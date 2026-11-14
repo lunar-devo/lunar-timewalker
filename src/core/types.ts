@@ -1111,6 +1111,11 @@ export interface GameAPI {
   exitSpaceView(): void;
   selectMarker(markerId: string | null): void;
   togglePanel(panel: PanelId, open?: boolean): void;
+  /**
+   * Opens the archive: on the topic given, or without one on the topic of where the user is (the subject of
+   * the close-up view, the event, the place stood on), never on one left over from another page.
+   */
+  openArchive(topicId?: string): void;
   /** Renders a still at the requested size and returns a PNG blob. */
   capture(kind: 'screen' | '4k' | '8k'): Promise<Blob>;
   updateSettings(patch: Partial<Settings>): void;

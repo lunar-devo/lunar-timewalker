@@ -1125,6 +1125,22 @@ export const INFO_TOPICS: Record<string, { title: L10n; blurb: L10n; query: stri
     },
     query: 'Neptune Voyager Great Dark Spot',
   },
+  moon: {
+    title: { tr: 'Ay: Lunar Reconnaissance Orbiter’ın gözünden', en: 'The Moon as seen by the Lunar Reconnaissance Orbiter' },
+    blurb: {
+      tr: 'NASA’nın Lunar Reconnaissance Orbiter aracı 2009’dan beri Ay’ın çevresinde dönüyor; yüzeyi, kraterleri ve iniş yerlerini görüntülüyor. Bu uygulamadaki Ay arazisi de onun LOLA yükseklik ölçümlerinden gelir.',
+      en: 'NASA’s Lunar Reconnaissance Orbiter has circled the Moon since 2009, picturing its surface, its craters and the landing sites. The Moon terrain in this app comes from its LOLA height measurements.',
+    },
+    query: 'Lunar Reconnaissance Orbiter Moon',
+  },
+  grb: {
+    title: { tr: 'Gama ışını patlamaları', en: 'Gamma-ray bursts' },
+    blurb: {
+      tr: 'Evrendeki en parlak patlamalar: çoğu, çok büyük bir yıldızın çöküşünden ya da iki nötron yıldızının birleşmesinden doğar. NASA’nın Swift ve Fermi uyduları bunları düzenli olarak yakalar. Buradaki görsellerin bir kısmı teleskop gözlemi, bir kısmı bilgisayar benzetimidir.',
+      en: 'The brightest explosions in the universe: most come from the collapse of a very massive star or the merger of two neutron stars. NASA’s Swift and Fermi satellites catch them regularly. Some pictures here are telescope observations, others computer simulations.',
+    },
+    query: 'NASA Telescopes Join Forces To Observe Unprecedented Explosion',
+  },
 };
 
 /** Info topic for each Sun, Earth and planet target (supernovae and comets carry their own topicId). */

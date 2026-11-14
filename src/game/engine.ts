@@ -785,6 +785,22 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     }, 7500);
   }
 
+  /**
+   * What belonged to the page being left must not show on the next: the hardware card, the open panels (the
+   * data panel is a preference and stays), the caption with its speech, the toast.
+   */
+  function clearPageState(): void {
+    if (subtitleClearTimer !== null) window.clearTimeout(subtitleClearTimer);
+    subtitleClearTimer = null;
+    audio.stopNarration();
+    setGame((s) => ({
+      focusAssetId: null,
+      subtitle: null,
+      toast: null,
+      panels: { ...s.panels, info: false, about: false, settings: false, help: false, credits: false, pause: false },
+    }));
+  }
+
   // ─────────────────────────── Map Globe Setup ───────────────────────────
 
   async function enterMapGlobe(jdTT: number, selectedSite: SiteDef): Promise<void> {
@@ -1121,15 +1137,33 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       activeSpaceView.detach();
       activeSpaceView = globeView;
       const st = getGame();
+      // The menu ends what was being watched: whatever is opened from it starts on its own, today, and leads
+      // back to the menu, not to the scene, the event or the date of the visit before.
+      const jdTT = jdTTNow();
       globeView.enter({
         targetId: 'moon',
-        jdTT: st.clock.jdTT,
+        jdTT,
         lang: st.settings.lang,
         quality: QUALITY[st.settings.quality],
         mode: 'backdrop',
       }).catch(() => undefined);
       leaveModes();
-      setGame({ phase: 'menu', spaceView: null, lab: null, labReturn: null, cleanMode: false });
+      leaveLabWatch();
+      endStaging(false);
+      clearPageState();
+      artifacts.removeBeacon();
+      setGame({
+        phase: 'menu',
+        spaceView: null,
+        lab: null,
+        labReturn: null,
+        cleanMode: false,
+        site: null,
+        activeEventId: null,
+        stage: null,
+        lightReading: null,
+        clock: { jdTT, rate: 1, paused: false },
+      });
     },
 
     selectEvent(eventId: string | null): void {
@@ -1139,6 +1173,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       input.exitLock();
       leaveModes();
       const site = prepareEvent(eventId);
+      clearPageState();
       // A new chapter has to be landed: the map's back button leads to the menu, not to the old scene.
       setGame({ phase: 'map', site: null });
       enterMapGlobe(getGame().clock.jdTT, site).catch(() => undefined);
@@ -1148,6 +1183,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       audio.cue('ui-open');
       input.enabled = false;
       input.exitLock();
+      clearPageState();
       const st = getGame();
       const sel = st.site ?? st.mapSelection ?? SITES[0];
       // Choosing another place does not change the world the astronaut is on.
@@ -1177,6 +1213,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     async landAt(site: SiteDef): Promise<void> {
       audio.unlock();
       audio.cue('teleport');
+      clearPageState();
       activeSpaceView.detach();
       input.enabled = false;
       endStaging(false);
@@ -1354,6 +1391,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     enterSpaceView(targetId: string): void {
       audio.cue('teleport');
       audio.setScene('space');
+      clearPageState();
       input.enabled = false;
       input.exitLock();
 
@@ -1499,6 +1537,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         return;
       }
       audio.cue('ui-close');
+      clearPageState();
       activeSpaceView.detach();
       audio.setScene('surface');
       input.enabled = true;
@@ -1529,6 +1568,11 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         input.exitLock();
       }
       setGame((s) => ({ panels: { ...s.panels, [panel]: next } }));
+    },
+
+    openArchive(topicId?: string): void {
+      setGame({ infoTopicId: topicId ?? null });
+      api.togglePanel('info', true);
     },
 
     async capture(kind: 'screen' | '4k' | '8k'): Promise<Blob> {
@@ -1676,14 +1720,17 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       const st = getGame();
       const apply = (): void => {
         const prevZeroG = WORLDS[getGame().world]?.zeroG ?? false;
-        // A sequence under way (on the old world, or in the close-up view being left) ends here.
+        // A sequence under way (on the old world, or in the close-up view being left) ends here, and so does
+        // what was read or said there: the mast's measurement belongs to the world it was taken on.
         endStaging(false);
+        clearPageState();
+        artifacts.removeBeacon();
         applyWorld(world);
         if (!WORLDS[world].zeroG && (prevZeroG || player.state.position.y > terrain.heightAt(player.state.position.x, player.state.position.z) + 12)) {
           player.teleport(player.state.position.x, player.state.position.z, player.state.headingDeg, terrain, player.state.pitchDeg);
         }
         // The map follows: a new place chosen there is landed on this world, not back on the Moon.
-        setGame({ world, mapWorld: world, stage: null });
+        setGame({ world, mapWorld: world, stage: null, lightReading: null });
         if (getGame().phase === 'space') {
           activeSpaceView.detach();
           audio.setScene('surface');
@@ -1713,6 +1760,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       input.exitLock();
       leaveModes();
       endStaging(false);
+      clearPageState();
       activeSpaceView.detach();
       activeSpaceView = labView;
       const st = getGame();
@@ -1755,14 +1803,14 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       }).catch(() => undefined);
       labView.attach(canvas);
       input.enabled = true;
-      // Opening the lab ends a watch of its supernova from the ground.
-      const watching = st.activeEventId === LAB_WATCH_EVENT_ID;
+      // The lab is a page of its own: a watch of its supernova from the ground ends, and no event or sequence
+      // of the visit before follows into it.
       leaveLabWatch();
       setGame({
         phase: 'space',
         spaceView: { targetId: 'lab', selectedMarkerId: null, galaxyPictureId: null },
-        activeEventId: watching ? null : st.activeEventId,
-        stage: watching ? null : st.stage,
+        activeEventId: null,
+        stage: null,
         labReturn: null,
         lab: {
           ...setup,
@@ -2076,6 +2124,10 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       }
     } else if (e.code === 'KeyU' && (st.phase === 'surface' || st.phase === 'space') && !st.spectator) {
       api.toggleCleanMode();
+    } else if (e.code === 'KeyI' && st.phase === 'space' && !st.spectator) {
+      // The archive, as the bar of the close-up views says; on the ground the surface hotkeys handle it.
+      if (st.panels.info) api.togglePanel('info', false);
+      else api.openArchive();
     } else if (e.code === 'Tab' && st.phase === 'surface') {
       e.preventDefault();
       if (input.locked) input.exitLock();
@@ -2178,7 +2230,10 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         setGame({ headlamp: !st.headlamp });
       }
       if (input.wasPressed('KeyM')) api.openMap();
-      if (input.wasPressed('KeyI')) api.togglePanel('info');
+      if (input.wasPressed('KeyI')) {
+        if (st.panels.info) api.togglePanel('info', false);
+        else api.openArchive();
+      }
       if (input.wasPressed('KeyN')) api.togglePanel('telemetry');
       if (input.wasPressed('KeyH')) api.togglePanel('help');
       if (input.wasPressed('KeyC')) api.updateSettings({ showConstellations: !st.settings.showConstellations });
@@ -2623,14 +2678,11 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
           setGame({ focusAssetId: bestReticleId });
         } else {
           const topic = bestReticleId === 'moon'
-            ? 'apollo11'
+            ? 'moon'
             : bestReticleId in BODY_TOPICS
               ? BODY_TOPICS[bestReticleId as BodyId]
               : transientById(bestReticleId)?.topicId ?? GALAXIES.find((g) => g.id === bestReticleId)?.topicId;
-          if (topic) {
-            setGame({ infoTopicId: topic });
-            api.togglePanel('info', true);
-          }
+          if (topic) api.openArchive(topic);
         }
       }
 

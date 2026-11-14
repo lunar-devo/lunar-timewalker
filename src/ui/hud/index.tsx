@@ -20,10 +20,11 @@ import {
 } from '../../core/time';
 import {
   BODY_NAMES, EVENTS, GALAXIES, INFO_TOPICS, SURFACE_ASSETS, TRANSIENTS,
-  WORLD_ORDER, WORLDS, earthImageryFor,
+  WORLD_ORDER, WORLDS, archiveTopicAt, earthImageryFor,
 } from '../../content';
 import { game } from '../../game/api';
 import { createNasa } from '../../nasa';
+import { parseLabLink } from '../../views/lab/link';
 import { LAB_WATCH_EVENT_ID, LAB_WATCH_NAME, LAB_WATCH_TARGET_ID } from '../../views/lab/watch';
 import { LangPicker } from '../LangPicker';
 import { LabDrawer } from './LabDrawer';
@@ -522,8 +523,8 @@ function AssetCardModal() {
               type="button"
               className="mn-btn mn-btn-primary"
               onClick={() => {
-                setGame({ focusAssetId: null, infoTopicId: asset.topicId ?? null });
-                game.togglePanel('info', true);
+                setGame({ focusAssetId: null });
+                game.openArchive(asset.topicId);
               }}
             >
               {tx(lang, 'NASA fotoğraflarını aç', 'Open NASA photographs')}
@@ -577,8 +578,7 @@ function AboutEventModal() {
             className="mn-btn mn-btn-primary"
             onClick={() => {
               game.togglePanel('about', false);
-              setGame({ infoTopicId: ev.infoTopicIds[0] ?? null });
-              game.togglePanel('info', true);
+              game.openArchive(ev.infoTopicIds[0]);
             }}
           >
             {tx(lang, 'NASA fotoğraflarını aç', 'Open NASA photographs')}
@@ -594,7 +594,7 @@ const ARCHIVE_GROUPS: Array<{ id: 'all' | 'events' | 'worlds' | 'rovers'; label:
   {
     id: 'events',
     label: { tr: 'Olaylar ve Gökyüzü', en: 'Events & Sky' },
-    ids: ['apollo11', 'lrrr', 'apollo_seismic', 'earth_from_moon', 'shackleton', 'artemis', 'eclipse_2026', 'solar_storm', 'sn1054', 'sn1006', 'sn1572', 'casA', 'comet', 'halley', 'conjunction', 'planets'],
+    ids: ['apollo11', 'lrrr', 'apollo_seismic', 'moon', 'earth_from_moon', 'shackleton', 'artemis', 'eclipse_2026', 'solar_storm', 'sn1054', 'sn1006', 'sn1572', 'casA', 'grb', 'comet', 'halley', 'conjunction', 'planets'],
   },
   {
     id: 'worlds',
@@ -625,37 +625,73 @@ function InfoCentreModal() {
   const open = useGame((s) => s.panels.info);
   const infoTopicId = useGame((s) => s.infoTopicId);
   const activeEventId = useGame((s) => s.activeEventId);
+  const spaceTargetId = useGame((s) => s.spaceView?.targetId ?? null);
+  const stageWhere = useGame((s) => s.stage?.where ?? null);
+  const world = useGame((s) => s.world);
+  const siteId = useGame((s) => s.site?.id ?? null);
+  const labKind = useGame((s) => s.lab?.kind ?? null);
+  const labReturn = useGame((s) => s.labReturn);
   const [showAllTopics, setShowAllTopics] = useState(false);
   const [group, setGroup] = useState<'all' | 'events' | 'worlds' | 'rovers'>('all');
 
+  // Without a topic asked for, the archive shows the one that belongs to where it is opened: the subject of
+  // the close-up view, the event, the lab's explosion (also while it is watched from the ground), the place.
+  const watchedKind = labReturn !== null && spaceTargetId === null ? parseLabLink(`?${labReturn}`)?.kind ?? null : null;
+  const here = archiveTopicAt({
+    spaceTargetId: spaceTargetId === 'lab' ? null : spaceTargetId,
+    eventId: activeEventId,
+    stagedHere: stageWhere !== null && stageWhere === spaceTargetId,
+    labKind: labKind ?? watchedKind,
+    world,
+    siteId,
+  });
+  const currentTopicId = infoTopicId && infoTopicId in INFO_TOPICS ? infoTopicId : here;
+
   const activeEvent = EVENTS.find((e) => e.id === activeEventId);
+  // The topics offered: the event's, or a group's; the one being shown leads when it is not among them.
   const topicIds = useMemo(() => {
-    const all = Object.keys(INFO_TOPICS);
     if (!showAllTopics && activeEvent) {
-      const base = [...activeEvent.infoTopicIds];
-      if (infoTopicId && !base.includes(infoTopicId)) base.unshift(infoTopicId);
-      return base;
+      return activeEvent.infoTopicIds.includes(currentTopicId) ? activeEvent.infoTopicIds : [currentTopicId, ...activeEvent.infoTopicIds];
     }
     const grp = ARCHIVE_GROUPS.find((g) => g.id === group);
-    if (!grp?.ids) return all;
+    if (!grp?.ids) return Object.keys(INFO_TOPICS);
     const filtered = grp.ids.filter((id) => id in INFO_TOPICS);
-    if (infoTopicId && !filtered.includes(infoTopicId) && infoTopicId in INFO_TOPICS) return [infoTopicId, ...filtered];
-    return filtered;
-  }, [activeEvent, infoTopicId, showAllTopics, group]);
+    return filtered.includes(currentTopicId) ? filtered : [currentTopicId, ...filtered];
+  }, [activeEvent, currentTopicId, showAllTopics, group]);
 
-  const currentTopicId = infoTopicId && infoTopicId in INFO_TOPICS ? infoTopicId : (topicIds[0] ?? 'apollo11');
   const [topicData, setTopicData] = useState<NasaTopicResult | null>(null);
   const [donkiData, setDonkiData] = useState<DonkiResult | null>(null);
   const [selectedImg, setSelectedImg] = useState<NasaImage | null>(null);
 
+  // Every opening starts from the topics of the place, not from the list that was browsed last time.
   useEffect(() => {
     if (!open) return;
+    setShowAllTopics(false);
+    setGroup('all');
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    // The pictures of the topic before must not stand under the new title, nor arrive late and replace it.
+    let wanted = true;
     setSelectedImg(null);
-    nasaClient.getTopic(currentTopicId).then(setTopicData).catch(() => setTopicData(null));
-    if (currentTopicId === 'solar_storm' || activeEventId === 'storm2024') {
-      nasaClient.donki('2024-05-07', '2024-05-15').then(setDonkiData).catch(() => setDonkiData(null));
+    setTopicData(null);
+    nasaClient.getTopic(currentTopicId)
+      .then((data) => {
+        if (wanted) setTopicData(data);
+      })
+      .catch(() => undefined);
+    if (currentTopicId === 'solar_storm') {
+      nasaClient.donki('2024-05-07', '2024-05-15')
+        .then((data) => {
+          if (wanted) setDonkiData(data);
+        })
+        .catch(() => undefined);
     }
-  }, [open, currentTopicId, activeEventId]);
+    return () => {
+      wanted = false;
+    };
+  }, [open, currentTopicId]);
 
   if (!open) return null;
   const meta = INFO_TOPICS[currentTopicId];
@@ -797,7 +833,7 @@ function InfoCentreModal() {
           </div>
         )}
 
-        {(currentTopicId === 'solar_storm' || activeEventId === 'storm2024') && donkiData && (
+        {currentTopicId === 'solar_storm' && donkiData && (
           <div style={{ borderTop: '1px solid var(--c-line-soft)', paddingTop: 10 }}>
             <div className="mn-section-label" style={{ marginBottom: 6 }}>
               NASA CCMC DONKI — {tx(lang, 'Mayıs 2024 Güneş Fırtınası Kayıtları', 'May 2024 Solar Storm Records')}
@@ -855,7 +891,7 @@ export function SurfaceHud() {
   const barActions: Array<{ id: string; group: 'look' | 'read'; label: string; hotkey: string; on: boolean; dropAt: number; run: () => void }> = [
     { id: 'guide', group: 'look', label: tx(lang, 'Yıldızlar', 'Sky guide'), hotkey: 'C', on: showGuide, dropAt: 2, run: () => game.updateSettings({ showConstellations: !showGuide }) },
     { id: 'data', group: 'read', label: tx(lang, 'Veriler', 'Data'), hotkey: 'N', on: panels.telemetry, dropAt: 3, run: () => game.togglePanel('telemetry') },
-    { id: 'archive', group: 'read', label: tx(lang, 'Arşiv', 'Archive'), hotkey: 'I', on: panels.info, dropAt: 1, run: () => game.togglePanel('info') },
+    { id: 'archive', group: 'read', label: tx(lang, 'Arşiv', 'Archive'), hotkey: 'I', on: panels.info, dropAt: 1, run: () => (panels.info ? game.togglePanel('info', false) : game.openArchive()) },
   ];
   const shownActions = barActions.filter((a) => tight < a.dropAt);
 
@@ -1343,7 +1379,7 @@ export function SpaceHud() {
               {tx(lang, 'Astronotla bu ortama git →', 'Go there as the astronaut →')}
             </button>
           )}
-          <button type="button" className="hud-bar-btn" onClick={() => game.togglePanel('info', true)}>
+          <button type="button" className="hud-bar-btn" onClick={() => game.openArchive()}>
             {tx(lang, 'Arşiv [I]', 'Archive [I]')}
           </button>
           {tight < 1 && (
@@ -1446,7 +1482,7 @@ export function SpaceHud() {
           <button
             type="button"
             className="mn-btn mn-btn-primary"
-            onClick={() => { setGame({ infoTopicId: galDef.topicId }); game.togglePanel('info', true); }}
+            onClick={() => game.openArchive(galDef.topicId)}
           >
             {tx(lang, 'NASA fotoğraflarını aç', 'Open NASA photographs')}
           </button>

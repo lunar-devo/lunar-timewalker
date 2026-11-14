@@ -1108,6 +1108,12 @@ TOPICS_QUERIES: dict[str, tuple[list[str], list[str]]] = {
     "m104": (["Sombrero galaxy M104", "M104 Spitzer Hubble"], ["sombrero", "m104"]),
     "m87": (["M87 jet Hubble", "M87 galaxy black hole"], ["m87"]),
     "magellanic": (["Large Magellanic Cloud Tarantula", "Magellanic Cloud Hubble"], ["magellanic", "tarantula"]),
+    "moon": (["Lunar Reconnaissance Orbiter Moon", "LRO lunar surface"], ["lunar reconnaissance", "lro"]),
+    # The library has few pictures of the bursts themselves: one blast seen by three telescopes, and a merger simulation.
+    "grb": (
+        ["NASA Telescopes Join Forces To Observe Unprecedented Explosion", "Neutron Stars Rip Each Other Apart to Form Black Hole"],
+        ["grb", "gamma-ray", "gamma ray", "neutron star"],
+    ),
 }
 
 _TAG_RE = re.compile(r"<[^>]+>")

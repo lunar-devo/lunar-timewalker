@@ -1,3 +1,4 @@
+export { archiveTopicAt } from './archive';
 export {
   ARTIFACT_PLACEMENTS, BODY_NAMES, BODY_TOPICS, INFO_TOPICS, SITES, SURFACE_ASSETS, TRANSIENTS,
 } from './catalog';

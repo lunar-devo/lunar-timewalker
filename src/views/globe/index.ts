@@ -562,10 +562,12 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
     }
   }
 
+  /** Counts the changes of the showcased model: one that finishes loading for an older choice is dropped. */
+  let showcaseSeq = 0;
   async function updateShowcaseForSelectedMarker(): Promise<void> {
-    while (showcaseGroup.children.length > 0) {
-      showcaseGroup.remove(showcaseGroup.children[0]);
-    }
+    showcaseSeq += 1;
+    const seq = showcaseSeq;
+    showcaseGroup.clear();
     showcaseModel = null;
     if (!selectedMarkerId) return;
     const mv = markerVisuals.find((v) => v.data.id === selectedMarkerId);
@@ -573,6 +575,7 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
     if (!modelFile || !hasAsset(`models/${modelFile}`)) return;
     try {
       const glb = await loadGlb(modelFile);
+      if (seq !== showcaseSeq) return;
       fitModelToHeight(glb, 2.6);
       showcaseGroup.add(glb);
       showcaseModel = glb;
@@ -652,6 +655,8 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
     async enter(opts: SpaceViewOptions): Promise<void> {
       currentOpts = opts;
       selectedMarkerId = null;
+      // The model of a marker chosen on the globe shown before does not follow into this one.
+      updateShowcaseForSelectedMarker().catch(() => undefined);
       const tid = opts.targetId;
 
       globeUniforms.uTargetKind.value =

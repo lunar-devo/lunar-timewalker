@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-14T09:30:01.064224+00:00",
+  "generated": "2026-11-14T22:35:09.496395+00:00",
   "files": {
     "data/bright_stars.json": {
       "source": "https://heasarc.gsfc.nasa.gov/xamin/vo/tap/sync?REQUEST=doQuery&LANG=ADQL&FORMAT=votable&QUERY=SELECT+ra,dec,vmag,bv_color+FROM+bsc5p+WHERE+vmag+%3C%3D+6.5+ORDER+BY+vmag+ASC",
@@ -17,7 +17,7 @@
     "data/nasa_topics.json": {
       "source": "https://images-api.nasa.gov",
       "credit": "NASA Image and Video Library",
-      "note": "42 topics"
+      "note": "44 topics"
     },
     "dem/moon_global.bin": {
       "source": "https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_16.tif",
