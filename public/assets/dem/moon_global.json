@@ -1,0 +1,13 @@
+{
+  "width": 5760,
+  "height": 2880,
+  "offset": -8981.501,
+  "scale": 0.300099,
+  "nodata": null,
+  "projection": "equirect",
+  "lonLeftDeg": -180,
+  "latTopDeg": 90,
+  "metersPerSample": 1895.21,
+  "source": "https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_16.tif",
+  "credit": "NASA's Scientific Visualization Studio / LRO LOLA Science Team (SVS #4720)"
+}

@@ -1,0 +1,55 @@
+{
+  "generated": "2026-11-14T09:30:01.064224+00:00",
+  "files": {
+    "data/bright_stars.json": {
+      "source": "https://heasarc.gsfc.nasa.gov/xamin/vo/tap/sync?REQUEST=doQuery&LANG=ADQL&FORMAT=votable&QUERY=SELECT+ra,dec,vmag,bv_color+FROM+bsc5p+WHERE+vmag+%3C%3D+6.5+ORDER+BY+vmag+ASC",
+      "credit": "NASA HEASARC / Yale Bright Star Catalog (BSC5P)",
+      "note": "0 stars with V <= 6.5"
+    },
+    "data/donki_archive.json": {
+      "source": "https://api.nasa.gov/DONKI/",
+      "credit": "NASA Community Coordinated Modeling Center (CCMC) DONKI"
+    },
+    "data/horizons_validation.json": {
+      "source": "https://ssd.jpl.nasa.gov/api/horizons.api",
+      "credit": "NASA/JPL Solar System Dynamics Group (Horizons DE441)"
+    },
+    "data/nasa_topics.json": {
+      "source": "https://images-api.nasa.gov",
+      "credit": "NASA Image and Video Library",
+      "note": "42 topics"
+    },
+    "dem/moon_global.bin": {
+      "source": "https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_16.tif",
+      "credit": "NASA's Scientific Visualization Studio / LRO LOLA Science Team (SVS #4720)",
+      "width": 5760,
+      "height": 2880
+    },
+    "dem/moon_global.json": {
+      "source": "https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_16.tif",
+      "credit": "NASA's Scientific Visualization Studio / LRO LOLA Science Team (SVS #4720)",
+      "width": 5760,
+      "height": 2880
+    },
+    "dem/sites/connecting_ridge/meta.json": {
+      "source": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site01/Site01_final_adj_5mpp_surf.tif",
+      "credit": "NASA GSFC Planetary Geodynamics Data Archive (PGDA) / LRO LOLA 5 m/px (Barker et al. 2021)"
+    },
+    "dem/sites/connecting_ridge/near.bin": {
+      "source": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site01/Site01_final_adj_5mpp_surf.tif",
+      "credit": "NASA GSFC Planetary Geodynamics Data Archive (PGDA) / LRO LOLA 5 m/px (Barker et al. 2021)"
+    },
+    "dem/sites/index.json": {
+      "source": "PGDA LOLA 5 m/px",
+      "credit": "NASA GSFC Planetary Geodynamics Data Archive (PGDA) / LRO LOLA 5 m/px (Barker et al. 2021)"
+    },
+    "dem/sites/shackleton/meta.json": {
+      "source": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site04/Site04_final_adj_5mpp_surf.tif",
+      "credit": "NASA GSFC Planetary Geodynamics Data Archive (PGDA) / LRO LOLA 5 m/px (Barker et al. 2021)"
+    },
+    "dem/sites/shackleton/near.bin": {
+      "source": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site04/Site04_final_adj_5mpp_surf.tif",
+      "credit": "NASA GSFC Planetary Geodynamics Data Archive (PGDA) / LRO LOLA 5 m/px (Barker et al. 2021)"
+    }
+  }
+}

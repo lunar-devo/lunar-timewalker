@@ -1,0 +1,23 @@
+{
+  "id": "connecting_ridge",
+  "centerLatDeg": -89.45,
+  "centerLonDeg": -137.31,
+  "layers": [
+    {
+      "name": "near",
+      "file": "near.bin",
+      "width": 2048,
+      "height": 2048,
+      "offset": 739.612,
+      "scale": 0.018611,
+      "nodata": null,
+      "projection": "local-aeqd",
+      "centerLatDeg": -89.45,
+      "centerLonDeg": -137.31,
+      "sizeM": 10240.0,
+      "metersPerSample": 5.002,
+      "source": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site01/Site01_final_adj_5mpp_surf.tif",
+      "credit": "NASA GSFC Planetary Geodynamics Data Archive (PGDA) / LRO LOLA 5 m/px (Barker et al. 2021)"
+    }
+  ]
+}

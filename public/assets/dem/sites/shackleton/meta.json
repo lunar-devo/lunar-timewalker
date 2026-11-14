@@ -1,0 +1,23 @@
+{
+  "id": "shackleton",
+  "centerLatDeg": -89.78,
+  "centerLonDeg": -155.73,
+  "layers": [
+    {
+      "name": "near",
+      "file": "near.bin",
+      "width": 2048,
+      "height": 2048,
+      "offset": -1801.993,
+      "scale": 0.054029,
+      "nodata": null,
+      "projection": "local-aeqd",
+      "centerLatDeg": -89.78,
+      "centerLonDeg": -155.73,
+      "sizeM": 10240.0,
+      "metersPerSample": 5.002,
+      "source": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site04/Site04_final_adj_5mpp_surf.tif",
+      "credit": "NASA GSFC Planetary Geodynamics Data Archive (PGDA) / LRO LOLA 5 m/px (Barker et al. 2021)"
+    }
+  ]
+}

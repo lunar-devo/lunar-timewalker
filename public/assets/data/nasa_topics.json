@@ -1,0 +1,2867 @@
+{
+  "fetched": "2026-11-14T09:30:01.062634+00:00",
+  "topics": {
+    "sn1054": {
+      "query": "Crab Nebula Hubble",
+      "keywords": [
+        "crab",
+        "m1",
+        "1054"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA03606",
+          "title": "Most Detailed Image of the Crab Nebula",
+          "description": "The Crab Nebula is one of the most intricately structured and highly dynamical objects ever observed. The new Hubble image of the Crab was assembled from 24 individual exposures taken with the NASA/ESA Hubble Space Telescope",
+          "date": "2005-12-01",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA03606/PIA03606~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA03606/PIA03606~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA03606",
+          "credit": "NASA/ESA/JPL/Arizona State Univ."
+        },
+        {
+          "nasaId": "PIA17563",
+          "title": "Crab Nebula, as Seen by Herschel and Hubble",
+          "description": "This image shows a composite view of the Crab nebula, an iconic supernova remnant in our Milky Way galaxy, as viewed by the Herschel Space Observatory and the Hubble Space Telescope.",
+          "date": "2013-12-12",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA17563/PIA17563~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA17563/PIA17563~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA17563",
+          "credit": "ESA/Herschel/PACS/MESS Key Programme Supernova Remnant Team; NASA, ESA and Allison Loll/Jeff Hester Arizona State\u2026"
+        },
+        {
+          "nasaId": "GSFC_20171208_Archive_e000273",
+          "title": "NASA's Hubble Captures the Beating Heart of the Crab Nebula",
+          "description": "Peering deep into the core of the Crab Nebula, this close-up image reveals the beating heart of one of the most historic and intensively studied remnants of a supernova, an exploding star. The inner region sends out clock-like pulses of radiation and tsunamis of charged particles embedded in magnetic fields. The neutron star at the very center of the Crab Nebula has about the same mass as the sun but compressed into an incredibly dense sphere that is only a few miles across.",
+          "date": "2017-12-08",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e000273/GSFC_20171208_Archive_e000273~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e000273/GSFC_20171208_Archive_e000273~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/GSFC_20171208_Archive_e000273",
+          "credit": "GSFC"
+        },
+        {
+          "nasaId": "GSFC_20171208_Archive_e002159",
+          "title": "Crab Nebula",
+          "description": "The Crab Nebula is a supernova remnant, all that remains of a tremendous stellar explosion. Observers in China and Japan recorded the supernova nearly 1,000 years ago, in 1054. Credit: NASA, ESA, J. Hester and A. Loll (Arizona State University) The Hubble Space Telescope is a project of international cooperation between NASA and the European Space Agency. NASA's Goddard Space Flight Center manages the telescope.",
+          "date": "2017-12-08",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e002159/GSFC_20171208_Archive_e002159~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e002159/GSFC_20171208_Archive_e002159~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/GSFC_20171208_Archive_e002159",
+          "credit": "GSFC"
+        },
+        {
+          "nasaId": "GSFC_20171208_Archive_e000053",
+          "title": "Observatories Combine to Crack Open the Crab Nebula",
+          "description": "Astronomers have produced a highly detailed image of the Crab Nebula, by combining data from telescopes spanning nearly the entire breadth of the electromagnetic spectrum, from radio waves seen by the Karl G. Jansky Very Large Array (VLA) to the powerful X-ray glow as seen by the orbiting Chandra X-ray Observatory. And, in between that range of wavelengths, the Hubble Space Telescope's crisp visible-light view, and the infrared perspective of the Spitzer Space Telescope.",
+          "date": "2017-12-08",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e000053/GSFC_20171208_Archive_e000053~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e000053/GSFC_20171208_Archive_e000053~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/GSFC_20171208_Archive_e000053",
+          "credit": "GSFC"
+        },
+        {
+          "nasaId": "PIA21474",
+          "title": "Crab Nebula from Five Observatories",
+          "description": "In the summer of the year 1054 AD, Chinese astronomers saw a new \"guest star,\" that appeared six times brighter than Venus. So bright in fact, it could be seen during the daytime for several months. This \"guest star\" was forgotten about until 700 years later with the advent of telescopes. Astronomers saw a tentacle-like nebula in the place of the vanished star and called it the Crab Nebula.",
+          "date": "2017-05-10",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA21474/PIA21474~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA21474/PIA21474~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA21474",
+          "credit": "NASA, ESA, G. Dubner IAFE, CONICET-University of Buenos Aires et al.; A. Loll et al.; T. Temim et al.; F."
+        }
+      ]
+    },
+    "sn1006": {
+      "query": "SN 1006 supernova",
+      "keywords": [
+        "1006",
+        "supernova"
+      ],
+      "images": [
+        {
+          "nasaId": "GSFC_20171208_Archive_e002173",
+          "title": "Hubble Sees Stars and a Stripe in Celestial Fireworks",
+          "description": "Release date: July 1, 2008 SN 1006 Supernova Remnant (Hubble) A delicate ribbon of gas floats eerily in our galaxy. A contrail from an alien spaceship? A jet from a black-hole? Actually this image, taken by NASA's Hubble Space Telescope, is a very thin section of a supernova remnant caused by a stellar explosion that occurred more than 1,000 years ago.",
+          "date": "2017-12-08",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e002173/GSFC_20171208_Archive_e002173~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e002173/GSFC_20171208_Archive_e002173~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/GSFC_20171208_Archive_e002173",
+          "credit": "GSFC"
+        },
+        {
+          "nasaId": "GSFC_20171208_Archive_e002166",
+          "title": "Hubble Sees Stars and a Stripe in Celestial Fireworks",
+          "description": "Release date: July 1, 2008 This image is a composite of visible (or optical), radio, and X-ray data of the full shell of the supernova remnant from SN 1006. The radio data show much of the extent that the X-ray image shows. In contrast, only a small linear filament in the northwest corner of the shell is visible in the optical data.",
+          "date": "2017-12-08",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e002166/GSFC_20171208_Archive_e002166~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e002166/GSFC_20171208_Archive_e002166~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/GSFC_20171208_Archive_e002166",
+          "credit": "GSFC"
+        }
+      ]
+    },
+    "sn1572": {
+      "query": "Tycho supernova remnant",
+      "keywords": [
+        "tycho",
+        "1572"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA11435",
+          "title": "Vivid View of Tycho Supernova Remnant",
+          "description": "This composite image of the Tycho supernova remnant combines infrared and X-ray observations obtained with NASA Spitzer and Chandra space observatories, respectively,",
+          "date": "2008-12-03",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA11435/PIA11435~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA11435/PIA11435~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA11435",
+          "credit": "MPIA/NASA/Calar Alto Observatory"
+        },
+        {
+          "nasaId": "0301839",
+          "title": "History of Chandra X-Ray Observatory",
+          "description": "This Chandra image reveals, in detail, the turbulent debris created by a supernova explosion that was observed by the Danish Astronomer Tycho Brahe in the year 1572. The colors show different x-ray energies, with red, green, and blue representing low, medium, and high energies, respectively.",
+          "date": "2000-09-20",
+          "center": "MSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/0301839/0301839~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/0301839/0301839~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/0301839",
+          "credit": "MSFC"
+        },
+        {
+          "nasaId": "PIA13119",
+          "title": "Tycho Supernova Remnant",
+          "description": "This image from NASA Wide-field Infrared Survey Explorer takes in several interesting objects in the constellation Cassiopeia which are not easily seen in visible light. The red circle visible at upper left is SN 1572, often called Tycho Supernova.",
+          "date": "2010-07-12",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA13119/PIA13119~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA13119/PIA13119~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA13119",
+          "credit": "NASA/JPL-Caltech/UCLA"
+        },
+        {
+          "nasaId": "GSFC_20171208_Archive_e001801",
+          "title": "Tycho's Star Shines in Gamma Rays",
+          "description": "NASA image relase December 13, 2011 Gamma-rays detected by Fermi's LAT show that the remnant of Tycho's supernova shines in the highest-energy form of light. This portrait of the shattered star includes gamma rays (magenta), X-rays (yellow, green, and blue), infrared (red) and optical data. Credit: Gamma ray, NASA/DOE/Fermi LAT Collaboration; X-ray, NASA/CXC/SAO; Infrared, NASA/JPL-Caltech; Optical, MPIA, Calar Alto, O. Krause et al.",
+          "date": "2017-12-08",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001801/GSFC_20171208_Archive_e001801~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001801/GSFC_20171208_Archive_e001801~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/GSFC_20171208_Archive_e001801",
+          "credit": "GSFC"
+        }
+      ]
+    },
+    "casA": {
+      "query": "Cassiopeia A supernova",
+      "keywords": [
+        "cassiopeia"
+      ],
+      "images": [
+        {
+          "nasaId": "GSFC_20171208_Archive_e002183",
+          "title": "Cassiopeia A supernova",
+          "description": "NASA's Fermi Closes on Source of Cosmic Rays New images from NASA's Fermi Gamma-ray Space Telescope show where supernova remnants emit radiation a billion times more energetic than visible light. The images bring astronomers a step closer to understanding the source of some of the universe's most energetic particles -- cosmic rays.",
+          "date": "2017-12-08",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e002183/GSFC_20171208_Archive_e002183~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e002183/GSFC_20171208_Archive_e002183~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/GSFC_20171208_Archive_e002183",
+          "credit": "GSFC"
+        },
+        {
+          "nasaId": "PIA17842",
+          "title": "The Case of Missing Iron in Cassiopeia A",
+          "description": "When astronomers first looked at images of a supernova remnant called Cassiopeia A, captured by NASA NuSTAR. The mystery of Cassiopeia A Cas A, a massive star that exploded in a supernova more than 11,000 years ago continues to confound scientists.",
+          "date": "2014-02-19",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA17842/PIA17842~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA17842/PIA17842~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA17842",
+          "credit": "NASA/JPL-Caltech/CXC/SAO"
+        },
+        {
+          "nasaId": "PIA03519",
+          "title": "Cassiopeia A: Death Becomes Her",
+          "description": "This false-color image from three of NASA Great Observatories provides one example of a star that died in a fiery supernova blast. Called Cassiopeia A, this supernova remnant is located 10,000 light-years away in the constellation Cassiopeia.",
+          "date": "2005-06-10",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA03519/PIA03519~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA03519/PIA03519~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA03519",
+          "credit": "NASA/JPL-Caltech/STScI/CXC/SAO Animation: NASA/JPL-Caltech/Univ. of Ariz./STScI/CXC/SAO"
+        },
+        {
+          "nasaId": "PIA15480",
+          "title": "Echoes of a Stellar Ending",
+          "description": "Listed as Cassiopeia A, this remnant of the supernova is one of the brightest radio sources in the known universe. More recently, NASA WISE telescope detected infrared echoes of the flash of light rippling outwards from the supernova.",
+          "date": "2012-03-14",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA15480/PIA15480~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA15480/PIA15480~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA15480",
+          "credit": "NASA/JPL-Caltech/UCLA"
+        },
+        {
+          "nasaId": "PIA11213",
+          "title": "Supernova Flashback",
+          "description": "The Cassiopeia A supernova first flash of radiation makes six clumps of dust circled in annotated version unusually hot. The supernova remnant is the large white ball in the center. This infrared picture was taken by NASA Spitzer Space Telescope.",
+          "date": "2008-10-01",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA11213/PIA11213~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA11213/PIA11213~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA11213",
+          "credit": "NASA/JPL-Caltech/E. Dwek and R. Arendt"
+        },
+        {
+          "nasaId": "PIA17839",
+          "title": "Adding a New Color to Palate of Cassiopeia A Images",
+          "description": "NASA NuSTAR is complementing previous observations of the Cassiopeia A supernova remnant red and green by providing the first maps of radioactive material forged in the fiery explosion blue.",
+          "date": "2014-02-19",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA17839/PIA17839~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA17839/PIA17839~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA17839",
+          "credit": "NASA/JPL-Caltech/CXC/SAO"
+        }
+      ]
+    },
+    "comet": {
+      "query": "Comet NEOWISE",
+      "keywords": [
+        "comet",
+        "neowise",
+        "hale",
+        "ison",
+        "67p"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA18032",
+          "title": "An Infrared portrait of Comet NEOWISE C/2014 C3",
+          "description": "Comet NEOWISE was first observed by NASA NEOWISE spacecraft on Valentine Day, 2014. This heat-sensitive infrared image was made by combining six exposures taken by the NEOWISE mission of the newly discovered comet.",
+          "date": "2014-02-27",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA18032/PIA18032~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA18032/PIA18032~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA18032",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA23792",
+          "title": "Comet NEOWISE Discovery Images",
+          "description": "Comet C/2020 F3 NEOWISE appears as a string of fuzzy red dots in this composite of several heat-sensitive infrared images taken by NASA's Near-Earth Object Wide-field Infrared Survey Explorer (NEOWISE) mission on March 27, 2020. The comet was discovered using these images to track its motion across the sky against the backdrop of stationary stars and galaxies.",
+          "date": "2020-07-08",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA23792/PIA23792~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA23792/PIA23792~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA23792",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "NHQ202007120001",
+          "title": "Comet NEOWISE Over Washington",
+          "description": "Comet NEOWISE is seen before sunrise over Washington, Sunday, July 12, 2020. The comet was discovered by NASA\u2019s Near-Earth Object Wide-field Infrared Survey Explorer, or NEOWISE, on March 27. Since then, the comet \u2014 called comet C/2020 F3 NEOWISE and nicknamed comet NEOWISE \u2014 has been spotted by several NASA spacecraft, including Parker Solar Probe, NASA\u2019s Solar and Terrestrial Relations Observatory, the ESA/NASA Solar and Heliospheric Observatory, and astronauts aboard the\u2026",
+          "date": "2020-07-12",
+          "center": "HQ",
+          "thumbUrl": "https://images-assets.nasa.gov/image/NHQ202007120001/NHQ202007120001~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/NHQ202007120001/NHQ202007120001~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/NHQ202007120001",
+          "credit": "NASA/Bill Ingalls"
+        },
+        {
+          "nasaId": "NHQ202007120002",
+          "title": "Comet NEOWISE Over Washington",
+          "description": "Comet NEOWISE is seen before sunrise, upper left, over Washington, Sunday, July 12, 2020. The comet was discovered by NASA\u2019s Near-Earth Object Wide-field Infrared Survey Explorer, or NEOWISE, on March 27. Since then, the comet \u2014 called comet C/2020 F3 NEOWISE and nicknamed comet NEOWISE \u2014 has been spotted by several NASA spacecraft, including Parker Solar Probe, NASA\u2019s Solar and Terrestrial Relations Observatory, the ESA/NASA Solar and Heliospheric Observatory, and\u2026",
+          "date": "2020-07-12",
+          "center": "HQ",
+          "thumbUrl": "https://images-assets.nasa.gov/image/NHQ202007120002/NHQ202007120002~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/NHQ202007120002/NHQ202007120002~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/NHQ202007120002",
+          "credit": "NASA/Bill Ingalls"
+        },
+        {
+          "nasaId": "NHQ202007120003",
+          "title": "Comet NEOWISE Over Washington",
+          "description": "Comet NEOWISE is seen, upper left, before sunrise over Washington, Sunday, July 12, 2020. The comet was discovered by NASA\u2019s Near-Earth Object Wide-field Infrared Survey Explorer, or NEOWISE, on March 27. Since then, the comet \u2014 called comet C/2020 F3 NEOWISE and nicknamed comet NEOWISE \u2014 has been spotted by several NASA spacecraft, including Parker Solar Probe, NASA\u2019s Solar and Terrestrial Relations Observatory, the ESA/NASA Solar and Heliospheric Observatory, and\u2026",
+          "date": "2020-07-12",
+          "center": "HQ",
+          "thumbUrl": "https://images-assets.nasa.gov/image/NHQ202007120003/NHQ202007120003~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/NHQ202007120003/NHQ202007120003~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/NHQ202007120003",
+          "credit": "NASA/Bill Ingalls"
+        },
+        {
+          "nasaId": "PIA19102",
+          "title": "NASA NEOWISE Images Comet C/2014 Q2 Lovejoy",
+          "description": "Comet C/2014 Q2 Lovejoy is one of more than 32 comets imaged by NASA NEOWISE mission from December 2013 to December 2014. This image of comet Lovejoy combines a series of observations made in November 2013.",
+          "date": "2015-01-13",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA19102/PIA19102~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA19102/PIA19102~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA19102",
+          "credit": "NASA/JPL-Caltech"
+        }
+      ]
+    },
+    "halley": {
+      "query": "Comet Halley 1986",
+      "keywords": [
+        "halley"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA17485",
+          "title": "Comet Halley",
+          "description": "In 1986, the European spacecraft Giotto became one of the first spacecraft ever to encounter and photograph the nucleus of a comet, passing and imaging Halley nucleus as it receded from the sun.",
+          "date": "1986-03-14",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA17485/PIA17485~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA17485/PIA17485~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA17485",
+          "credit": "NASA/ESA/Giotto Project"
+        },
+        {
+          "nasaId": "61c-05-026",
+          "title": "Astronaut George Nelson working on Comet Halley Active monitoring program",
+          "description": "61C-05-026 (14 Jan. 1986) --- Astronaut George D. Nelson smiles for a fellow crew man's 35mm camera exposure while participating in the Comet Halley active monitoring program (CHAMP). Camera equipment and a protective shroud used to eliminate all cabin light interference surround the mission specialist. This is the first of three 1986 missions which are scheduled to monitor the rare visit by the comet. The principal investigators for CHAMP are S.",
+          "date": "1986-01-14",
+          "center": "JSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/61c-05-026/61c-05-026~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/61c-05-026/61c-05-026~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/61c-05-026",
+          "credit": "JSC"
+        },
+        {
+          "nasaId": "ARC-1986-AC86-0720-4",
+          "title": "ARC-1986-AC86-0720-4",
+          "description": "C-141 Kuiper Airborne Imagery of Comet Halley (New Zealand Expedition) PHOTO CREDIT Photo taken with equipment designed, mounted on the headring and operated by the Charleston (South Carolina) County School District CAN DO Project;",
+          "date": "1986-10-01",
+          "center": "ARC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/ARC-1986-AC86-0720-4/ARC-1986-AC86-0720-4~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/ARC-1986-AC86-0720-4/ARC-1986-AC86-0720-4~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/ARC-1986-AC86-0720-4",
+          "credit": "ARC"
+        },
+        {
+          "nasaId": "GSFC_20171208_Archive_e000131",
+          "title": "Hubble Witnesses Massive Comet-Like Object Pollute Atmosphere of a White Dwarf",
+          "description": "For the first time, scientists using NASA\u2019s Hubble Space Telescope have witnessed a massive object with the makeup of a comet being ripped apart and scattered in the atmosphere of a white dwarf, the burned-out remains of a compact star. The object has a chemical composition similar to Halley\u2019s Comet, but it is 100,000 times more massive and has a much higher amount of water. It is also rich in the elements essential for life, including nitrogen, carbon, oxygen, and sulfur.",
+          "date": "2017-12-08",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e000131/GSFC_20171208_Archive_e000131~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e000131/GSFC_20171208_Archive_e000131~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/GSFC_20171208_Archive_e000131",
+          "credit": "GSFC"
+        }
+      ]
+    },
+    "apollo11": {
+      "query": "Apollo 11 Aldrin lunar surface",
+      "keywords": [
+        "apollo 11"
+      ],
+      "images": [
+        {
+          "nasaId": "6900956",
+          "title": "Saturn Apollo Program",
+          "description": "The first manned lunar landing mission, Apollo 11, launched from the Kennedy Space Center (KSC) in Florida via the Marshall Space Flight Center (MSFC) developed Saturn V launch vehicle on July 16, 1969 and safely returned to Earth on July 24, 1969. Aboard the space craft were astronauts Neil A. Armstrong, commander; Michael Collins, Command Module (CM) pilot; and Edwin E. (Buzz) Aldrin Jr., Lunar Module (LM) pilot.",
+          "date": "1969-07-20",
+          "center": "MSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/6900956/6900956~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/6900956/6900956~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/6900956",
+          "credit": "MSFC"
+        },
+        {
+          "nasaId": "6900960",
+          "title": "Saturn Apollo Program",
+          "description": "The first manned lunar landing mission, Apollo 11, launched from the Kennedy Space Center (KSC) in Florida via the Marshall Space Flight Center (MSFC) developed Saturn V launch vehicle on July 16, 1969 and safely returned to Earth on July 24, 1969. Aboard the space craft were astronauts Neil A. Armstrong, commander; Michael Collins, Command Module (CM) pilot; and Edwin E. (Buzz) Aldrin Jr., Lunar Module (LM) pilot.",
+          "date": "1969-07-20",
+          "center": "MSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/6900960/6900960~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/6900960/6900960~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/6900960",
+          "credit": "MSFC"
+        },
+        {
+          "nasaId": "6900957",
+          "title": "Saturn Apollo Program",
+          "description": "The first manned lunar landing mission, Apollo 11, launched from the Kennedy Space Center (KSC) in Florida via the Marshall Space Flight Center (MSFC) developed Saturn V launch vehicle on July 16, 1969 and safely returned to Earth on July 24, 1969. Aboard the space craft were astronauts Neil A. Armstrong, commander; Michael Collins, Command Module (CM) pilot; and Edwin E. (Buzz) Aldrin Jr., Lunar Module (LM) pilot.",
+          "date": "1969-07-20",
+          "center": "MSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/6900957/6900957~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/6900957/6900957~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/6900957",
+          "credit": "MSFC"
+        },
+        {
+          "nasaId": "6900959",
+          "title": "n/a",
+          "description": "The first manned lunar landing mission, Apollo 11, launched from the Kennedy Space Center (KSC) in Florida via the Marshall Space Flight Center (MSFC) developed Saturn V launch vehicle on July 16, 1969 and safely returned to Earth on July 24, 1969. Aboard the space craft were astronauts Neil A. Armstrong, commander; Michael Collins, Command Module (CM) pilot; and Edwin E. (Buzz) Aldrin Jr., Lunar Module (LM) pilot.",
+          "date": "1969-07-20",
+          "center": "MSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/6900959/6900959~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/6900959/6900959~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/6900959",
+          "credit": "MSFC"
+        },
+        {
+          "nasaId": "6901252",
+          "title": "n/a",
+          "description": "The first manned lunar landing mission, Apollo 11, launched from the Kennedy Space Flight Center (KSC) in Florida via the Marshall Space Flight Center (MSFC) developed Saturn V launch vehicle on July 16, 1969 and safely returned to Earth on July 24, 1969. Astronauts onboard included Neil A. Armstrong, commander; Michael Collins, Command Module (CM) pilot; and Edwin E. Aldrin, Jr., Lunar Module (LM) pilot.",
+          "date": "1969-07-20",
+          "center": "MSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/6901252/6901252~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/6901252/6901252~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/6901252",
+          "credit": "MSFC"
+        },
+        {
+          "nasaId": "6900962",
+          "title": "Saturn Apollo Program",
+          "description": "The first manned lunar landing mission, Apollo 11, launched from the Kennedy Space Center (KSC) in Florida via the Marshall Space Flight Center (MSFC) developed Saturn V launch vehicle on July 16, 1969 and safely returned to Earth on July 24, 1969. Aboard the space craft were astronauts Neil A. Armstrong, commander; Michael Collins, Command Module (CM) pilot; and Edwin E. (Buzz) Aldrin Jr., Lunar Module (LM) pilot.",
+          "date": "1969-07-20",
+          "center": "MSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/6900962/6900962~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/6900962/6900962~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/6900962",
+          "credit": "MSFC"
+        }
+      ]
+    },
+    "lrrr": {
+      "query": "Laser Ranging Retroreflector Apollo",
+      "keywords": [
+        "retroreflector",
+        "laser"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA13037",
+          "title": "The Apollo 15 Lunar Laser Ranging Retroreflector - A Fundamental Point on the Moon",
+          "description": "The Apollo 15 Lunar Laser Ranging Retroreflector - A Fundamental Point on the Moon",
+          "date": "2010-04-13",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA13037/PIA13037~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA13037/PIA13037~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA13037",
+          "credit": "NASA/GSFC/Arizona State University"
+        }
+      ]
+    },
+    "apollo_seismic": {
+      "query": "Apollo 11 seismometer",
+      "keywords": [
+        "seism",
+        "apollo 11",
+        "experiment"
+      ],
+      "images": [
+        {
+          "nasaId": "S69-39588",
+          "title": "Dr. Garry Latham - Seismometer Tracings Study - Moon - MSC",
+          "description": "S69-39588 (20 July 1969) --- Dr. Garry Latham, with the Lamont Geological Observatory, studies seismometer tracings in the Mission Control Center?s ASEP control room. The electronic data was coming from the Passive Seismic Experiments Package which the Apollo 11 astronauts had just deployed on the surface of the moon. Dr. Lamont is the principal investigator for the PSEP, a component of the Early Apollo Scientific Experiments Package (EASEP).",
+          "date": "1969-07-22",
+          "center": "JSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/S69-39588/S69-39588~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/S69-39588/S69-39588~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/S69-39588",
+          "credit": "JSC"
+        },
+        {
+          "nasaId": "S69-39587",
+          "title": "Dr. Garry Latham studies seismometer tracings from the moon",
+          "description": "S69-39587 (20 July 1969) --- Dr. Garry Latham (left) with the Lamont Geological Observatory, studies seismometer tracings in the Mission Control Center's (MCC) ALSEP control room. The electronic data was coming from the Passive Seismic Experiments Package (PSEP) which the Apollo 11 astronauts had just deployed on the surface of the moon. Dr. Lamont is the principal investigator for the PSEP, a component of the Early Apollo Scientific Experiments Package (EASEP).",
+          "date": "1969-07-22",
+          "center": "JSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/S69-39587/S69-39587~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/S69-39587/S69-39587~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/S69-39587",
+          "credit": "NA"
+        },
+        {
+          "nasaId": "S71-17609",
+          "title": "Activity in the Mission Control Center during Apollo 14",
+          "description": "S71-17609 (4 Feb. 1971) --- These two individuals are examining a seismic reading in the Mission Control Center's ALSEP Room during the Apollo 14 S-IVB impact on the moon. Dr. Maurice Ewing (left) is the director of the Lamont-Doherty Geological Observatory at Columbia University. David Lammlein, a Columbia graduate student, is on the right. The Apollo 14 Saturn IVB stage impacted on the lunar surface at 1:40:54 a.m. (CST), Feb.",
+          "date": "1971-02-04",
+          "center": "JSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/S71-17609/S71-17609~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/S71-17609/S71-17609~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/S71-17609",
+          "credit": "JSC"
+        },
+        {
+          "nasaId": "6900966",
+          "title": "Saturn Apollo Program",
+          "description": "The Apollo 11 mission launched from the Kennedy Space Center (KSC) in Florida via the Marshall Space Flight Center (MSFC) developed Saturn V launch vehicle on July 16, 1969 and safely returned to Earth on July 24, 1969. Aboard the space craft were astronauts Neil A. Armstrong, commander; Michael Collins, Command Module (CM) pilot; and Edwin E. (Buzz) Aldrin Jr., Lunar Module (LM) pilot.",
+          "date": "1969-07-20",
+          "center": "MSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/6900966/6900966~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/6900966/6900966~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/6900966",
+          "credit": "MSFC"
+        },
+        {
+          "nasaId": "6900962",
+          "title": "Saturn Apollo Program",
+          "description": "The first manned lunar landing mission, Apollo 11, launched from the Kennedy Space Center (KSC) in Florida via the Marshall Space Flight Center (MSFC) developed Saturn V launch vehicle on July 16, 1969 and safely returned to Earth on July 24, 1969. Aboard the space craft were astronauts Neil A. Armstrong, commander; Michael Collins, Command Module (CM) pilot; and Edwin E. (Buzz) Aldrin Jr., Lunar Module (LM) pilot.",
+          "date": "1969-07-20",
+          "center": "MSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/6900962/6900962~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/6900962/6900962~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/6900962",
+          "credit": "MSFC"
+        },
+        {
+          "nasaId": "as11-37-5551",
+          "title": "Components of the Early Apollo Scientific Experiments Package (EASEP)",
+          "description": "AS11-37-5551 (20 July 1969) --- Two components of the Early Apollo Scientific Experiments Package (EASEP) are seen deployed on the lunar surface in this view photographed from inside the Lunar Module (LM). In the far background is the Passive Seismic Experiment Package (PSEP); and to the right and closer to the camera is the Laser Ranging Retro-Reflector (LR-3). The footprints of Apollo 11 astronauts Neil A. Armstrong and Edwin E. Aldrin Jr.",
+          "date": "1969-07-20",
+          "center": "JSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/as11-37-5551/as11-37-5551~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/as11-37-5551/as11-37-5551~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/as11-37-5551",
+          "credit": "JSC"
+        }
+      ]
+    },
+    "earth_from_moon": {
+      "query": "Earthrise Apollo 8",
+      "keywords": [
+        "earth"
+      ],
+      "images": [
+        {
+          "nasaId": "GSFC_20171208_Archive_e001282",
+          "title": "NASA Google+ Hangout: 'Earthrise' A New Visualization - 45th Anniversary of Apollo 8 Viewing Earth from Space",
+          "description": "Join NASA's Google+ Hangout on Friday, December 20th 2:00 - 3:00 PM (EST) at go.nasa.gov/18S2TbC It was 45 years ago, on December 24, 1968 when Apollo 8 astronauts captured 'Earthrise' \u2013 the first color photograph of Earth taken by a person in lunar orbit. NASA announces a new simulation of the events leading to the creation of 'Earthrise,' one of the iconic photographs of the 20th Century \u2013 Earth seen from the moon captured by the crew of Apollo 8.",
+          "date": "2017-12-08",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001282/GSFC_20171208_Archive_e001282~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001282/GSFC_20171208_Archive_e001282~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/GSFC_20171208_Archive_e001282",
+          "credit": "GSFC"
+        },
+        {
+          "nasaId": "art002e021278",
+          "title": "A Breathtaking Earthset from Orion",
+          "description": "art002e021278 (April 6, 2026) \u2013 Echoing the iconic Earthrise photo captured by the Apollo 8 astronauts in 1968, during the lunar flyby, the Artemis II crew captured a shot of Earthset as they passed behind the Moon\u2019s far side. It is one of many photos taken during the seven-hour lunar flyby by the Artemis II crew on the Orion spacecraft. Credit: NASA",
+          "date": "2026-04-06",
+          "center": "JSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/art002e021278/art002e021278~large.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/art002e021278/art002e021278~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/art002e021278",
+          "credit": "NASA"
+        },
+        {
+          "nasaId": "KSC-20250404-PH-KLS01_0001",
+          "title": "Artemis II Mission Patch on VAB",
+          "description": "The official Artemis II mission crew insignia is projected on the exterior of the Vehicle Assembly Building at NASA\u2019s Kennedy Space Center in Florida on Friday, April 4, 2025. The patch designates the mission as \u201cAII,\u201d signifying not only the second major flight of the Artemis campaign, but also an endeavor of discovery that seeks to explore for all and by all.",
+          "date": "2025-04-04",
+          "center": "KSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/KSC-20250404-PH-KLS01_0001/KSC-20250404-PH-KLS01_0001~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/KSC-20250404-PH-KLS01_0001/KSC-20250404-PH-KLS01_0001~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/KSC-20250404-PH-KLS01_0001",
+          "credit": "NASA/Kim Shiflett"
+        },
+        {
+          "nasaId": "KSC-20250404-PH-KLS01_0008",
+          "title": "Artemis II Mission Patch on VAB",
+          "description": "The official Artemis II mission crew insignia is projected on the exterior of the Vehicle Assembly Building at NASA\u2019s Kennedy Space Center in Florida on Friday, April 4, 2025. The patch designates the mission as \u201cAII,\u201d signifying not only the second major flight of the Artemis campaign, but also an endeavor of discovery that seeks to explore for all and by all.",
+          "date": "2025-04-04",
+          "center": "KSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/KSC-20250404-PH-KLS01_0008/KSC-20250404-PH-KLS01_0008~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/KSC-20250404-PH-KLS01_0008/KSC-20250404-PH-KLS01_0008~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/KSC-20250404-PH-KLS01_0008",
+          "credit": "NASA/Kim Shiflett"
+        },
+        {
+          "nasaId": "KSC-20250404-PH-KLS01_0016",
+          "title": "Artemis II Mission Patch on VAB",
+          "description": "The official Artemis II mission crew insignia is projected on the exterior of the Vehicle Assembly Building at NASA\u2019s Kennedy Space Center in Florida on Friday, April 4, 2025. The patch designates the mission as \u201cAII,\u201d signifying not only the second major flight of the Artemis campaign, but also an endeavor of discovery that seeks to explore for all and by all.",
+          "date": "2025-04-04",
+          "center": "KSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/KSC-20250404-PH-KLS01_0016/KSC-20250404-PH-KLS01_0016~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/KSC-20250404-PH-KLS01_0016/KSC-20250404-PH-KLS01_0016~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/KSC-20250404-PH-KLS01_0016",
+          "credit": "NASA/Kim Shiflett"
+        },
+        {
+          "nasaId": "KSC-20260329-PH-KLS01_0034",
+          "title": "Artemis II Crew Q and A and Zero Gravity Indicator",
+          "description": "The Artemis II crew pose with the zero gravity indicator named Rise that also holds a SD card containing the names of millions who will fly with the crew around the Moon. \u201cRise\u201d was inspired by the iconic Earthrise moment from the Apollo 8 mission. A zero gravity indicator is a small plush item that typically rides with a crew to visually indicate when they are in space.",
+          "date": "2026-03-29",
+          "center": "KSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/KSC-20260329-PH-KLS01_0034/KSC-20260329-PH-KLS01_0034~large.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/KSC-20260329-PH-KLS01_0034/KSC-20260329-PH-KLS01_0034~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/KSC-20260329-PH-KLS01_0034",
+          "credit": "NASA/Kim Shiflett"
+        }
+      ]
+    },
+    "mars_global": {
+      "query": "Mars globe Hubble",
+      "keywords": [
+        "mars"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA13215",
+          "title": "Hydrated Minerals Exposed at Lyot, Northern Mars",
+          "description": "This view of Lyot Crater is a combined mapping by NASA Project Viking with elevation information from Mars Global Surveyor showing at least one of the nine craters in the northern lowlands of Mars with exposures of hydrated minerals detected from orbit.",
+          "date": "2010-06-24",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA13215/PIA13215~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA13215/PIA13215~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA13215",
+          "credit": "NASA/ESA/JPL-Caltech/JHU-APL/IAS"
+        },
+        {
+          "nasaId": "PIA01443",
+          "title": "Mars Orbiter Camera Acquires High Resolution Stereoscopic Images of the Viking One Landing Site",
+          "description": "This image of the vicinity of the Viking Lander 1 was captured by NASA Mars Global Surveyor MOC camera. site. 3D glasses are necessary to identify surface detail.",
+          "date": "1998-07-03",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA01443/PIA01443~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA01443/PIA01443~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA01443",
+          "credit": "NASA/JPL/Malin Space Science Systems"
+        },
+        {
+          "nasaId": "PIA02000",
+          "title": "Acidalia and Chryse Plains, Mars",
+          "description": "Somewhere down there sits the Mars Pathfinder lander and Sojourner rover. This Mars Global Surveyor Mars Orbiter Camera view of the red planet shows the region that includes Ares Vallis and the Chryse Plains upon which both Mars Pathfinder and the Viking 1 landed in 1997 and 1976, respectively. Acidalia Planitia is the dark surface that dominates the center left. The Pathfinder site is immediately south of Acidalia, just left of center in this view.",
+          "date": "2000-06-14",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA02000/PIA02000~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA02000/PIA02000~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA02000",
+          "credit": "NASA/JPL/MSSS"
+        },
+        {
+          "nasaId": "PIA02316",
+          "title": "Proposed Mars Polar Lander Landing Site Perspective View 1",
+          "description": "Proposed Mars Polar Lander Landing Site Perspective View 1",
+          "date": "1999-08-26",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA02316/PIA02316~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA02316/PIA02316~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA02316",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA02315",
+          "title": "Proposed Mars Polar Lander Landing Site Global Perspective",
+          "description": "Proposed Mars Polar Lander Landing Site Global Perspective",
+          "date": "1999-08-26",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA02315/PIA02315~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA02315/PIA02315~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA02315",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA02318",
+          "title": "Proposed Mars Polar Lander Landing Site Perspective View 3",
+          "description": "Proposed Mars Polar Lander Landing Site Perspective View 3",
+          "date": "1999-08-26",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA02318/PIA02318~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA02318/PIA02318~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA02318",
+          "credit": "NASA/JPL"
+        }
+      ]
+    },
+    "mars_2003": {
+      "query": "Mars Hubble",
+      "keywords": [
+        "mars"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA01249",
+          "title": "Hubble Sharpest View Of Mars",
+          "description": "Hubble Sharpest View Of Mars",
+          "date": "1998-05-02",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA01249/PIA01249~thumb.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA01249/PIA01249~orig.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA01249",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA01250",
+          "title": "Hubble Captures A Full Rotation Of Mars",
+          "description": "Hubble Captures A Full Rotation Of Mars",
+          "date": "1998-05-02",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA01250/PIA01250~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA01250/PIA01250~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA01250",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA01590",
+          "title": "A Closer Hubble Encounter With Mars - Tharsis",
+          "description": "A Closer Hubble Encounter With Mars - Tharsis",
+          "date": "1999-08-23",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA01590/PIA01590~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA01590/PIA01590~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA01590",
+          "credit": "Steve Lee University of Colorado, Jim Bell Cornell University, Mike Wolff Space Science Institute, and NASA"
+        },
+        {
+          "nasaId": "PIA01591",
+          "title": "A Closer Hubble Encounter With Mars - Elysium",
+          "description": "A Closer Hubble Encounter With Mars - Elysium",
+          "date": "1999-08-23",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA01591/PIA01591~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA01591/PIA01591~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA01591",
+          "credit": "Steve Lee University of Colorado, Jim Bell Cornell University, Mike Wolff Space Science Institute, and NASA"
+        },
+        {
+          "nasaId": "PIA01253",
+          "title": "Springtime on Mars: Hubble Best View of the Red Planet",
+          "description": "Springtime on Mars: Hubble Best View of the Red Planet",
+          "date": "1998-05-02",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA01253/PIA01253~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA01253/PIA01253~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA01253",
+          "credit": "JPL/NASA/STScI"
+        },
+        {
+          "nasaId": "PIA01545",
+          "title": "Hubble Views Colossal Polar Cyclone on Mars",
+          "description": "Hubble Views Colossal Polar Cyclone on Mars",
+          "date": "1999-05-21",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA01545/PIA01545~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA01545/PIA01545~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA01545",
+          "credit": "NASA/JPL/STScI"
+        }
+      ]
+    },
+    "mars_dust_2018": {
+      "query": "Mars dust storm 2018",
+      "keywords": [
+        "mars",
+        "dust"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA22737",
+          "title": "Mars Climate Sounder Studies 2018 Dust Storm",
+          "description": "This image is from an animation that shows the evolution of the 2018 Mars global dust storm from late May to September. The animation shows the optical depth tau -- a measure of how much light is being blocked by atmospheric dust as measured by the Mars Climate Sounder instrument onboard NASA's Mars Reconnaissance Orbiter. NASA's Opportunity rover is marked with a red dot. The dust is mapped to two opposite hemispheres of Mars, giving a view of the full globe.",
+          "date": "2018-10-30",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA22737/PIA22737~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA22737/PIA22737~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA22737",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA22519",
+          "title": "2018 Giant Dust Storm on Mars",
+          "description": "This set of images from NASA's Mars Reconnaissance Orbiter (MRO) shows a fierce, giant dust storm is kicking up on Mars, with rovers on the surface indicated as icons. The spread of the storm can be seen in the salmon-colored overlay. These images from MRO's Mars Color Imager start from May 31, when the dust event was first detected, and go through June 11, 2018.",
+          "date": "2018-06-13",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA22519/PIA22519~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA22519/PIA22519~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA22519",
+          "credit": "NASA/JPL-Caltech/MSSS"
+        },
+        {
+          "nasaId": "PIA22329",
+          "title": "Dust Storm Covers Opportunity",
+          "description": "This global map of Mars shows a growing dust storm as of June 6, 2018. The map was produced by the Mars Color Imager (MARCI) camera on NASA's Mars Reconnaissance Orbiter spacecraft. The blue dot shows the approximate location of Opportunity. The storm was first detected on June 1. The MARCI camera has been used to monitor the storm ever since. Full dust storms like this one are not surprising, but are infrequent. They can crop up suddenly but last weeks, even months.",
+          "date": "2018-06-10",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA22329/PIA22329~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA22329/PIA22329~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA22329",
+          "credit": "NASA/JPL-Caltech/MSSS"
+        },
+        {
+          "nasaId": "PIA22486",
+          "title": "Curiosity's Dusty Selfie",
+          "description": "A self-portrait of NASA's Curiosity rover taken on Sol 2082 (June 15, 2018). A Martian dust storm has reduced sunlight and visibility at the rover's location in Gale Crater. Self-portraits are created using images taken by Curiosity's Mars Hands Lens Imager (MAHLI). https://photojournal.jpl.nasa.gov/catalog/PIA22486",
+          "date": "2018-06-20",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA22486/PIA22486~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA22486/PIA22486~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA22486",
+          "credit": "NASA/JPL-Caltech/MSSS"
+        },
+        {
+          "nasaId": "PIA22545",
+          "title": "Panorama of Vera Rubin Ridge",
+          "description": "After snagging a new rock sample on August 9, 2018 (Sol 2137), NASA's Curiosity rover surveyed its surroundings on Mars, producing a 360-degree panorama of its current location on Vera Rubin Ridge. The scene is presented with a color adjustment that approximates white balancing, to resemble how the rocks and sand would appear under daytime lighting conditions on Earth. Two versions are included here: one with scale bars, and one without.",
+          "date": "2018-09-06",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA22545/PIA22545~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA22545/PIA22545~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA22545",
+          "credit": "NASA/JPL-Caltech/MSSS"
+        },
+        {
+          "nasaId": "PIA23233",
+          "title": "The Changing Surface of Mars",
+          "description": "HiRISE commonly takes images of recent craters on Mars, which are usually found by the MRO Context Camera where they disturb surface dust. An impact site in this area was first imaged in December 2017. A year and a half later, the scene looks totally different! Dust has eroded from the surface, probably due to the planet-encircling dust storm from 2018. The dark spots around the fresh craters have vanished because they only affected the dust that has since disappeared.",
+          "date": "2019-05-15",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA23233/PIA23233~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA23233/PIA23233~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA23233",
+          "credit": "NASA/JPL-Caltech/University of Arizona"
+        }
+      ]
+    },
+    "opportunity": {
+      "query": "Opportunity rover Mars",
+      "keywords": [
+        "opportunity"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA20285",
+          "title": "Mars Rover Opportunity at Rock Abrasion Target Potts",
+          "description": "The target beneath the tool turret at the end of the rover's robotic arm in this image from NASA's Mars Exploration Rover Opportunity is \"Private John Potts.\" It lies high on the southern side of \"Marathon Valley,\" which slices through the western rim of Endeavour Crater. The target's informal name refers to a member of the Lewis and Clark Expedition's Corps of Discovery. The image was taken by Opportunity's front hazard avoidance camera on Jan.",
+          "date": "2016-01-25",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA20285/PIA20285~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA20285/PIA20285~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA20285",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA07108",
+          "title": "Frost on Mars Rover Opportunity",
+          "description": "Frost on Mars Rover Opportunity",
+          "date": "2004-12-13",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA07108/PIA07108~thumb.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA07108/PIA07108~orig.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA07108",
+          "credit": "NASA/JPL/Cornell"
+        },
+        {
+          "nasaId": "PIA21706",
+          "title": "Mars Rover Opportunity's View of 'Orion Crater' (Stereo)",
+          "description": "This view of a small, relatively fresh crater on Mars combines images from the left eye and right eye of the Panoramic Camera (Pancam) on NASA's Opportunity Mars rover, to appear three-dimensional when seen through blue-red glasses with the red lens on the left. The rover paused beside the crater in April 2017, during the 45th anniversary of the Apollo 16 mission to the moon. The rover team chose to call it \"Orion Crater,\" after the Apollo 16 lunar module.",
+          "date": "2017-06-16",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA21706/PIA21706~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA21706/PIA21706~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA21706",
+          "credit": "NASA/JPL-Caltech/Cornell Univ./Arizona State Univ."
+        },
+        {
+          "nasaId": "PIA21708",
+          "title": "Mars Rover Opportunity's View of 'Orion Crater'",
+          "description": "NASA's Opportunity Mars rover passed near this small, relatively fresh crater in April 2017, during the 45th anniversary of the Apollo 16 mission to the moon. The rover team chose to call it \"Orion Crater,\" after the Apollo 16 lunar module. The rover's Panoramic Camera (Pancam) recorded this view. The crater's diameter is about 90 feet (27 meters).",
+          "date": "2017-06-16",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA21708/PIA21708~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA21708/PIA21708~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA21708",
+          "credit": "NASA/JPL-Caltech/Cornell Univ./Arizona State Univ."
+        },
+        {
+          "nasaId": "PIA21707",
+          "title": "Mars Rover Opportunity's View of 'Orion Crater' (Enhanced Color)",
+          "description": "NASA's Opportunity Mars rover passed near this small, relatively fresh crater in April 2017, during the 45th anniversary of the Apollo 16 mission to the moon. The rover team chose to call it \"Orion Crater,\" after the Apollo 16 lunar module. The rover's Panoramic Camera (Pancam) recorded this view, presented in enhanced color to make differences in surface materials more easily visible. The crater's diameter is about 90 feet (27 meters).",
+          "date": "2017-06-16",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA21707/PIA21707~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA21707/PIA21707~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA21707",
+          "credit": "NASA/JPL-Caltech/Cornell Univ./Arizona State Univ."
+        },
+        {
+          "nasaId": "PIA22071",
+          "title": "Opportunity's View Downhill Catches Martian Shadows",
+          "description": "Late-afternoon shadows include one cast by the rover itself in this look toward the floor of Endeavour Crater by NASA's Mars Exploration Rover Opportunity. The rover recorded this scene on Nov. 11, 2017, during the 4,911th Martian day, or sol, of the rover's work on Mars. That was about a week before Opportunity's eighth Martian winter solstice.",
+          "date": "2017-12-06",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA22071/PIA22071~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA22071/PIA22071~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA22071",
+          "credit": "NASA/JPL-Caltech"
+        }
+      ]
+    },
+    "spirit": {
+      "query": "Spirit rover Mars",
+      "keywords": [
+        "spirit"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA05040",
+          "title": "Spirit Stretches Out",
+          "description": "This frame from an animation flips back and forth between images taken before and after deployment of the Mars Exploration Rover Spirit's bogie, a part of the rover's suspension system that extends the wheel base. These images were taken by Spirit's hazard avoidance camera. An animation is available at http://photojournal.jpl.nasa.gov/catalog/PIA05040",
+          "date": "2004-01-10",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA05040/PIA05040~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA05040/PIA05040~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA05040",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA05120",
+          "title": "Mars Exploration Rover MER-A Spirit Landing Site",
+          "description": "Mars Exploration Rover MER-A Spirit Landing Site",
+          "date": "2004-01-03",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA05120/PIA05120~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA05120/PIA05120~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA05120",
+          "credit": "NASA/JPL/Malin Space Science Systems"
+        },
+        {
+          "nasaId": "PIA11996",
+          "title": "Von Braun Mound in Spirit Drive Direction",
+          "description": "NASA Mars Exploration Rover Spirit used its navigation camera to capture this view of the terrain toward the southeast from the location Spirit reached on the 1,871st Martian day, or sol, of the rover mission on Mars April 8, 2009. The mound on the horizon in the upper left is informally called \"Von Braun\" and is one of the features that rover team has designated as a possible investigation site in future months.",
+          "date": "2009-04-23",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA11996/PIA11996~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA11996/PIA11996~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA11996",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA07410",
+          "title": "Spirit 360-Degree View on Sol 409 (vertical)",
+          "description": "NASA's Mars Exploration Rover Spirit used its navigation camera to take the images combined into this 360-degree view of the rover's surroundings on Spirit's 409th martian day, or sol (Feb. 26, 2005). Spirit had driven 2 meters (7 feet) on this sol to get in position on \"Cumberland Ridge\" for looking into \"Tennessee Valley\" to the east. This location is catalogued as Spirit's Site 108. Rover-wheel tracks from climbing the ridge are visible on the right.",
+          "date": "2005-03-03",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA07410/PIA07410~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA07410/PIA07410~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA07410",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA05248",
+          "title": "MGS MOC Image of Mars Exploration Rover, Spirit, on Mars",
+          "description": "MGS MOC Image of Mars Exploration Rover, Spirit, on Mars",
+          "date": "2004-01-23",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA05248/PIA05248~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA05248/PIA05248~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA05248",
+          "credit": "NASA/JPL/Malin Space Science Systems"
+        },
+        {
+          "nasaId": "PIA12007",
+          "title": "Spirit Wheels Digging into Soft Ground, Sol 1899",
+          "description": "Wheel slippage during attempts to extricate NASA's Mars Rover Spirit from a patch of soft ground during the preceding two weeks had partially buried the wheels by the 1,899th Martian day, or sol, of the Spirit's mission on Mars (May 6, 2009). Spirit took this image with its front hazard-avoidance camera on Sol 1899.",
+          "date": "2009-05-11",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA12007/PIA12007~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA12007/PIA12007~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA12007",
+          "credit": "NASA/JPL-Caltech"
+        }
+      ]
+    },
+    "viking": {
+      "query": "Viking lander Mars",
+      "keywords": [
+        "viking"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA10738",
+          "title": "Mars Surface near Viking Lander 1 Footpad",
+          "description": "Mars Surface near Viking Lander 1 Footpad",
+          "date": "2008-05-30",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA10738/PIA10738~thumb.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA10738/PIA10738~orig.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA10738",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA00565",
+          "title": "Viking Lander 1 U.S. Flag on Mars Surface",
+          "description": "Viking Lander 1 U.S. Flag on Mars Surface",
+          "date": "1997-02-28",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00565/PIA00565~thumb.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00565/PIA00565~orig.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00565",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA00396",
+          "title": "Viking Lander 2 First Picture On The Surface Of Mars",
+          "description": "Viking Lander 2 First Picture On The Surface Of Mars http://photojournal.jpl.nasa.gov/catalog/PIA00396",
+          "date": "1996-12-12",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00396/PIA00396~thumb.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00396/PIA00396~orig.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00396",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "9141929",
+          "title": "Launch Vehicles",
+          "description": "The Titan III-Centaur carrying the Viking 1 Lander lifted off on August 20, 1975. The Viking Lander conducted a detailed scientific investigation of the planet Mars.",
+          "date": "1975-08-20",
+          "center": "MSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/9141929/9141929~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/9141929/9141929~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/9141929",
+          "credit": "MSFC"
+        },
+        {
+          "nasaId": "NHQ201707210014",
+          "title": "NASM Mars Day",
+          "description": "Visitors learn about the Viking landers at the Smithsonian Institution\u2019s National Air and Space Museum Mars Day, an annual event celebrating the Red Planet with exhibits, speakers, and educational activities, Friday, July 21, 2017 in Washington. Photo Credit: (NASA/Aubrey Gemignani)",
+          "date": "2017-07-21",
+          "center": "HQ",
+          "thumbUrl": "https://images-assets.nasa.gov/image/NHQ201707210014/NHQ201707210014~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/NHQ201707210014/NHQ201707210014~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/NHQ201707210014",
+          "credit": "NASA/Aubrey Gemignani"
+        },
+        {
+          "nasaId": "PIA01443",
+          "title": "Mars Orbiter Camera Acquires High Resolution Stereoscopic Images of the Viking One Landing Site",
+          "description": "This image of the vicinity of the Viking Lander 1 was captured by NASA Mars Global Surveyor MOC camera. site. 3D glasses are necessary to identify surface detail.",
+          "date": "1998-07-03",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA01443/PIA01443~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA01443/PIA01443~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA01443",
+          "credit": "NASA/JPL/Malin Space Science Systems"
+        }
+      ]
+    },
+    "pathfinder": {
+      "query": "Mars Pathfinder Sojourner",
+      "keywords": [
+        "pathfinder",
+        "sojourner"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA00626",
+          "title": "Flat Top",
+          "description": "A close-up of the rectangular rock called \"Flat Top\" from NASA's Mars Pathfinder (MPF) rover Sojourner in July, 1997. http://photojournal.jpl.nasa.gov/catalog/PIA00626",
+          "date": "1997-07-06",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00626/PIA00626~thumb.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00626/PIA00626~orig.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00626",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA00623",
+          "title": "Rover Touchdown on Martian Surface",
+          "description": "This picture taken by the IMP (Imager for Mars Pathfinder) aboard the Mars Pathfinder spacecraft depicts the rover Sojourner's position after driving onto the Martian surface. Sojourner has become the first autonomous robot ever to traverse the surface of Mars. This image reflects the success of Pathfinder's principle objective -- to place a payload on Mars in a safe, operational configuration.",
+          "date": "1997-07-06",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00623/PIA00623~thumb.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00623/PIA00623~orig.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00623",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA00621",
+          "title": "Color Mosaic of Rover & Terrain",
+          "description": "NASA's Sojourner rover and undeployed ramps onboard the Mars Pathfinder spacecraft can be seen in this image, by the Imager for Mars Pathfinder (IMP) on July 4 (Sol 1). This image has been corrected for the curvature created by parallax. The microrover Sojourner is latched to the petal, and has not yet been deployed.",
+          "date": "1997-07-05",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00621/PIA00621~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00621/PIA00621~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00621",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA00921",
+          "title": "Sojourner APXS at Shark",
+          "description": "NASA's Sojourner rover is seen next to the rock \"Shark,\" in this image taken by the Imager for Mars Pathfinder (IMP) near the end of daytime operations on Sol 52. The rover's Alpha Proton X-Ray Spectrometer is deployed against the rock. The rock \"Wedge\" is in the foreground. The Sojourner rover is seen next to the rock \"Shark,\" in this image taken by the Imager for Mars Pathfinder (IMP) near the end of daytime operations on Sol 52.",
+          "date": "1997-08-28",
+          "center": "NASA",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00921/PIA00921~thumb.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00921/PIA00921~orig.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00921",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA00627",
+          "title": "Pathfinder Rear Ramp",
+          "description": "NASA's Mars Pathfinder's rear rover ramp can be seen successfully unfurled in this image, taken at the end of Sol 2 by the Imager for Mars Pathfinder (IMP). This ramp was later used for the deployment of the microrover Sojourner, which occurred at the end of Sol 2. Areas of a lander petal and deflated airbag are visible at left. The image helped Pathfinder scientists determine that the rear ramp was the one to use for rover deployment.",
+          "date": "1997-07-06",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00627/PIA00627~thumb.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00627/PIA00627~orig.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00627",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA00618",
+          "title": "Airbag Retraction",
+          "description": "This image shows that the Mars Pathfinder airbags have been successfully retracted, allowing safe deployment of the rover ramps. The Sojourner rover is at lower right, and rocks are visible in the background. Mars Pathfinder landed successfully on the surface of Mars today at 10:07 a.m. PDT. http://photojournal.jpl.nasa.gov/catalog/PIA00618",
+          "date": "1997-07-05",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00618/PIA00618~thumb.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00618/PIA00618~orig.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00618",
+          "credit": "NASA/JPL"
+        }
+      ]
+    },
+    "mgs": {
+      "query": "Mars Global Surveyor",
+      "keywords": [
+        "surveyor",
+        "mars"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA17486",
+          "title": "Mars Global Surveyor Artist Concept",
+          "description": "An artist concept of NASA Mars Global Surveyor MGS flying over Mars.",
+          "date": "2010-01-27",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA17486/PIA17486~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA17486/PIA17486~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA17486",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA03874",
+          "title": "Derived Topographic Model from Mars Global Surveyor Instruments",
+          "description": "Derived Topographic Model from Mars Global Surveyor Instruments",
+          "date": "2002-10-10",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA03874/PIA03874~thumb.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA03874/PIA03874~orig.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA03874",
+          "credit": "NASA/JPL/USGS/MSSS"
+        },
+        {
+          "nasaId": "PIA03873",
+          "title": "Derived Topographic Model from Mars Global Surveyor Instruments",
+          "description": "Derived Topographic Model from Mars Global Surveyor Instruments",
+          "date": "2002-10-10",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA03873/PIA03873~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA03873/PIA03873~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA03873",
+          "credit": "NASA/JPL/USGS/MSSS"
+        },
+        {
+          "nasaId": "PIA01685",
+          "title": "Mariner 4 Meets Mars Global Surveyor -- Mariner Crater 1965 and 1999",
+          "description": "Mariner 4 Meets Mars Global Surveyor -- Mariner Crater 1965 and 1999",
+          "date": "2000-09-16",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA01685/PIA01685~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA01685/PIA01685~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA01685",
+          "credit": "NASA/JPL/MSSS"
+        },
+        {
+          "nasaId": "PIA02331",
+          "title": "Mars Global Surveyor MOC Celebrates 2 Years in Orbit!",
+          "description": "Mars Global Surveyor MOC Celebrates 2 Years in Orbit!",
+          "date": "2000-05-13",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA02331/PIA02331~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA02331/PIA02331~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA02331",
+          "credit": "NASA/JPL/MSSS"
+        },
+        {
+          "nasaId": "PIA07944",
+          "title": "Mars Express Seen by Mars Global Surveyor",
+          "description": "This picture of the European Space Agency Mars Express spacecraft by the Mars Orbiter Camera on NASA Mars Global Surveyor is from the first successful imaging of any spacecraft orbiting Mars taken by another spacecraft orbiting Mars.",
+          "date": "2005-05-19",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA07944/PIA07944~thumb.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA07944/PIA07944~orig.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA07944",
+          "credit": "NASA/JPL/MSSS"
+        }
+      ]
+    },
+    "curiosity": {
+      "query": "Curiosity rover Gale crater",
+      "keywords": [
+        "curiosity"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA17705",
+          "title": "Gale Crater",
+          "description": "This image captured by NASA 2001 Mars Odyssey spacecraft of Gale Crater shows the region of the crater that is home to the Curiosity Rover.",
+          "date": "2013-11-21",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA17705/PIA17705~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA17705/PIA17705~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA17705",
+          "credit": "NASA/JPL-Caltech/ASU"
+        },
+        {
+          "nasaId": "PIA22392",
+          "title": "Gale Crater",
+          "description": "This VIS image shows part of Gale Crater. Gale Crater is the home of the Curiosity Rover. Orbit Number: 71399 Latitude: -4.54006 Longitude: 137.334 Instrument: VIS Captured: 2018-01-18 03:26 https://photojournal.jpl.nasa.gov/catalog/PIA22392",
+          "date": "2018-05-15",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA22392/PIA22392~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA22392/PIA22392~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA22392",
+          "credit": "NASA/JPL-Caltech/ASU"
+        },
+        {
+          "nasaId": "PIA15102",
+          "title": "Cross Section of Gale Crater, Mars Artist Concept",
+          "description": "This artist impression Mars Gale Crater depicts a cross section through the mountain in the middle of the crater, from a viewpoint looking toward the southeast. NASA rover Curiosity will land in Gale Crater in August 2012.",
+          "date": "2011-11-28",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA15102/PIA15102~thumb.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA15102/PIA15102~orig.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA15102",
+          "credit": "NASA/JPL-Caltech/ESA/DLR/FU Berlin/MSSS"
+        },
+        {
+          "nasaId": "PIA24951",
+          "title": "Gale Crater",
+          "description": "Today's VIS image shows the large layered deposit on the floor of Gale. The Curiosity Rover is located in Gale Crater. Gale crater is 150km (90 miles) in diameter. Orbit Number: 86309 Latitude: -4.67469 Longitude: 137.724 Instrument: VIS Captured: 2021-05-29 23:44 https://photojournal.jpl.nasa.gov/catalog/PIA24951",
+          "date": "2021-11-01",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA24951/PIA24951~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA24951/PIA24951~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA24951",
+          "credit": "NASA/JPL-Caltech/ASU"
+        },
+        {
+          "nasaId": "PIA17767",
+          "title": "Crystal-Laden Martian Rock Examined by Curiosity Laser Instrument",
+          "description": "As NASA Mars rover Curiosity is progressing toward Mount Sharp, researchers are using the rover RIM and ChemCam instruments to examine soils and rocks in Gale Crater.",
+          "date": "2014-01-29",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA17767/PIA17767~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA17767/PIA17767~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA17767",
+          "credit": "NASA/JPL-Caltech/LANL/CNES/IRAP/LPGNantes/CNRS/IAS"
+        },
+        {
+          "nasaId": "PIA16051",
+          "title": "First High-Resolution Color Mosaic of Curiosity Mastcam Images",
+          "description": "This image is the first high-resolution color mosaic from NASA Curiosity rover, showing the geological environment around the rover landing site in Gale Crater on Mars.",
+          "date": "2012-08-11",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA16051/PIA16051~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA16051/PIA16051~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA16051",
+          "credit": "NASA/JPL-Caltech/MSSS"
+        }
+      ]
+    },
+    "phoenix": {
+      "query": "Phoenix Mars lander",
+      "keywords": [
+        "phoenix"
+      ],
+      "images": [
+        {
+          "nasaId": "KSC-07PD-1085",
+          "title": "Phoenix Mars Lander Spacecraft Processing",
+          "description": "In the Payload Hazardous Servicing Facility, technicians attach a crane to the Phoenix Mars Lander spacecraft. The crane will be used to remove the heat shield from around the Phoenix. The Phoenix mission is the first project in NASA's first openly competed program of Mars Scout missions. Phoenix will land in icy soils near the north polar permanent ice cap of Mars and explore the history of the water in these soils and any associated rocks, while monitoring polar climate.",
+          "date": "2007-05-10",
+          "center": "KSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/KSC-07PD-1085/KSC-07PD-1085~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/KSC-07PD-1085/KSC-07PD-1085~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/KSC-07PD-1085",
+          "credit": "NASA"
+        },
+        {
+          "nasaId": "KSC-07PD-1084",
+          "title": "Phoenix Mars Lander Spacecraft Processing",
+          "description": "In the Payload Hazardous Servicing Facility, technicians lower a crane over the Phoenix Mars Lander spacecraft. The crane will be used to remove the heat shield from around the Phoenix. The Phoenix mission is the first project in NASA's first openly competed program of Mars Scout missions. Phoenix will land in icy soils near the north polar permanent ice cap of Mars and explore the history of the water in these soils and any associated rocks, while monitoring polar climate.",
+          "date": "2007-05-10",
+          "center": "KSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/KSC-07PD-1084/KSC-07PD-1084~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/KSC-07PD-1084/KSC-07PD-1084~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/KSC-07PD-1084",
+          "credit": "NASA"
+        },
+        {
+          "nasaId": "KSC-07PD-1090",
+          "title": "Phoenix Mars Lander Spacecraft Processing",
+          "description": "In the Payload Hazardous Servicing Facility, the Phoenix Mars Lander (foreground) can be seen inside the backshell. In the background, workers are helping place the heat shield, just removed from the Phoenix, onto a platform. The Phoenix mission is the first project in NASA's first openly competed program of Mars Scout missions.",
+          "date": "2007-05-10",
+          "center": "KSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/KSC-07PD-1090/KSC-07PD-1090~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/KSC-07PD-1090/KSC-07PD-1090~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/KSC-07PD-1090",
+          "credit": "NASA"
+        },
+        {
+          "nasaId": "KSC-07PD-1093",
+          "title": "Phoenix Mars Lander Spacecraft Processing",
+          "description": "An overhead crane lowers the backshell with the Phoenix Mars Lander inside toward a spin table for spin testing in the Payload Hazardous Servicing Facility. The Phoenix mission is the first project in NASA's first openly competed program of Mars Scout missions. Phoenix will land in icy soils near the north polar permanent ice cap of Mars and explore the history of the water in these soils and any associated rocks, while monitoring polar climate.",
+          "date": "2007-05-10",
+          "center": "KSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/KSC-07PD-1093/KSC-07PD-1093~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/KSC-07PD-1093/KSC-07PD-1093~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/KSC-07PD-1093",
+          "credit": "NASA"
+        },
+        {
+          "nasaId": "KSC-07PD-1099",
+          "title": "Phoenix Mars Lander Spacecraft Processing",
+          "description": "This closeup shows the spin test of the Phoenix Mars Lander in the Payload Hazardous Servicing Facility. The Phoenix mission is the first project in NASA's first openly competed program of Mars Scout missions. Phoenix will land in icy soils near the north polar permanent ice cap of Mars and explore the history of the water in these soils and any associated rocks, while monitoring polar climate.",
+          "date": "2007-05-10",
+          "center": "KSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/KSC-07PD-1099/KSC-07PD-1099~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/KSC-07PD-1099/KSC-07PD-1099~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/KSC-07PD-1099",
+          "credit": "NASA"
+        },
+        {
+          "nasaId": "KSC-07PD-1089",
+          "title": "Phoenix Mars Lander Spacecraft Processing",
+          "description": "In the Payload Hazardous Servicing Facility, workers help guide the heat shield onto a platform. The heat shield was removed from the Phoenix Mars Lander spacecraft.. The Phoenix mission is the first project in NASA's first openly competed program of Mars Scout missions. Phoenix will land in icy soils near the north polar permanent ice cap of Mars and explore the history of the water in these soils and any associated rocks, while monitoring polar climate.",
+          "date": "2007-05-10",
+          "center": "KSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/KSC-07PD-1089/KSC-07PD-1089~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/KSC-07PD-1089/KSC-07PD-1089~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/KSC-07PD-1089",
+          "credit": "NASA"
+        }
+      ]
+    },
+    "insight": {
+      "query": "InSight Mars lander",
+      "keywords": [
+        "insight"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA19811",
+          "title": "Artist Concept of InSight Lander on Mars",
+          "description": "This artist's concept from August 2015 depicts NASA's InSight Mars lander fully deployed for studying the deep interior of Mars. This illustration updates the correct placement and look of Insight's main instruments. For an earlier artist rendition, see PIA17358. InSight, short for Interior Exploration using Seismic Investigations, Geodesy and Heat Transport, will investigate processes that formed and shaped Mars.",
+          "date": "2015-08-18",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA19811/PIA19811~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA19811/PIA19811~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA19811",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA17358",
+          "title": "Artist Concept of InSight Lander on Mars",
+          "description": "This artist's concept depicts the stationary NASA Mars lander known by the acronym InSight at work studying the interior of Mars. The InSight mission (for Interior Exploration using Seismic Investigations, Geodesy and Heat Transport) is scheduled to launch in March 2016 and land on Mars six months later.",
+          "date": "2014-03-26",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA17358/PIA17358~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA17358/PIA17358~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA17358",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA22647",
+          "title": "InSight's Inner Sanctum Revealed",
+          "description": "This long-exposure image (24 seconds) was taken by Instrument Context Camera (ICC) of NASA's InSight Mars lander. The image shows some of the interior features of the backshell that encapsulates the spacecraft. The backshell carries the parachute and several components used during later stages of entry, descent, and landing. Along with the heatshield, the backshell protects NASA's InSight Mars lander during its commute to and entry into the Martian atmosphere.",
+          "date": "2018-08-20",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA22647/PIA22647~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA22647/PIA22647~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA22647",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA21847",
+          "title": "Mars Lander Deck of NASA's InSight Mission",
+          "description": "This view looks upward toward the InSight Mars lander suspended upside down. It shows the top of the lander's science deck with the mission's two main science instruments -- the Seismic Experiment for Interior Structure (SEIS) and the Heat Flow and Physical Properties Probe (HP3) -- plus the robotic arm and other subsystems installed. The photo was taken Aug. 9, 2017, in a Lockheed Martin clean room facility in Littleton, Colorado.",
+          "date": "2017-08-28",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA21847/PIA21847~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA21847/PIA21847~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA21847",
+          "credit": "NASA/JPL-Caltech/Lockheed Martin"
+        },
+        {
+          "nasaId": "PIA19664",
+          "title": "InSight Lander in Mars-Surface Configuration",
+          "description": "The solar arrays on NASA's InSight lander are deployed in this test inside a clean room at Lockheed Martin Space Systems, Denver. This configuration is how the spacecraft will look on the surface of Mars. The image was taken on April 30, 2015. InSight, for Interior Exploration Using Seismic Investigations, Geodesy and Heat Transport, is scheduled for launch in March 2016 and landing in September 2016.",
+          "date": "2015-05-27",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA19664/PIA19664~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA19664/PIA19664~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA19664",
+          "credit": "NASA/JPL-Caltech/Lockheed Martin"
+        },
+        {
+          "nasaId": "PIA22745",
+          "title": "InSight - Artist's Illustration",
+          "description": "An artist illustration of the InSight lander on Mars. InSight, short for Interior Exploration using Seismic Investigations, Geodesy and Heat Transport, is designed to give the Red Planet its first thorough check up since it formed 4.5 billion years ago. The mission will look for tectonic activity and meteorite impacts, study how much heat is still flowing through the planet, and track Mars' wobble as it orbits the sun.",
+          "date": "2018-10-30",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA22745/PIA22745~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA22745/PIA22745~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA22745",
+          "credit": "NASA/JPL-Caltech"
+        }
+      ]
+    },
+    "perseverance": {
+      "query": "Perseverance rover Jezero",
+      "keywords": [
+        "perseverance"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA24350",
+          "title": "Perseverance Rover Landing Ellipse in Jezero Crater",
+          "description": "The white circle near the center of this image of Mars represents the location where NASA's Perseverance rover is expected to land on Feb. 18, 2021. The landing ellipse, measuring 4.8 miles by 4.1 miles (7.7 kilometers by 6.6 kilometers), places the rover at the site of an ancient river delta which could harbor signs of fossilized microbial life. The fan-like shape of the delta is visible in this image, as is the crater rim.",
+          "date": "2021-01-08",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA24350/PIA24350~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA24350/PIA24350~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA24350",
+          "credit": "ESA/DLR/FU-Berlin/NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA24320",
+          "title": "Mars Landing Sites, Including Perseverance (Illustration)",
+          "description": "This map of Mars shows the landing site for NASA's Perseverance rover in relation to those of previous successful Mars missions. The newest addition to the group, Perseverance is set to land in Jezero Crater on Feb. 18, 2021. https://photojournal.jpl.nasa.gov/catalog/PIA24320",
+          "date": "2020-12-16",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA24320/PIA24320~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA24320/PIA24320~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA24320",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA24745",
+          "title": "An Expanse for Perseverance to Explore",
+          "description": "This wide view of Mars' Jezero Crater was taken by NASA's Perseverance rover on July 15, 2021 (the 143rd sol, or Martian day, of its mission). The rover has driven nearly a mile (1.5 kilometers) south of its landing site, \"Octavia E. Butler Landing,\" into a region the team has nicknamed the \"Crater Floor Fractured Rough\" unit.",
+          "date": "2021-07-21",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA24745/PIA24745~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA24745/PIA24745~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA24745",
+          "credit": "NASA/JPL-Caltech/ASU/MSSS"
+        },
+        {
+          "nasaId": "PIA24744",
+          "title": "The End of One Drive by Perseverance on the Floor of Jezero Crater",
+          "description": "This image of a Martian vista in Jezero Crater, made from smaller individual images, was taken by NASA's Perseverance rover on July 3, 2021 (the 131th sol, or Martian day, of its mission). The rover's tracks from its autonomous drive that day are visible on the right. The images that compose the larger mosaic came from the rover's Navigation Cameras and were processed to enhance the contrast. Perseverance has been exploring the floor of Jezero since it landed on Feb.",
+          "date": "2021-07-21",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA24744/PIA24744~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA24744/PIA24744~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA24744",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA25243",
+          "title": "Perseverance's View of Possible Future Sample Cache Depot Site",
+          "description": "This annotated image from NASA's Perseverance Mars rover shows its wheel tracks in Jezero Crater and a distant view of the first potential location it could deposit a group of sample tubes for possible future return to Earth. The image was taken on Aug. 29, 2022, the 542nd Martian day, or sol, of the rover's mission, by Perseverance's navigation camera. Sample tubes already filled with rock are currently stored in the rover's Sampling and Caching System.",
+          "date": "2022-09-15",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA25243/PIA25243~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA25243/PIA25243~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA25243",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA26479",
+          "title": "Perseverance Views Slippery Terrain",
+          "description": "NASA's Perseverance Mars rover used its navigation cameras, or navcams, to capture this scene while driving up to Jezero Crater's rim on Nov. 11, 2024, the 1,326th Martian day, or sol, of the mission. The sandy terrain seen here, along with a 10-degree average slope, meant it was a slippery drive. Rover tracks trail off behind Perseverance in this image. Far in the distance is the floor of Jezero Crater.",
+          "date": "2024-12-12",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA26479/PIA26479~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA26479/PIA26479~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA26479",
+          "credit": "NASA/JPL-Caltech"
+        }
+      ]
+    },
+    "ingenuity": {
+      "query": "Ingenuity Mars helicopter",
+      "keywords": [
+        "ingenuity"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA24466",
+          "title": "Ingenuity Helicopter on Mars (Illustration)",
+          "description": "An illustration of NASA's Ingenuity Helicopter flying on Mars. Ingenuity, a technology demonstration experiment, will be the first aircraft to attempt powered, controlled flight on another planet. Ingenuity arrived at Mars on Feb. 18, 2021, attached to the belly of NASA's Mars 2020 Perseverance rover. Ingenuity is expected to attempt its first flight test in spring 2021. https://photojournal.jpl.nasa.gov/catalog/PIA24466",
+          "date": "2021-03-16",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA24466/PIA24466~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA24466/PIA24466~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA24466",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA23882",
+          "title": "NASA's Ingenuity Mars Helicopter",
+          "description": "The flight model of NASA's Ingenuity Mars Helicopter. https://photojournal.jpl.nasa.gov/catalog/PIA23882",
+          "date": "2020-04-29",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA23882/PIA23882~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA23882/PIA23882~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA23882",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA23969",
+          "title": "Bottom of Ingenuity Mars Helicopter",
+          "description": "An Ingenuity team member inspects NASA's Ingenuity Mars Helicopter in one of the space simulation chambers at the agency's Jet Propulsion Laboratory in Southern California. The helicopter's two cameras are visible in this view of the underside of Ingenuity: one looking straight down and the other at an oblique angle.",
+          "date": "2021-01-20",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA23969/PIA23969~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA23969/PIA23969~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA23969",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "NHQ202312150007",
+          "title": "Ingenuity Mars Helicopter Prototype Donation to NASM",
+          "description": "Teddy Tzanetos, Ingenuity project manager at NASA's Jet Propulsion Laboratory speaks at an event marking NASA\u2019s donation of the aerial prototype of the Ingenuity Mars Helicopter, Friday, Dec. 15, 2023, at the Smithsonian National Air and Space Museum\u2019s Steve F. Udvar-Hazy Center in Chantilly, Va.",
+          "date": "2023-12-15",
+          "center": "HQ",
+          "thumbUrl": "https://images-assets.nasa.gov/image/NHQ202312150007/NHQ202312150007~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/NHQ202312150007/NHQ202312150007~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/NHQ202312150007",
+          "credit": "NASA/Joel Kowsky"
+        },
+        {
+          "nasaId": "NHQ202312150009",
+          "title": "Ingenuity Mars Helicopter Prototype Donation to NASM",
+          "description": "Teddy Tzanetos, Ingenuity project manager at NASA's Jet Propulsion Laboratory speaks at an event marking NASA\u2019s donation of the aerial prototype of the Ingenuity Mars Helicopter, Friday, Dec. 15, 2023, at the Smithsonian National Air and Space Museum\u2019s Steve F. Udvar-Hazy Center in Chantilly, Va.",
+          "date": "2023-12-15",
+          "center": "HQ",
+          "thumbUrl": "https://images-assets.nasa.gov/image/NHQ202312150009/NHQ202312150009~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/NHQ202312150009/NHQ202312150009~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/NHQ202312150009",
+          "credit": "NASA/Joel Kowsky"
+        },
+        {
+          "nasaId": "NHQ202312150008",
+          "title": "Ingenuity Mars Helicopter Prototype Donation to NASM",
+          "description": "Teddy Tzanetos, Ingenuity project manager at NASA's Jet Propulsion Laboratory speaks at an event marking NASA\u2019s donation of the aerial prototype of the Ingenuity Mars Helicopter, Friday, Dec. 15, 2023, at the Smithsonian National Air and Space Museum\u2019s Steve F. Udvar-Hazy Center in Chantilly, Va.",
+          "date": "2023-12-15",
+          "center": "HQ",
+          "thumbUrl": "https://images-assets.nasa.gov/image/NHQ202312150008/NHQ202312150008~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/NHQ202312150008/NHQ202312150008~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/NHQ202312150008",
+          "credit": "NASA/Joel Kowsky"
+        }
+      ]
+    },
+    "eclipse_2026": {
+      "query": "solar eclipse shadow Earth DSCOVR",
+      "keywords": [
+        "eclipse"
+      ],
+      "images": [
+        {
+          "nasaId": "GSFC_20171208_Archive_e000005",
+          "title": "NASA's EPIC View of 2017 Eclipse Across America",
+          "description": "From a million miles out in space, NASA\u2019s Earth Polychromatic Imaging Camera (EPIC) captured natural color images of the moon\u2019s shadow crossing over North America on Aug. 21, 2017. EPIC is aboard NOAA\u2019s Deep Space Climate Observatory (DSCOVR), where it photographs the full sunlit side of Earth every day, giving it a unique view of total solar eclipses.",
+          "date": "2017-12-08",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e000005/GSFC_20171208_Archive_e000005~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e000005/GSFC_20171208_Archive_e000005~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/GSFC_20171208_Archive_e000005",
+          "credit": "GSFC"
+        },
+        {
+          "nasaId": "AFRC2018-0020-08",
+          "title": "Image shows Trona Pinnacles near California\u2019s NASA Armstrong Flight Research Center during Jan. 31 Super Blue Blood Moon.",
+          "description": "NASA Armstrong Flight Research Center photographer Lauren Hughes takes photos of the Super Blue Blood Moon eclipse from California\u2019s Trona Pinnacles Desert National Conservation for the Jan. 31 of the total lunar eclipse that provided a rare opportunity to capture a supermoon, a blue moon and a lunar eclipse at the same time. A supermoon occurs when the Moon is closer to Earth in its orbit and appearing 14 percent brighter than usual.",
+          "date": "2017-01-31",
+          "center": "AFRC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/AFRC2018-0020-08/AFRC2018-0020-08~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/AFRC2018-0020-08/AFRC2018-0020-08~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/AFRC2018-0020-08",
+          "credit": "NASA/Lauren Hughes"
+        },
+        {
+          "nasaId": "AFRC2018-0020-09",
+          "title": "Image shows Trona Pinnacles near California\u2019s NASA Armstrong Flight Research Center during Jan. 31 Super Blue Blood Moon.",
+          "description": "NASA Armstrong Flight Research Center photographer Lauren Hughes takes photos of the Super Blue Blood Moon eclipse from California\u2019s Trona Pinnacles Desert National Conservation for the Jan. 31 of the total lunar eclipse that provided a rare opportunity to capture a supermoon, a blue moon and a lunar eclipse at the same time. A supermoon occurs when the Moon is closer to Earth in its orbit and appearing 14 percent brighter than usual.",
+          "date": "2017-01-31",
+          "center": "AFRC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/AFRC2018-0020-09/AFRC2018-0020-09~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/AFRC2018-0020-09/AFRC2018-0020-09~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/AFRC2018-0020-09",
+          "credit": "NASA/Lauren Hughes"
+        },
+        {
+          "nasaId": "AFRC2018-0020-04",
+          "title": "NASA Armstrong Flight Research Center\u2019s communications facility with radar dish and antennas is shown having the eclipsed moon overhead\u2026",
+          "description": "California\u2019s NASA Armstrong Flight Research Center\u2019s photographer Carla Thomas takes photos on January 31 of the rare opportunity to capture a supermoon, a blue moon and a lunar eclipse at the same time. A supermoon occurs when the Moon is closer to Earth in its orbit and appearing 14 percent brighter than usual. As the second full moon of the month, this moon is also commonly known as a blue moon, though it will not be blue in appearance.",
+          "date": "2018-01-31",
+          "center": "AFRC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/AFRC2018-0020-04/AFRC2018-0020-04~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/AFRC2018-0020-04/AFRC2018-0020-04~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/AFRC2018-0020-04",
+          "credit": "NASA/Carla Thomas"
+        },
+        {
+          "nasaId": "AFRC2018-0020-06_Composite",
+          "title": "Image is NASA Armstrong Flight Research Center\u2019s mission support building with a composite of 16 images of the eclipsed moons overhead\u2026",
+          "description": "California\u2019s NASA Armstrong Flight Research Center photographer Ken Ulbrich takes photos of Super Blue Blood Moon eclipse making a time-lapse composition of the event on January 31. The total lunar eclipse provided a rare opportunity to capture a supermoon, a blue moon and a lunar eclipse at the same time. A supermoon occurs when the Moon is closer to Earth in its orbit and appearing 14 percent brighter than usual.",
+          "date": "2018-01-31",
+          "center": "AFRC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/AFRC2018-0020-06_Composite/AFRC2018-0020-06_Composite~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/AFRC2018-0020-06_Composite/AFRC2018-0020-06_Composite~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/AFRC2018-0020-06_Composite",
+          "credit": "NASA/Ken Ulbrich"
+        },
+        {
+          "nasaId": "KSC-03pd3081",
+          "title": "KENNEDY SPACE CENTER, FLA. - The start of a lunar eclipse is viewed from Merritt Island, Fla.",
+          "description": "KENNEDY SPACE CENTER, FLA. - The start of a lunar eclipse is viewed from Merritt Island, Fla. Eclipses occur when the Sun, Earth and Moon line up. They are rare because the Moon usually passes above or below the imaginary line connecting Earth and the Sun. The Earth casts a shadow that the Moon can pass through - when it does, it is called a lunar eclipse.",
+          "date": "2003-11-08",
+          "center": "KSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/KSC-03pd3081/KSC-03pd3081~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/KSC-03pd3081/KSC-03pd3081~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/KSC-03pd3081",
+          "credit": "KSC"
+        }
+      ]
+    },
+    "solar_storm": {
+      "query": "coronal mass ejection SDO",
+      "keywords": [
+        "sun",
+        "solar",
+        "flare",
+        "cme",
+        "coronal"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA21598",
+          "title": "Cascading Post-coronal Loops",
+          "description": "An active region that had just rotated into view blasted out a coronal mass ejection, which was immediately followed by a bright series of post-coronal loops seeking to reorganize that region's magnetic field (April 19, 2017). We have observed this phenomenon numerous times, but this one was one of the longest and clearest sequences we have seen in years. The bright loops are actually charged particles spinning along the magnetic field lines.",
+          "date": "2017-04-24",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA21598/PIA21598~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA21598/PIA21598~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA21598",
+          "credit": "NASA/GSFC/Solar Dynamics Observatory"
+        },
+        {
+          "nasaId": "PIA21836",
+          "title": "Bastille Day Solar Flare and a Coronal Mass Ejection",
+          "description": "A flare medium-sized (M2) flare and a coronal mass ejection erupted from the same, large active region (July 14, 2017). The flare lasted almost two hours, quite a long duration. Coronagraphs on the SOHO spacecraft show a substantial cloud of charged particles blasting into space just after the blast.",
+          "date": "2017-07-18",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA21836/PIA21836~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA21836/PIA21836~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA21836",
+          "credit": "NASA/GSFC/Solar Dynamics Observatory"
+        },
+        {
+          "nasaId": "brief-outburst_16760026566_o",
+          "title": "Brief Outburst",
+          "description": "The Sun blew out a coronal mass ejection along with part of a solar filament over a three-hour period (Feb. 24, 2015). While some of the strands fell back into the Sun, a substantial part raced into space in a bright cloud of particles (as observed by the SOHO spacecraft). The activity was captured in a wavelength of extreme ultraviolet light. Because this occurred way over near the edge of the Sun, it was unlikely to have any effect on Earth.",
+          "date": "2015-03-11",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/brief-outburst_16760026566_o/brief-outburst_16760026566_o~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/brief-outburst_16760026566_o/brief-outburst_16760026566_o~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/brief-outburst_16760026566_o",
+          "credit": "GSFC"
+        },
+        {
+          "nasaId": "PIA19680",
+          "title": "Solar Activity Seen at Sunspot Site Tracked by Mars Rover",
+          "description": "An eruption from the surface of the sun is conspicuous in the lower left portion of this July 6, 2015, image from NASA's Earth-orbiting Solar Dynamics Observatory (SDO). It originates from a location on the surface where NASA's Curiosity Mars rover had been tracking a sunspot in late June and early July. This image was taken by the Atmosphere Imaging Assembly on SDO using the instrument's 131-Angstrom wavelength channel, which is sensitive to hot solar flares.",
+          "date": "2015-07-10",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA19680/PIA19680~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA19680/PIA19680~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA19680",
+          "credit": "NASA/GSFC/SDO"
+        },
+        {
+          "nasaId": "cme-blow-out_18529951894_o",
+          "title": "CME Blow Out",
+          "description": "A substantial coronal mass ejection, or CME, blew out from side of the Sun, giving us a great view of the event in profile (June 17-18, 2015). NASA's Solar Dynamics Observatory caught the action in the 304 Angstrom wavelength of extreme ultraviolet light. The video clip covers about four hours of the event. While some of the plasma falls back into the Sun, a look at the coronagraph on SOHO shows a large cloud of particles heading into space. Credit: NASA/Goddard//SDO",
+          "date": "2015-06-25",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/cme-blow-out_18529951894_o/cme-blow-out_18529951894_o~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/cme-blow-out_18529951894_o/cme-blow-out_18529951894_o~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/cme-blow-out_18529951894_o",
+          "credit": "GSFC"
+        },
+        {
+          "nasaId": "PIA21949",
+          "title": "Major Solar Flare",
+          "description": "A large sunspot was the source of a powerful solar flare (an X 9.3) and a coronal mass ejection (Sept. 6, 2017). The flare was the largest solar flare of the last decade. For one thing, it created a strong shortwave radio blackout over Europe, Africa and the Atlantic Ocean. Sunspot 2673 has been also the source of several other smaller to medium-sized solar flares over the past few days.",
+          "date": "2017-09-11",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA21949/PIA21949~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA21949/PIA21949~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA21949",
+          "credit": "NASA/GSFC/Solar Dynamics Observatory"
+        }
+      ]
+    },
+    "shackleton": {
+      "query": "Shackleton crater LRO",
+      "keywords": [
+        "shackleton",
+        "south pole",
+        "moon",
+        "lunar"
+      ],
+      "images": [
+        {
+          "nasaId": "ARC-2009-ACD09-0084",
+          "title": "ARC-2009-ACD09-0084",
+          "description": "Dan Andrews, Project Manager LCROSS and Craig Tooley, Project Manager LRO (Lunar Reconnaissance Orbiter) in front of Spacecraft at the Astrotech facility titusville, FL during LRO/LCROSS media photo op event. The LCROSS mission's objective is to confirm the presence or absence of water ice in a permanently shadowed crater at the moon's South Pole. (Photo by Jonis Dino AMES PAO, premission for use granted by Dan Andrews, image owner)",
+          "date": "2009-05-14",
+          "center": "ARC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/ARC-2009-ACD09-0084/ARC-2009-ACD09-0084~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/ARC-2009-ACD09-0084/ARC-2009-ACD09-0084~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/ARC-2009-ACD09-0084",
+          "credit": "ARC"
+        },
+        {
+          "nasaId": "ARC-2006-ACD06-0232-003",
+          "title": "ARC-2006-ACD06-0232-003",
+          "description": "LCROSS (Lunar CRater Observation and Sensing Satellite) Mission Art IMAGES COURTESY OF NORTHROP GRUMMAN, WILLIAM FURLONG, ARTIST This NASA Ames spacecraft is a small 'secondary payload' spacecraft that will travel with Lunar Reconnaissance Obriter (LRO) satellite to the moon on the same rocket, the Evolved Expendable Launch Vehicle (EELV) to be launched from Kennedy Space Center, Florida in a search for water ice on the moon's south polar region.",
+          "date": "2006-04-10",
+          "center": "ARC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/ARC-2006-ACD06-0232-003/ARC-2006-ACD06-0232-003~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/ARC-2006-ACD06-0232-003/ARC-2006-ACD06-0232-003~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/ARC-2006-ACD06-0232-003",
+          "credit": "ARC"
+        },
+        {
+          "nasaId": "ARC-2006-ACD06-0232-005",
+          "title": "ARC-2006-ACD06-0232-005",
+          "description": "LCROSS (Lunar CRater Observation and Sensing Satellite) Mission Art IMAGES COURTESY OF NORTHROP GRUMMAN, WILLIAM FURLONG, ARTIST This NASA Ames spacecraft is a small 'secondary payload' spacecraft that will travel with Lunar Reconnaissance Obriter (LRO) satellite to the moon on the same rocket, the Evolved Expendable Launch Vehicle (EELV) to be launched from Kennedy Space Center, Florida in a search for water ice on the moon's south polar region.",
+          "date": "2006-04-10",
+          "center": "ARC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/ARC-2006-ACD06-0232-005/ARC-2006-ACD06-0232-005~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/ARC-2006-ACD06-0232-005/ARC-2006-ACD06-0232-005~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/ARC-2006-ACD06-0232-005",
+          "credit": "ARC"
+        },
+        {
+          "nasaId": "ARC-2006-ACD06-0232-004",
+          "title": "ARC-2006-ACD06-0232-004",
+          "description": "LCROSS (Lunar CRater Observation and Sensing Satellite) Mission Art IMAGES COURTESY OF NORTHROP GRUMMAN, WILLIAM FURLONG, ARTIST This NASA Ames spacecraft is a small 'secondary payload' spacecraft that will travel with Lunar Reconnaissance Obriter (LRO) satellite to the moon on the same rocket, the Evolved Expendable Launch Vehicle (EELV) to be launched from Kennedy Space Center, Florida in a search for water ice on the moon's south polar region.",
+          "date": "2006-04-10",
+          "center": "ARC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/ARC-2006-ACD06-0232-004/ARC-2006-ACD06-0232-004~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/ARC-2006-ACD06-0232-004/ARC-2006-ACD06-0232-004~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/ARC-2006-ACD06-0232-004",
+          "credit": "ARC"
+        },
+        {
+          "nasaId": "ARC-2006-ACD06-0232-001",
+          "title": "ARC-2006-ACD06-0232-001",
+          "description": "LCROSS (Lunar CRater Observation and Sensing Satellite) Mission Art IMAGES COURTESY OF NORTHROP GRUMMAN, WILLIAM FURLONG, ARTIST This NASA Ames spacecraft is a small 'secondary payload' spacecraft that will travel with Lunar Reconnaissance Obriter (LRO) satellite to the moon on the same rocket, the Evolved Expendable Launch Vehicle (EELV) to be launched from Kennedy Space Center, Florida in a search for water ice on the moon's south polar region.",
+          "date": "2006-04-10",
+          "center": "ARC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/ARC-2006-ACD06-0232-001/ARC-2006-ACD06-0232-001~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/ARC-2006-ACD06-0232-001/ARC-2006-ACD06-0232-001~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/ARC-2006-ACD06-0232-001",
+          "credit": "ARC"
+        },
+        {
+          "nasaId": "ARC-2006-ACD06-0232-002",
+          "title": "ARC-2006-ACD06-0232-002",
+          "description": "LCROSS (Lunar CRater Observation and Sensing Satellite) Mission Art IMAGES COURTESY OF NORTHROP GRUMMAN, WILLIAM FURLONG, ARTIST This NASA Ames spacecraft is a small 'secondary payload' spacecraft that will travel with Lunar Reconnaissance Obriter (LRO) satellite to the moon on the same rocket, the Evolved Expendable Launch Vehicle (EELV) to be launched from Kennedy Space Center, Florida in a search for water ice on the moon's south polar region.",
+          "date": "2006-04-10",
+          "center": "ARC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/ARC-2006-ACD06-0232-002/ARC-2006-ACD06-0232-002~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/ARC-2006-ACD06-0232-002/ARC-2006-ACD06-0232-002~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/ARC-2006-ACD06-0232-002",
+          "credit": "ARC"
+        }
+      ]
+    },
+    "artemis": {
+      "query": "Artemis Moon lunar",
+      "keywords": [
+        "artemis"
+      ],
+      "images": [
+        {
+          "nasaId": "art002e009463-cropped",
+          "title": "Artemis II Crew Annotating a \u201cPulsating\u201d Streamer",
+          "description": "art002e009463 (April 7, 2026) \u2013 During the Artemis II lunar flyby, crew member Jeremy Hansen annotated this view to document a streamer that appeared to \u201cpulsate\u201d as the Sun moved behind the Moon. Hansen\u2019s in-flight annotation marks the location of the observed feature and records the crew\u2019s description in real time, providing additional context for post-mission analysis of the observation. Credit: CSA/NASA",
+          "date": "2026-04-07",
+          "center": "JSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/art002e009463-cropped/art002e009463-cropped~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/art002e009463-cropped/art002e009463-cropped~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/art002e009463-cropped",
+          "credit": "JSC"
+        },
+        {
+          "nasaId": "art002e019914",
+          "title": "Lunar Flyby Observation",
+          "description": "art002e019914 (April 6, 2026) \u2013 The Artemis II crew captured this close-up view of the Moon\u2019s southwestern limb during lunar flyby observation operations. The view highlights variations in brightness across the lunar surface and features including Orientale basin, Grimaldi crater, Byrgius A crater, and the western edge of Oceanus Procellarum. Credit: NASA",
+          "date": "2026-04-06",
+          "center": "JSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/art002e019914/art002e019914~large.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/art002e019914/art002e019914~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/art002e019914",
+          "credit": "JSC"
+        },
+        {
+          "nasaId": "jsc2026e020764",
+          "title": "Artemis II lunar science team celebrates lunar flyby -- jsc2026e020764",
+          "description": "Artemis II deputy lunar science lead, Jacob Richardson, left, and Artemis II lunar science team members, Kiarre Dumes, react to the astronauts' verbal observations of the Moon during their flyby on April 6, 2026. Along with other lunar science team members, Richardson and Dumes helped train the crew in geology both in the classroom and in the field.",
+          "date": "2026-04-06",
+          "center": "JSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/jsc2026e020764/jsc2026e020764~large.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/jsc2026e020764/jsc2026e020764~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/jsc2026e020764",
+          "credit": "NASA/PHOTO_ LUNA_POSADAS_N"
+        },
+        {
+          "nasaId": "art002e012090",
+          "title": "The Rings of the Orientale Basin",
+          "description": "art002e012090 (April 6, 2026) - In this view of the Moon, the Artemis II crew captured an intricate snapshot of the rings of the Orientale basin, one of the Moon\u2019s youngest and best-preserved large impact craters on his first shift during the lunar flyby observation period. Credit: NASA",
+          "date": "2026-04-06",
+          "center": "JSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/art002e012090/art002e012090~large.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/art002e012090/art002e012090~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/art002e012090",
+          "credit": "NASA"
+        },
+        {
+          "nasaId": "jsc2026e020757",
+          "title": "Ernie Wright, Artemis II lunar science visualization lead -- jsc2026e020757",
+          "description": "Ernie Wright, Artemis II lunar science visualization lead, reacts to hearing the astronauts describe features of the Moon as they few by on April 6, 2026. To prepare the crew for this mission, the Artemis II lunar science team trained the astronauts in geology, both in the classroom and in the field.",
+          "date": "2026-04-06",
+          "center": "JSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/jsc2026e020757/jsc2026e020757~large.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/jsc2026e020757/jsc2026e020757~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/jsc2026e020757",
+          "credit": "NASA/PHOTO_ LUNA_POSADAS_N"
+        },
+        {
+          "nasaId": "jsc2026e020753",
+          "title": "Artemis II Lunar Science Team -- jsc2026e020753",
+          "description": "Artemis II Lunar Science Deputy Jacob Richardson and Artemis II Lunar Science Team Member Kiarre Dumes react to the astronauts' verbal observations of the Moon during their flyby on April 6. The science team trained the astronauts in geology both in the classroom and in the field.",
+          "date": "2026-04-06",
+          "center": "JSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/jsc2026e020753/jsc2026e020753~large.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/jsc2026e020753/jsc2026e020753~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/jsc2026e020753",
+          "credit": "Luna Posadas Nava - NASA - JSC"
+        }
+      ]
+    },
+    "conjunction": {
+      "query": "Jupiter Saturn Great Conjunction 2020",
+      "keywords": [
+        "jupiter",
+        "saturn",
+        "conjunction"
+      ],
+      "images": [
+        {
+          "nasaId": "NHQ202012220002",
+          "title": "Saturn and Jupiter Conjunction",
+          "description": "Jupiter, left, and Saturn, right, are seen after sunset from Alexandria, Va., Tuesday, Dec. 22, 2020. The two planets are now slowly separating from each other in the sky, after appearing a tenth of a degree apart during the \"great conjunction\" on December 21. Photo Credit: (NASA/Joel Kowsky)",
+          "date": "2020-12-22",
+          "center": "HQ",
+          "thumbUrl": "https://images-assets.nasa.gov/image/NHQ202012220002/NHQ202012220002~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/NHQ202012220002/NHQ202012220002~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/NHQ202012220002",
+          "credit": "NASA/Joel Kowsky"
+        },
+        {
+          "nasaId": "NHQ202012210003",
+          "title": "Saturn and Jupiter Conjunction",
+          "description": "Jupiter, left, and Saturn, right, are seen during the \u201cgreat conjunction\u201d where the two planets appear a tenth of a degree apart from one another, Monday, Dec. 21, 2020, from Washington, DC. Photo Credit: (NASA/Aubrey Gemignani)",
+          "date": "2020-12-21",
+          "center": "HQ",
+          "thumbUrl": "https://images-assets.nasa.gov/image/NHQ202012210003/NHQ202012210003~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/NHQ202012210003/NHQ202012210003~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/NHQ202012210003",
+          "credit": "NASA/Aubrey Gemignani"
+        },
+        {
+          "nasaId": "NHQ202012210001",
+          "title": "Saturn and Jupiter Conjunction",
+          "description": "Jupiter, left, and Saturn, right, are seen after sunset above Jordan Lake during the \u201cgreat conjunction\u201d where the two planets appear a tenth of a degree apart from one another, Monday, Dec. 21, 2020, near Chapel Hill, North Carolina. Photo Credit: (NASA/Bill Ingalls)",
+          "date": "2020-12-21",
+          "center": "HQ",
+          "thumbUrl": "https://images-assets.nasa.gov/image/NHQ202012210001/NHQ202012210001~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/NHQ202012210001/NHQ202012210001~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/NHQ202012210001",
+          "credit": "NASA/Bill Ingalls"
+        },
+        {
+          "nasaId": "NHQ202012170003",
+          "title": "Saturn and Jupiter Conjunction",
+          "description": "Saturn, top, and Jupiter, bottom, are seen after sunset from Alexandria, Va., Thursday, Dec. 17, 2020. The two planets are drawing closer to each other in the sky as they head towards a \u201cgreat conjunction\u201d on December 21, where the two giant planets will appear a tenth of a degree apart. Photo Credit: (NASA/Joel Kowsky)",
+          "date": "2020-12-17",
+          "center": "HQ",
+          "thumbUrl": "https://images-assets.nasa.gov/image/NHQ202012170003/NHQ202012170003~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/NHQ202012170003/NHQ202012170003~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/NHQ202012170003",
+          "credit": "NASA/Joel Kowsky"
+        },
+        {
+          "nasaId": "NHQ202012220003",
+          "title": "Saturn and Jupiter Conjunction",
+          "description": "Jupiter, left, and Saturn, right, are seen after sunset from Washington, DC, Tuesday, Dec. 22, 2020. The two planets are now slowly separating from each other in the sky, after appearing a tenth of a degree apart during the \"great conjunction\" on December 21. Photo Credit: (NASA/Aubrey Gemignani)",
+          "date": "2020-12-22",
+          "center": "HQ",
+          "thumbUrl": "https://images-assets.nasa.gov/image/NHQ202012220003/NHQ202012220003~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/NHQ202012220003/NHQ202012220003~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/NHQ202012220003",
+          "credit": "NASA/Aubrey Gemignani"
+        },
+        {
+          "nasaId": "NHQ202012170002",
+          "title": "Saturn and Jupiter Conjunction",
+          "description": "Saturn, top, and Jupiter, bottom, are seen after sunset from Alexandria, Va., Thursday, Dec. 17, 2020. The two planets are drawing closer to each other in the sky as they head towards a \u201cgreat conjunction\u201d on December 21, where the two giant planets will appear a tenth of a degree apart. Photo Credit: (NASA/Joel Kowsky)",
+          "date": "2020-12-17",
+          "center": "HQ",
+          "thumbUrl": "https://images-assets.nasa.gov/image/NHQ202012170002/NHQ202012170002~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/NHQ202012170002/NHQ202012170002~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/NHQ202012170002",
+          "credit": "NASA/Joel Kowsky"
+        }
+      ]
+    },
+    "planets": {
+      "query": "Solar System planets Voyager",
+      "keywords": [
+        "planet",
+        "solar system"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA00451",
+          "title": "Solar System Portrait - 60 Frame Mosaic",
+          "description": "The cameras of Voyager 1 on Feb. 14, 1990, pointed back toward the sun and took a series of pictures of the sun and the planets, making the first ever portrait of our solar system as seen from the outside. In the course of taking this mosaic consisting of a total of 60 frames, Voyager 1 made several images of the inner solar system from a distance of approximately 4 billion miles and about 32 degrees above the ecliptic plane.",
+          "date": "1996-09-13",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00451/PIA00451~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00451/PIA00451~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00451",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA22921",
+          "title": "Voyager 2 and the Scale of the Solar System (Artist Concept)",
+          "description": "This artist's concept puts solar system distances -- and the travels of NASA's Voyager 2 spacecraft -- in perspective. The scale bar is in astronomical units, with each set distance beyond 1 AU representing 10 times the previous distance. One AU is the distance from the Sun to Earth, which is about 93 million miles, or 150 million kilometers. Neptune, the most distant planet from the Sun, is about 30 AU. Much of the solar system is actually in interstellar space.",
+          "date": "2018-12-10",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA22921/PIA22921~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA22921/PIA22921~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA22921",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA04927",
+          "title": "Voyager Approaches Final Frontier Artist Concept",
+          "description": "An artist's concept illustrates the positions of the Voyager spacecraft in relation to structures formed around our Sun by the solar wind. Also illustrated is the termination shock, a violent region the spacecraft must pass through before reaching the outer limits of the solar system.",
+          "date": "2003-12-12",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA04927/PIA04927~thumb.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA04927/PIA04927~orig.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA04927",
+          "credit": "NASA/JPL/Walt Feimer"
+        },
+        {
+          "nasaId": "PIA23645",
+          "title": "Pale Blue Dot Revisited",
+          "description": "For the 30th anniversary of one of the most iconic images taken by NASA's Voyager mission, a new version of the image known as \"the Pale Blue Dot.\" Planet Earth is visible as a bright speck within the sunbeam just right of center and appears softly blue, as in the original version published in 1990 (see PIA00452).",
+          "date": "2020-02-12",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA23645/PIA23645~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA23645/PIA23645~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA23645",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "GSFC_20171208_Archive_e001171",
+          "title": "Solar System, in Perspective",
+          "description": "This artist's concept puts solar system distances in perspective. The scale bar is in astronomical units, with each set distance beyond 1 AU representing 10 times the previous distance. One AU is the distance from the sun to the Earth, which is about 93 million miles or 150 million kilometers. Neptune, the most distant planet from the sun, is about 30 AU. Informally, the term \"solar system\" is often used to mean the space out to the last planet.",
+          "date": "2017-12-08",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001171/GSFC_20171208_Archive_e001171~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001171/GSFC_20171208_Archive_e001171~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/GSFC_20171208_Archive_e001171",
+          "credit": "GSFC"
+        },
+        {
+          "nasaId": "PIA00371",
+          "title": "Jupiter - Io In Front of Jupiter Turbulent Clouds",
+          "description": "This photograph of the southern hemisphere of Jupiter was obtained by Voyager 2 on June 25, 1979, at a distance of 12 million kilometers (8 million miles). The Voyager spacecraft is rapidly nearing the giant planet, with closest approach to occur at 4:23 pm PDT on July 9. Seen in front of the turbulent clouds of the planet is Io, the innermost of the large Galilean satellites of Jupiter. Io is the size of our moon.",
+          "date": "1996-11-13",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00371/PIA00371~thumb.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00371/PIA00371~orig.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00371",
+          "credit": "NASA/JPL"
+        }
+      ]
+    },
+    "mercury": {
+      "query": "Mercury MESSENGER globe",
+      "keywords": [
+        "mercury"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA12051",
+          "title": "A Global View of Mercury Surface",
+          "description": "NASA MESSENGER shows the thin crescent of Mercury during approach forming the right portion of the globe and the fuller departure view showing Caloris basin forming the left side and majority of the view.",
+          "date": "2009-05-12",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA12051/PIA12051~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA12051/PIA12051~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA12051",
+          "credit": "NASA/Johns Hopkins University Applied Physics Laboratory/Smithsonian Institution/Carnegie Institution of Washington"
+        },
+        {
+          "nasaId": "PIA19419",
+          "title": "Unmasking the Secrets of Mercury",
+          "description": "The MASCS instrument onboard NASA MESSENGER spacecraft was designed to study both the exosphere and surface of Mercury. To learn more about the minerals and surface processes on Mercury, the Visual and Infrared Spectrometer (VIRS) portion of MASCS has been diligently collecting single tracks of spectral surface measurements since MESSENGER entered orbit.",
+          "date": "2015-04-16",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA19419/PIA19419~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA19419/PIA19419~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA19419",
+          "credit": "NASA/Johns Hopkins University Applied Physics Laboratory/Carnegie Institution of Washington"
+        },
+        {
+          "nasaId": "GSFC_20171208_Archive_e001545",
+          "title": "False Color View of Mercury",
+          "description": "This colorful view of Mercury was produced by using images from the color base map imaging campaign during MESSENGER's primary mission. These colors are not what Mercury would look like to the human eye, but rather the colors enhance the chemical, mineralogical, and physical differences between the rocks that make up Mercury's surface.",
+          "date": "2017-12-08",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001545/GSFC_20171208_Archive_e001545~orig.png",
+          "imageUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001545/GSFC_20171208_Archive_e001545~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/GSFC_20171208_Archive_e001545",
+          "credit": "GSFC"
+        },
+        {
+          "nasaId": "GSFC_20171208_Archive_e001544",
+          "title": "False Color View of Mercury",
+          "description": "This colorful view of Mercury was produced by using images from the color base map imaging campaign during MESSENGER's primary mission. These colors are not what Mercury would look like to the human eye, but rather the colors enhance the chemical, mineralogical, and physical differences between the rocks that make up Mercury's surface. Young crater rays, extending radially from fresh impact craters, appear light blue or white.",
+          "date": "2017-12-08",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001544/GSFC_20171208_Archive_e001544~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001544/GSFC_20171208_Archive_e001544~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/GSFC_20171208_Archive_e001544",
+          "credit": "GSFC"
+        },
+        {
+          "nasaId": "PIA12264",
+          "title": "Today, MESSENGER Flies by Mercury!",
+          "description": "Today, MESSENGER Flies by Mercury!",
+          "date": "2009-09-29",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA12264/PIA12264~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA12264/PIA12264~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA12264",
+          "credit": "NASA/Johns Hopkins University Applied Physics Laboratory/Carnegie Institution of Washington"
+        },
+        {
+          "nasaId": "PIA13823",
+          "title": "MESSENGER Explores Mercury - In Color",
+          "description": "MESSENGER Explores Mercury - In Color",
+          "date": "2011-01-25",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA13823/PIA13823~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA13823/PIA13823~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA13823",
+          "credit": "NASA/Johns Hopkins University Applied Physics Laboratory/Carnegie Institution of Washington"
+        }
+      ]
+    },
+    "venus": {
+      "query": "Venus Magellan global",
+      "keywords": [
+        "venus"
+      ],
+      "images": [
+        {
+          "nasaId": "S91-50688",
+          "title": "Global view of Venus from Magellan, Pioneer, and Venera data",
+          "description": "This global view of Venus, centered at 270 degrees east longitude, is a compilation of data from several sources. Magellan synthetic aperature radar mosaics from the first cycle of Magellan mapping are mapped onto a computer-simulated globe to create the image. Data gaps are filled with Pioneer-Venus orbiter data, or a constant mid-range value. Simulated color is used to enhance small-scale structure.",
+          "date": "1991-10-29",
+          "center": "JSC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/S91-50688/S91-50688~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/S91-50688/S91-50688~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/S91-50688",
+          "credit": "JSC"
+        },
+        {
+          "nasaId": "PIA00270",
+          "title": "Venus - Computer Simulated Global View Centered at 90 Degrees East Longitude",
+          "description": "The northern hemisphere is displayed in this global view of the surface of Venus as seen by NASA Magellan spacecraft. http://photojournal.jpl.nasa.gov/catalog/PIA00270",
+          "date": "1996-09-23",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00270/PIA00270~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00270/PIA00270~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00270",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA00271",
+          "title": "Venus - Computer Simulated Global View of the Northern Hemisphere",
+          "description": "The northern hemisphere is displayed in this global view of the surface of Venus as seen by NASA Magellan spacecraft. http://photojournal.jpl.nasa.gov/catalog/PIA00271",
+          "date": "1996-07-18",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00271/PIA00271~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00271/PIA00271~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00271",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA00104",
+          "title": "Venus - Computer Simulated Global View Centered at 180 Degrees East Longitude",
+          "description": "This global view from NASA's Magellan spacecraft is of the surface of Venus is centered at 180 degrees east longitude. http://photojournal.jpl.nasa.gov/catalog/PIA00104",
+          "date": "1996-11-12",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00104/PIA00104~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00104/PIA00104~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00104",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA00478",
+          "title": "Venus - Global View Centered at 180 degrees",
+          "description": "This global view of the surface of Venus is centered at 180 degrees east longitude. Magellan synthetic aperture radar mosaics from the first cycle of Magellan mapping, and a 5 degree latitude-longitude grid, are mapped onto a computer-simulated globe to create this image. Data gaps are filled with Pioneer-Venus Orbiter data, or a constant mid-range value.",
+          "date": "1996-11-26",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00478/PIA00478~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00478/PIA00478~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00478",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA00257",
+          "title": "Venus - Computer Simulated Global View Centered at 0 Degrees East Longitude",
+          "description": "This global view of the surface of Venus is centered at 0 degrees east longitude. NASA Magellan synthetic aperture radar mosaics from the first cycle of Magellan mapping were mapped onto a computer-simulated globe to create this image. http://photojournal.jpl.nasa.gov/catalog/PIA00257",
+          "date": "1996-03-14",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00257/PIA00257~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00257/PIA00257~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00257",
+          "credit": "NASA/JPL"
+        }
+      ]
+    },
+    "mars": {
+      "query": "Mars globe Hubble",
+      "keywords": [
+        "mars"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA01522",
+          "title": "Viking 2 Image of Mars Utopian Plain",
+          "description": "Viking 2 Image of Mars Utopian Plain",
+          "date": "2000-05-02",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA01522/PIA01522~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA01522/PIA01522~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA01522",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA10738",
+          "title": "Mars Surface near Viking Lander 1 Footpad",
+          "description": "Mars Surface near Viking Lander 1 Footpad",
+          "date": "2008-05-30",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA10738/PIA10738~thumb.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA10738/PIA10738~orig.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA10738",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA00565",
+          "title": "Viking Lander 1 U.S. Flag on Mars Surface",
+          "description": "Viking Lander 1 U.S. Flag on Mars Surface",
+          "date": "1997-02-28",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00565/PIA00565~thumb.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00565/PIA00565~orig.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00565",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA00396",
+          "title": "Viking Lander 2 First Picture On The Surface Of Mars",
+          "description": "Viking Lander 2 First Picture On The Surface Of Mars http://photojournal.jpl.nasa.gov/catalog/PIA00396",
+          "date": "1996-12-12",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00396/PIA00396~thumb.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00396/PIA00396~orig.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00396",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA17940",
+          "title": "Martian Morning Clouds Seen by Viking Orbiter 1 in 1976",
+          "description": "No NASA Mars orbiter has been in a position to observe morning daylight on Mars since the twin Viking orbiters of the 1970s. This image, taken by Viking Orbiter 1 on Aug. 17, 1976, shows water-ice clouds in the Valles Marineris area of equatorial Mars.",
+          "date": "2014-02-12",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA17940/PIA17940~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA17940/PIA17940~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA17940",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA00180",
+          "title": "MC-20 Sinus Sabeus Region",
+          "description": "Mars digital-image mosaic merged with color of the MC-20 quadrangle, Sinus Sabeus region of Mars. This image is from NASA Viking Orbiter 1.",
+          "date": "1998-06-05",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00180/PIA00180~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00180/PIA00180~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00180",
+          "credit": "NASA/JPL/USGS"
+        }
+      ]
+    },
+    "jupiter": {
+      "query": "Jupiter Juno",
+      "keywords": [
+        "jupiter"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA21771",
+          "title": "Juno Over Jupiter's South Pole (Illustration)",
+          "description": "This illustration depicts NASA's Juno spacecraft soaring over Jupiter's south pole. https://photojournal.jpl.nasa.gov/catalog/PIA21771",
+          "date": "2017-07-11",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA21771/PIA21771~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA21771/PIA21771~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA21771",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA22965",
+          "title": "Juno Images Jupiter's Dark Side",
+          "description": "Juno's Radiation Monitoring Investigation used the Stellar Reference Unit (SRU) star camera to collect this high-resolution image of the dark side of Jupiter during Perijove 11 on Feb. 7, 2018. The clouds are illuminated by moonlight from Jupiter's moon Io and the two bright spots on the right side of the image are flashes of Jovian lightning. Juno was only 41,000 miles (66,000 kilometers) from the cloud tops when this SRU image was collected.",
+          "date": "2018-12-19",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA22965/PIA22965~orig.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA22965/PIA22965~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA22965",
+          "credit": "NASA/JPL-Caltech/SwRI"
+        },
+        {
+          "nasaId": "PIA22968",
+          "title": "Juno's SRU Captures Jupiter Lightning",
+          "description": "Juno's Radiation Monitoring Investigation used the Stellar Reference Unit (SRU) star camera to collect this high-resolution image Jupiter's northern auroral oval on May 24, 2018 (Perijove 13). Also present in the image are several small bright dots and streaks -- signatures of high energy relativistic electrons from polar beams that are penetrating the camera. The large bright dot in the lower right corner of the image is a flash of Jupiter's lightning.",
+          "date": "2018-12-19",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA22968/PIA22968~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA22968/PIA22968~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA22968",
+          "credit": "NASA/JPL-Caltech/SwRI"
+        },
+        {
+          "nasaId": "PIA21033",
+          "title": "Juno View of Jupiter Southern Lights",
+          "description": "This infrared image gives an unprecedented view of the southern aurora of Jupiter, as captured by NASA's Juno spacecraft on August 27, 2016. The planet's southern aurora can hardly be seen from Earth due to our home planet's position in respect to Jupiter's south pole. Juno's unique polar orbit provides the first opportunity to observe this region of the gas-giant planet in detail.",
+          "date": "2016-09-02",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA21033/PIA21033~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA21033/PIA21033~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA21033",
+          "credit": "NASA/JPL-Caltech/SwRI/ASI/INAF/JIRAM"
+        },
+        {
+          "nasaId": "PIA25013",
+          "title": "A View of Crescent Jupiter from Juno",
+          "description": "If you could ride along with NASA's Juno spacecraft as it approaches Jupiter during one of its regular close passes by the giant planet, you would be treated to a striking vista similar to this one. Unlike the Moon or Venus, this view of Jupiter in a crescent phase is impossible to see from Earth, even using a telescope.",
+          "date": "2022-02-22",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA25013/PIA25013~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA25013/PIA25013~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA25013",
+          "credit": "mage data: NASA/JPL-Caltech/SwRI/MSSS Image processing by Kevin M. Gill \u00a9 CC BY"
+        },
+        {
+          "nasaId": "PIA25020",
+          "title": "NASA's Juno Mission Captures Lightning On Jupiter",
+          "description": "In this view of a vortex near Jupiter's north pole, NASA's Juno mission observed the glow from a bolt of lightning. On Earth, lightning bolts originate from water clouds, and happen most frequently near the equator, while on Jupiter lightning likely also occurs in clouds containing an ammonia-water solution, and can be seen most often near the poles.",
+          "date": "2023-06-15",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA25020/PIA25020~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA25020/PIA25020~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA25020",
+          "credit": "Image data: NASA/JPL-Caltech/SwRI/MSSS Image processing by Kevin M. Gill \u00a9 CC BY"
+        }
+      ]
+    },
+    "saturn": {
+      "query": "Saturn Cassini rings",
+      "keywords": [
+        "saturn"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA17199",
+          "title": "The Edge of the Night",
+          "description": "Saturn's shadow sweeps across the rings in a view captured on Nov. 5, 2006 by NASA's Cassini spacecraft. In the bottom half of the image, the countless icy particles that make up the rings bask in full daylight. In the top half, they move through Saturn's shadow. On the right side of the image, the planet's night side, dimly lit by reflected ringshine, can be seen through gaps in the darkened rings.",
+          "date": "2018-03-19",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA17199/PIA17199~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA17199/PIA17199~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA17199",
+          "credit": "NASA/JPL-Caltech/Space Science Institute"
+        },
+        {
+          "nasaId": "PIA21894",
+          "title": "Lone Propeller",
+          "description": "This view of Saturn's A ring features a lone \"propeller\" -- one of many such features created by small moonlets embedded in the rings as they attempt, unsuccessfully, to open gaps in the ring material. The image was taken by NASA's Cassini spacecraft on Sept. 13, 2017. It is among the last images Cassini sent back to Earth. The view was taken in visible light using the Cassini spacecraft wide-angle camera at a distance of 420,000 miles (676,000 kilometers) from Saturn.",
+          "date": "2017-09-15",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA21894/PIA21894~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA21894/PIA21894~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA21894",
+          "credit": "NASA/JPL-Caltech/Space Science Institute"
+        },
+        {
+          "nasaId": "PIA21901",
+          "title": "Veil of Ice",
+          "description": "Saturn's rings, made of countless icy particles, form a translucent veil in this view from NASA's Cassini spacecraft. Saturn's tiny moon Pan, about 17 miles (28 kilometers) across, orbits within the Encke Gap in the A ring. Beyond, we can see the arc of Saturn itself, its cloud tops streaked with dark shadows cast by the rings. This image was taken in visible light with the Cassini spacecraft narrow-angle camera on Feb.",
+          "date": "2018-01-08",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA21901/PIA21901~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA21901/PIA21901~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA21901",
+          "credit": "NASA/JPL-Caltech/Space Science Institute"
+        },
+        {
+          "nasaId": "PIA06193",
+          "title": "The Greatest Saturn Portrait ...Yet",
+          "description": "While cruising around Saturn in early October 2004, Cassini captured a series of images that have been composed into the largest, most detailed, global natural color view of Saturn and its rings ever made. This grand mosaic consists of 126 images acquired in a tile-like fashion, covering one end of Saturn's rings to the other and the entire planet in between. The images were taken over the course of two hours on Oct.",
+          "date": "2005-02-24",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA06193/PIA06193~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA06193/PIA06193~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA06193",
+          "credit": "NASA/JPL/Space Science Institute"
+        },
+        {
+          "nasaId": "PIA18313",
+          "title": "Faint D Ring",
+          "description": "Not all of Saturn's rings are created equal: here the C and D rings appear side-by-side, but the C ring, which occupies the bottom half of this image, clearly outshines its neighbor. The D ring appears fainter than the C ring because it is comprised of less material. However, even rings as thin as the D ring can pose hazards to spacecraft.",
+          "date": "2015-04-27",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA18313/PIA18313~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA18313/PIA18313~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA18313",
+          "credit": "NASA/JPL-Caltech/Space Science Institute"
+        },
+        {
+          "nasaId": "PIA18303",
+          "title": "Cubist Saturn",
+          "description": "Sometimes at Saturn you can see things almost as if from every angle at once, the way a Cubist might imagine things. For example, in this image, we're seeing Saturn's A ring in the lower part of the image and the limb of Saturn in the upper. In addition, the rings cast their shadows onto the portion of the planet imaged here, creating alternating patterns of light and dark.",
+          "date": "2015-02-23",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA18303/PIA18303~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA18303/PIA18303~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA18303",
+          "credit": "NASA/JPL-Caltech/Space Science Institute"
+        }
+      ]
+    },
+    "uranus": {
+      "query": "Uranus Voyager 2",
+      "keywords": [
+        "uranus"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA18182",
+          "title": "Uranus as seen by NASA Voyager 2",
+          "description": "This is an image of the planet Uranus taken by the spacecraft Voyager 2 in 1986.",
+          "date": "1986-12-18",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA18182/PIA18182~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA18182/PIA18182~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA18182",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA00346",
+          "title": "Color Voyager 2 Image Showing Crescent Uranus",
+          "description": "This image shows a crescent Uranus, a view that Earthlings never witnessed until Voyager 2 flew near and then beyond Uranus on Jan 24, 1986. http://photojournal.jpl.nasa.gov/catalog/PIA00346",
+          "date": "1998-06-04",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00346/PIA00346~thumb.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00346/PIA00346~orig.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00346",
+          "credit": "NASA/JPL/USGS"
+        },
+        {
+          "nasaId": "ARC-1986-AC86-7017",
+          "title": "ARC-1986-AC86-7017",
+          "description": "P29501C Moon from Voyager 2 Uranus flyby",
+          "date": "1986-03-07",
+          "center": "ARC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/ARC-1986-AC86-7017/ARC-1986-AC86-7017~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/ARC-1986-AC86-7017/ARC-1986-AC86-7017~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/ARC-1986-AC86-7017",
+          "credit": "JPL"
+        },
+        {
+          "nasaId": "ARC-1986-A86-7023",
+          "title": "ARC-1986-A86-7023",
+          "description": "P-29507 Rings Voyager 2 flyby of Uranus",
+          "date": "1986-01-01",
+          "center": "ARC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/ARC-1986-A86-7023/ARC-1986-A86-7023~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/ARC-1986-A86-7023/ARC-1986-A86-7023~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/ARC-1986-A86-7023",
+          "credit": "JPL"
+        },
+        {
+          "nasaId": "ARC-1995-A86-7033",
+          "title": "ARC-1995-A86-7033",
+          "description": "P-25517 3 UP COMPOSITE Voyager 2 and Uranus",
+          "date": "1995-01-19",
+          "center": "ARC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/ARC-1995-A86-7033/ARC-1995-A86-7033~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/ARC-1995-A86-7033/ARC-1995-A86-7033~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/ARC-1995-A86-7033",
+          "credit": "ARC"
+        },
+        {
+          "nasaId": "PIA01535",
+          "title": "Uranus Atmosphere",
+          "description": "Processing brings out Uranus atmosphere in this image taken by NASA Voyager 2.",
+          "date": "1999-05-08",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA01535/PIA01535~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA01535/PIA01535~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA01535",
+          "credit": "NASA/JPL"
+        }
+      ]
+    },
+    "neptune": {
+      "query": "Neptune Voyager 2",
+      "keywords": [
+        "neptune"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA01492",
+          "title": "PIA01492",
+          "description": "This picture of Neptune was produced from the last whole planet images taken through the green and orange filters on NASA's Voyager 2 narrow angle camera. The images were taken at a range of 4.4 million miles from the planet, 4 days and 20 hours before closest approach. The picture shows the Great Dark Spot and its companion bright smudge; on the west limb the fast moving bright feature called Scooter and the little dark spot are visible.",
+          "date": "1998-10-30",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA01492/PIA01492~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA01492/PIA01492~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA01492",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA01493",
+          "title": "Neptune Rings",
+          "description": "In Neptune outermost ring, 39,000 miles out, material mysteriously clumps into three arcs. Voyager 2 acquired this image as it encountered Neptune in August of 1989.",
+          "date": "1998-10-30",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA01493/PIA01493~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA01493/PIA01493~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA01493",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA18669",
+          "title": "Triton Video",
+          "description": "NASA Voyager 2 spacecraft flew by Triton, a moon of Neptune, on August 25, 1989. This frame from a video using Voyager data recreates that exciting encounter.",
+          "date": "2014-08-21",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA18669/PIA18669~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA18669/PIA18669~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA18669",
+          "credit": "NASA/JPL-Caltech/Lunar & Planetary Institute"
+        },
+        {
+          "nasaId": "PIA02210",
+          "title": "Neptune",
+          "description": "This contrast enhanced color picture of Neptune was acquired by NASA Voyager 2 on Aug. 14, 1989. As Voyager 2 approached Neptune, rapidly increasing image resolution is revealed striking new details. Bright, wispy clouds are seen overlying the Great Dar",
+          "date": "1999-08-19",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA02210/PIA02210~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA02210/PIA02210~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA02210",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA01539",
+          "title": "Post-encounter View of Neptune South Pole",
+          "description": "NASA Voyager 2 post-encounter view of Neptune south pole as the spacecraft sped away on a southward trajectory.",
+          "date": "1999-05-08",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA01539/PIA01539~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA01539/PIA01539~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA01539",
+          "credit": "NASA/JPL"
+        },
+        {
+          "nasaId": "PIA00049",
+          "title": "Neptune - Great Dark Spot, Scooter, Dark Spot 2",
+          "description": "This photograph of Neptune was reconstructed from two images taken by NASA Voyager 2. At the north top is the Great Dark Spot. http://photojournal.jpl.nasa.gov/catalog/PIA00049",
+          "date": "1998-01-08",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA00049/PIA00049~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA00049/PIA00049~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA00049",
+          "credit": "NASA/JPL"
+        }
+      ]
+    },
+    "m31": {
+      "query": "Andromeda galaxy M31",
+      "keywords": [
+        "andromeda",
+        "m31"
+      ],
+      "images": [
+        {
+          "nasaId": "0002272",
+          "title": "History of Chandra X-Ray Observatory",
+          "description": "Chandra X-Ray Observatory took this first x-ray picture of the Andromeda Galaxy (M31) on October 13, 1999. The blue dot in the center of the image is a \"cool\" million-degree x-ray source where a supermassive black hole with the mass of 30-million suns is located. The x-rays are produced by matter furneling toward the black hole. Numerous other hotter x-ray sources are also apparent.",
+          "date": "1999-10-13",
+          "center": "MSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/0002272/0002272~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/0002272/0002272~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/0002272",
+          "credit": "MSFC"
+        },
+        {
+          "nasaId": "PIA16682",
+          "title": "Cool Andromeda",
+          "description": "In this new view of the Andromeda, also known as M31, galaxy from the Herschel space observatory, cool lanes of forming stars are revealed in the finest detail yet. M31 is the nearest major galaxy to our own Milky Way at a distance of 2.5 million light-ye",
+          "date": "2013-01-28",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA16682/PIA16682~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA16682/PIA16682~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA16682",
+          "credit": "ESA/Herschel/PACS & SPIRE Consortium, O. Krause, HSC, H. Linz"
+        },
+        {
+          "nasaId": "PIA15416",
+          "title": "Andromeda",
+          "description": "Hot stars burn brightly in this new image from NASA Galaxy Evolution Explorer, showing the ultraviolet side of a familiar face. Approximately 2.5 million light-years away, the Andromeda galaxy, or M31, is our Milky Way largest galactic neighbor.",
+          "date": "2012-05-16",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA15416/PIA15416~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA15416/PIA15416~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA15416",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "7993119",
+          "title": "Space Science",
+          "description": "The Andromeda Galaxy, also known as M31 since it is the 31st object on Messier's list of diffuse sky objects, is the nearest large galaxy to our own Milky Way galaxy. Our galaxy is thought to look much like Andromeda, but it is about four times as massive as the Milky Way. Together these two galaxies dominate the Local Group of galaxies. The diffused light from Andromeda is caused by hundreds of billions of stars that compose it.",
+          "date": "1978-12-01",
+          "center": "MSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/7993119/7993119~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/7993119/7993119~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/7993119",
+          "credit": "MSFC"
+        },
+        {
+          "nasaId": "PIA25163",
+          "title": "Andromeda Galaxy Imaged by Herschel, Planck, IRAS, COBE",
+          "description": "This image of the Andromeda galaxy, or M31, includes data from the ESA (European Space Agency) Herschel mission, supplemented with data from ESA's retired Planck observatory and two retired NASA missions: the Infrared Astronomical Satellite (IRAS) and Cosmic Background Explorer (COBE).",
+          "date": "2022-06-16",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA25163/PIA25163~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA25163/PIA25163~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA25163",
+          "credit": "ESA/NASA/JPL-Caltech/GBT/WSRT/IRAM/C. Clark (STScI)"
+        },
+        {
+          "nasaId": "PIA04923",
+          "title": "Galaxy NGC 55",
+          "description": "This image of the nearby edge-on spiral galaxy NGC 55 was taken by Galaxy Evolution Explorer on September 14, 2003, during 2 orbits. This galaxy lies 5.4 million light years from our Milky Way galaxy and is a member of the \"local group\" of galaxies that also includes the Andromeda galaxy (M31), the Magellanic clouds, and 40 other galaxies. The spiral disk of NGC 55 is inclined to our line of sight by approximately 80 degrees and so this galaxy looks cigar-shaped.",
+          "date": "2003-12-10",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA04923/PIA04923~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA04923/PIA04923~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA04923",
+          "credit": "NASA/JPL/California Institute of Technology"
+        }
+      ]
+    },
+    "m33": {
+      "query": "Triangulum galaxy M33",
+      "keywords": [
+        "triangulum",
+        "m33"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA11969",
+          "title": "M33: A Close Neighbor Reveals its True Size and Splendor 3-color composite",
+          "description": "One of our closest galactic neighbors shows its awesome beauty in this new image from NASA Spitzer Space Telescope. M33, also known as the Triangulum Galaxy, is a member of what known as our Local Group of galaxies.",
+          "date": "2009-04-03",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA11969/PIA11969~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA11969/PIA11969~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA11969",
+          "credit": "NASA/JPL-Caltech/Univ. of Ariz."
+        },
+        {
+          "nasaId": "PIA11970",
+          "title": "M33: A Close Neighbor Reveals its True Size and Splendor",
+          "description": "One of our closest galactic neighbors shows its awesome beauty in this new image from NASA Spitzer Space Telescope. M33, also known as the Triangulum Galaxy, is a member of what known as our Local Group of galaxies.",
+          "date": "2009-04-03",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA11970/PIA11970~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA11970/PIA11970~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA11970",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA03033",
+          "title": "Anatomy of a Triangulum",
+          "description": "This image from NASA Galaxy Evolution Explorer shows M33, the Triangulum Galaxy, is a perennial favorite of amateur and professional astronomers alike, due to its orientation and relative proximity to us.",
+          "date": "2005-10-13",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA03033/PIA03033~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA03033/PIA03033~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA03033",
+          "credit": "NASA/JPL-Caltech"
+        },
+        {
+          "nasaId": "PIA13452",
+          "title": "WISE Spies a Galactic Neighbor",
+          "description": "This image captured by NASA Wide-field Infrared Survey Explorer shows of one of our closest neighboring galaxies, Messier 33. Also named the Triangulum galaxy, M33 is one of largest members in our small neighborhood of galaxies -- the Local Group.",
+          "date": "2011-01-04",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA13452/PIA13452~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA13452/PIA13452~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA13452",
+          "credit": "NASA/JPL-Caltech/UCLA"
+        },
+        {
+          "nasaId": "PIA25165",
+          "title": "Triangulum Galaxy Imaged by Herschel, Planck, IRAS, COBE",
+          "description": "This image of the Triangulum galaxy, or M33, includes data from the ESA (European Space Agency) Herschel mission, supplemented with data from ESA's retired Planck observatory and two retired NASA missions: the Infrared Astronomical Satellite (IRAS) and Cosmic Background Explorer (COBE).",
+          "date": "2022-06-16",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA25165/PIA25165~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA25165/PIA25165~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA25165",
+          "credit": "ESA/NASA/JPL-Caltech/GBT/VLA/IRAM/C. Clark (STScI)"
+        },
+        {
+          "nasaId": "PIA11998",
+          "title": "NASA Galaxy Mission Celebrates Sixth Anniversary",
+          "description": "NASA Galaxy Evolution Explorer Mission celebrates its sixth anniversary studying galaxies beyond our Milky Way through its sensitive ultraviolet telescope, the only such far-ultraviolet detector in space. Pictured here, the galaxy NGC598 known as M33. The mission studies the shape, brightness, size and distance of distant galaxies across 10 billion years of cosmic history, giving scientists a wealth of data to help us better understand the origins of the universe.",
+          "date": "2009-04-28",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA11998/PIA11998~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA11998/PIA11998~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA11998",
+          "credit": "NASA/JPL-Caltech"
+        }
+      ]
+    },
+    "m51": {
+      "query": "Whirlpool galaxy M51",
+      "keywords": [
+        "whirlpool",
+        "m51"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA10200",
+          "title": "A Classic Beauty",
+          "description": "A composite image of M51, also known as the Whirlpool Galaxy, shows the majesty of its structure in a dramatic new way through several of NASA orbiting observatories",
+          "date": "2007-12-13",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA10200/PIA10200~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA10200/PIA10200~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA10200",
+          "credit": "X-ray: NASA/CXC; UV: NASA/JPL-Caltech; Optical: NASA/ESA/STScI/AURA; IR: NASA/JPL-Caltech/ Univ. of Ariz."
+        },
+        {
+          "nasaId": "GSFC_20171208_Archive_e001935",
+          "title": "The Two-faced Whirlpool Galaxy",
+          "description": "NASA image release January 13, 2011 These images by NASA's Hubble Space Telescope show off two dramatically different face-on views of the spiral galaxy M51, dubbed the Whirlpool Galaxy. The image here, taken in visible light, highlights the attributes of a typical spiral galaxy, including graceful, curving arms, pink star-forming regions, and brilliant blue strands of star clusters.",
+          "date": "2017-12-08",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001935/GSFC_20171208_Archive_e001935~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001935/GSFC_20171208_Archive_e001935~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/GSFC_20171208_Archive_e001935",
+          "credit": "GSFC"
+        },
+        {
+          "nasaId": "GSFC_20171208_Archive_e001925",
+          "title": "The Two-faced Whirlpool Galaxy",
+          "description": "NASA image release January 13, 2011 These images by NASA's Hubble Space Telescope show off two dramatically different face-on views of the spiral galaxy M51, dubbed the Whirlpool Galaxy. The image above, taken in visible light, highlights the attributes of a typical spiral galaxy, including graceful, curving arms, pink star-forming regions, and brilliant blue strands of star clusters.",
+          "date": "2017-12-08",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001925/GSFC_20171208_Archive_e001925~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001925/GSFC_20171208_Archive_e001925~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/GSFC_20171208_Archive_e001925",
+          "credit": "GSFC"
+        }
+      ]
+    },
+    "m104": {
+      "query": "Sombrero galaxy M104",
+      "keywords": [
+        "sombrero",
+        "m104"
+      ],
+      "images": [
+        {
+          "nasaId": "0700064",
+          "title": "History of Hubble Space Telescope (HST)",
+          "description": "The razor sharp eye of the Hubble Space Telescope (HST) easily resolves the Sombrero galaxy, Messier 104 (M104). 50,000 light-years across, the galaxy is located 28 million light-years from Earth at the southern edge of the rich Virgo cluster of galaxies. Equivalent to 800 billion suns, Sombrero is one of the most massive objects in that group.",
+          "date": "2003-06-09",
+          "center": "MSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/0700064/0700064~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/0700064/0700064~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/0700064",
+          "credit": "MSFC"
+        },
+        {
+          "nasaId": "0700065",
+          "title": "History of Hubble Space Telescope (HST)",
+          "description": "In the 19th century, astronomer V. M. Slipher first discovered a hat-like object that appeared to be rushing away from us at 700 miles per second. This enormous velocity offered some of the earliest clues that it was really another galaxy, and that the universe was expanding in all directions. The trained razor sharp eye of the Hubble Space Telescope (HST) easily resolves this Sombrero galaxy, Messier 104 (M104).",
+          "date": "2006-06-09",
+          "center": "MSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/0700065/0700065~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/0700065/0700065~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/0700065",
+          "credit": "MSFC"
+        }
+      ]
+    },
+    "m87": {
+      "query": "M87 jet Hubble",
+      "keywords": [
+        "m87"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA23122",
+          "title": "Spitzer Captures Messier 87",
+          "description": "This image from NASA's Spitzer Space Telescope shows the elliptical galaxy Messier 87 (M87), the home galaxy of the supermassive black hole recently imaged by the Event Horizon Telescope (EHT). Spitzer's infrared view shows a faint trace of a jet of material spewing to the right of the galaxy - a feature that was previously one key indicator that a supermassive black hole lived at the galaxy's center. More prominent in the image is the shockwave created by that jet.",
+          "date": "2019-04-25",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA23122/PIA23122~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA23122/PIA23122~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA23122",
+          "credit": "NASA/JPL-Caltech/IPAC/Event Horizon Telescope Collaboration"
+        }
+      ]
+    },
+    "magellanic": {
+      "query": "Large Magellanic Cloud Tarantula",
+      "keywords": [
+        "magellanic",
+        "tarantula"
+      ],
+      "images": [
+        {
+          "nasaId": "PIA14415",
+          "title": "A New View of the Tarantula Nebula",
+          "description": "This composite of 30 Doradus, the Tarantula Nebula, contains data from Chandra blue, Hubble green, and Spitzer red. Located in the Large Magellanic Cloud, the Tarantula Nebula is one of the largest star-forming regions close to the Milky Way.",
+          "date": "2012-04-17",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA14415/PIA14415~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA14415/PIA14415~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA14415",
+          "credit": "X-ray: NASA/CXC/PSU/L.Townsley et al.; Optical: NASA/STScI; Infrared: NASA/JPL/PSU/L.Townsley et al."
+        },
+        {
+          "nasaId": "PIA15254",
+          "title": "Dusty Space Cloud",
+          "description": "This image shows the Large Magellanic Cloud galaxy in infrared light as seen by ESA Herschel Space Observatory and NASA Spitzer Space Telescope. The brightest center-left region is called 30 Doradus, or the Tarantula Nebula.",
+          "date": "2012-01-10",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA15254/PIA15254~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA15254/PIA15254~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA15254",
+          "credit": "ESA/NASA/JPL-Caltech/STScI"
+        },
+        {
+          "nasaId": "GSFC_20171208_Archive_e000226",
+          "title": "Hubble Peers into the Storm",
+          "description": "This shot from the NASA/ESA Hubble Space Telescope shows a maelstrom of glowing gas and dark dust within one of the Milky Way\u2019s satellite galaxies, the Large Magellanic Cloud (LMC). This stormy scene shows a stellar nursery known as N159, an HII region over 150 light-years across. N159 contains many hot young stars.",
+          "date": "2017-12-08",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e000226/GSFC_20171208_Archive_e000226~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e000226/GSFC_20171208_Archive_e000226~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/GSFC_20171208_Archive_e000226",
+          "credit": "GSFC"
+        },
+        {
+          "nasaId": "PIA05062",
+          "title": "The Tarantula Nebula",
+          "description": "NASA Spitzer Space Telescope, formerly known as the Space Infrared Telescope Facility, has captured in stunning detail the spidery filaments and newborn stars of theTarantula Nebula, a rich star-forming region also known as 30 Doradus. This cloud of glowing dust and gas is located in the Large Magellanic Cloud, the nearest galaxy to our own Milky Way, and is visible primarily from the Southern Hemisphere.",
+          "date": "2004-01-13",
+          "center": "JPL",
+          "thumbUrl": "https://images-assets.nasa.gov/image/PIA05062/PIA05062~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/PIA05062/PIA05062~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/PIA05062",
+          "credit": "NASA/JPL-Caltech/Cornell University and University of Leiden"
+        },
+        {
+          "nasaId": "GSFC_20171208_Archive_e002020",
+          "title": "ESO 2.2-m WFI Image of the Tarantula Nebula",
+          "description": "NASA image release May 11, 2010 Hubble Catches Heavyweight Runaway Star Speeding from 30 Doradus Image: ESO 2.2-m WFI Image of the Tarantula Nebula A blue-hot star, 90 times more massive than our Sun, is hurtling across space fast enough to make a round trip from Earth to the Moon in merely two hours. Though the speed is not a record-breaker, it is unique to find a homeless star that has traveled so far from its nest.",
+          "date": "2017-12-08",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e002020/GSFC_20171208_Archive_e002020~medium.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e002020/GSFC_20171208_Archive_e002020~medium.jpg",
+          "pageUrl": "https://images.nasa.gov/details/GSFC_20171208_Archive_e002020",
+          "credit": "GSFC"
+        },
+        {
+          "nasaId": "GSFC_20171208_Archive_e000933",
+          "title": "Hubble Sees Turquoise-Tinted Plumes in Large Magellanic Cloud",
+          "description": "The brightly glowing plumes seen in this image are reminiscent of an underwater scene, with turquoise-tinted currents and nebulous strands reaching out into the surroundings. However, this is no ocean. This image actually shows part of the Large Magellanic Cloud (LMC), a small nearby galaxy that orbits our galaxy, the Milky Way, and appears as a blurred blob in our skies.",
+          "date": "2017-12-08",
+          "center": "GSFC",
+          "thumbUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e000933/GSFC_20171208_Archive_e000933~small.jpg",
+          "imageUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e000933/GSFC_20171208_Archive_e000933~small.jpg",
+          "pageUrl": "https://images.nasa.gov/details/GSFC_20171208_Archive_e000933",
+          "credit": "GSFC"
+        }
+      ]
+    }
+  }
+}

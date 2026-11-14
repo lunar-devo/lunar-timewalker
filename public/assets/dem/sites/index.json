@@ -1,0 +1,20 @@
+{
+  "packs": [
+    {
+      "id": "shackleton",
+      "centerLatDeg": -89.78,
+      "centerLonDeg": -155.73,
+      "metersPerSample": 5.002,
+      "sizeM": 10240.0,
+      "source": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site04/Site04_final_adj_5mpp_surf.tif"
+    },
+    {
+      "id": "connecting_ridge",
+      "centerLatDeg": -89.45,
+      "centerLonDeg": -137.31,
+      "metersPerSample": 5.002,
+      "sizeM": 10240.0,
+      "source": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site01/Site01_final_adj_5mpp_surf.tif"
+    }
+  ]
+}

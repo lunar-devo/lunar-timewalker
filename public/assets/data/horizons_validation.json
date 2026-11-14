@@ -1,0 +1,395 @@
+{
+  "generated": "2026-11-12T17:33:17.158802+00:00",
+  "topocentric": [
+    {
+      "label": "Sun from Shackleton-ridge 2026-08-12 17:00 UT",
+      "body": "sun",
+      "latDeg": -89.45,
+      "lonDeg": -137.2,
+      "jdUT": 2461265.2083333335,
+      "azDeg": 321.576632,
+      "elDeg": 0.181336
+    },
+    {
+      "label": "Sun from Shackleton-ridge 2026-08-12 18:00 UT",
+      "body": "sun",
+      "latDeg": -89.45,
+      "lonDeg": -137.2,
+      "jdUT": 2461265.25,
+      "azDeg": 321.066307,
+      "elDeg": 0.179398
+    },
+    {
+      "label": "Sun from Shackleton-ridge 2026-08-12 19:00 UT",
+      "body": "sun",
+      "latDeg": -89.45,
+      "lonDeg": -137.2,
+      "jdUT": 2461265.2916666665,
+      "azDeg": 320.555983,
+      "elDeg": 0.177423
+    },
+    {
+      "label": "Earth from Apollo 11 1054-07-04 00:00 UT",
+      "body": "earth",
+      "latDeg": 0.6741,
+      "lonDeg": 23.473,
+      "jdUT": 2106215.5,
+      "azDeg": 268.926773,
+      "elDeg": 59.296638
+    },
+    {
+      "label": "Earth from Apollo 11 1054-07-04 01:00 UT",
+      "body": "earth",
+      "latDeg": 0.6741,
+      "lonDeg": 23.473,
+      "jdUT": 2106215.5416666665,
+      "azDeg": 268.795005,
+      "elDeg": 59.314348
+    }
+  ],
+  "geocentric": [
+    {
+      "label": "3000BC-01-01",
+      "body": "mercury",
+      "jdTT": 625673.5,
+      "raDeg": 323.8074,
+      "decDeg": -16.88707
+    },
+    {
+      "label": "44BC-07-23",
+      "body": "mercury",
+      "jdTT": 1705555.5,
+      "raDeg": 168.11898,
+      "decDeg": 5.59427
+    },
+    {
+      "label": "7BC-05-29",
+      "body": "mercury",
+      "jdTT": 1719014.5,
+      "raDeg": 119.23379,
+      "decDeg": 21.6131
+    },
+    {
+      "label": "7BC-09-30",
+      "body": "mercury",
+      "jdTT": 1719138.5,
+      "raDeg": 231.38328,
+      "decDeg": -22.0991
+    },
+    {
+      "label": "7BC-12-05",
+      "body": "mercury",
+      "jdTT": 1719204.5,
+      "raDeg": 274.16337,
+      "decDeg": -24.78215
+    },
+    {
+      "label": "1054-07-04",
+      "body": "mercury",
+      "jdTT": 2106215.5,
+      "raDeg": 103.56136,
+      "decDeg": 22.33024
+    },
+    {
+      "label": "2000-05-05",
+      "body": "mercury",
+      "jdTT": 2451669.5,
+      "raDeg": 37.74159,
+      "decDeg": 14.12496
+    },
+    {
+      "label": "3000BC-01-01",
+      "body": "venus",
+      "jdTT": 625673.5,
+      "raDeg": 300.58026,
+      "decDeg": -20.41904
+    },
+    {
+      "label": "44BC-07-23",
+      "body": "venus",
+      "jdTT": 1705555.5,
+      "raDeg": 172.75257,
+      "decDeg": 4.68108
+    },
+    {
+      "label": "7BC-05-29",
+      "body": "venus",
+      "jdTT": 1719014.5,
+      "raDeg": 126.92513,
+      "decDeg": 21.21256
+    },
+    {
+      "label": "7BC-09-30",
+      "body": "venus",
+      "jdTT": 1719138.5,
+      "raDeg": 249.8456,
+      "decDeg": -28.1505
+    },
+    {
+      "label": "7BC-12-05",
+      "body": "venus",
+      "jdTT": 1719204.5,
+      "raDeg": 241.65901,
+      "decDeg": -17.78433
+    },
+    {
+      "label": "1054-07-04",
+      "body": "venus",
+      "jdTT": 2106215.5,
+      "raDeg": 165.40149,
+      "decDeg": 7.34372
+    },
+    {
+      "label": "2000-05-05",
+      "body": "venus",
+      "jdTT": 2451669.5,
+      "raDeg": 32.9214,
+      "decDeg": 11.98347
+    },
+    {
+      "label": "3000BC-01-01",
+      "body": "mars",
+      "jdTT": 625673.5,
+      "raDeg": 30.80644,
+      "decDeg": 12.45266
+    },
+    {
+      "label": "44BC-07-23",
+      "body": "mars",
+      "jdTT": 1705555.5,
+      "raDeg": 79.73151,
+      "decDeg": 22.78646
+    },
+    {
+      "label": "7BC-05-29",
+      "body": "mars",
+      "jdTT": 1719014.5,
+      "raDeg": 192.91116,
+      "decDeg": -5.20021
+    },
+    {
+      "label": "7BC-09-30",
+      "body": "mars",
+      "jdTT": 1719138.5,
+      "raDeg": 269.87414,
+      "decDeg": -25.1412
+    },
+    {
+      "label": "7BC-12-05",
+      "body": "mars",
+      "jdTT": 1719204.5,
+      "raDeg": 323.5244,
+      "decDeg": -15.96694
+    },
+    {
+      "label": "1054-07-04",
+      "body": "mars",
+      "jdTT": 2106215.5,
+      "raDeg": 120.90547,
+      "decDeg": 21.54917
+    },
+    {
+      "label": "2000-05-05",
+      "body": "mars",
+      "jdTT": 2451669.5,
+      "raDeg": 58.60444,
+      "decDeg": 20.74233
+    },
+    {
+      "label": "3000BC-01-01",
+      "body": "jupiter",
+      "jdTT": 625673.5,
+      "raDeg": 245.78657,
+      "decDeg": -20.76396
+    },
+    {
+      "label": "44BC-07-23",
+      "body": "jupiter",
+      "jdTT": 1705555.5,
+      "raDeg": 328.98325,
+      "decDeg": -13.91034
+    },
+    {
+      "label": "7BC-05-29",
+      "body": "jupiter",
+      "jdTT": 1719014.5,
+      "raDeg": 17.7933,
+      "decDeg": 6.19455
+    },
+    {
+      "label": "7BC-09-30",
+      "body": "jupiter",
+      "jdTT": 1719138.5,
+      "raDeg": 14.9039,
+      "decDeg": 4.54053
+    },
+    {
+      "label": "7BC-12-05",
+      "body": "jupiter",
+      "jdTT": 1719204.5,
+      "raDeg": 12.87384,
+      "decDeg": 4.00589
+    },
+    {
+      "label": "1054-07-04",
+      "body": "jupiter",
+      "jdTT": 2106215.5,
+      "raDeg": 143.42809,
+      "decDeg": 15.35554
+    },
+    {
+      "label": "2000-05-05",
+      "body": "jupiter",
+      "jdTT": 2451669.5,
+      "raDeg": 44.91639,
+      "decDeg": 16.11822
+    },
+    {
+      "label": "3000BC-01-01",
+      "body": "saturn",
+      "jdTT": 625673.5,
+      "raDeg": 168.71484,
+      "decDeg": 6.49954
+    },
+    {
+      "label": "44BC-07-23",
+      "body": "saturn",
+      "jdTT": 1705555.5,
+      "raDeg": 282.88172,
+      "decDeg": -22.30109
+    },
+    {
+      "label": "7BC-05-29",
+      "body": "saturn",
+      "jdTT": 1719014.5,
+      "raDeg": 18.20569,
+      "decDeg": 5.29865
+    },
+    {
+      "label": "7BC-09-30",
+      "body": "saturn",
+      "jdTT": 1719138.5,
+      "raDeg": 15.22024,
+      "decDeg": 3.61716
+    },
+    {
+      "label": "7BC-12-05",
+      "body": "saturn",
+      "jdTT": 1719204.5,
+      "raDeg": 13.31923,
+      "decDeg": 3.05005
+    },
+    {
+      "label": "1054-07-04",
+      "body": "saturn",
+      "jdTT": 2106215.5,
+      "raDeg": 14.60666,
+      "decDeg": 3.61967
+    },
+    {
+      "label": "2000-05-05",
+      "body": "saturn",
+      "jdTT": 2451669.5,
+      "raDeg": 47.80848,
+      "decDeg": 15.72952
+    },
+    {
+      "label": "3000BC-01-01",
+      "body": "sun",
+      "jdTT": 625673.5,
+      "raDeg": 329.0545,
+      "decDeg": -13.03088
+    },
+    {
+      "label": "44BC-07-23",
+      "body": "sun",
+      "jdTT": 1705555.5,
+      "raDeg": 147.23648,
+      "decDeg": 13.36851
+    },
+    {
+      "label": "7BC-05-29",
+      "body": "sun",
+      "jdTT": 1719014.5,
+      "raDeg": 92.06399,
+      "decDeg": 23.69091
+    },
+    {
+      "label": "7BC-09-30",
+      "body": "sun",
+      "jdTT": 1719138.5,
+      "raDeg": 209.91642,
+      "decDeg": -12.35272
+    },
+    {
+      "label": "7BC-12-05",
+      "body": "sun",
+      "jdTT": 1719204.5,
+      "raDeg": 279.90004,
+      "decDeg": -23.38935
+    },
+    {
+      "label": "1054-07-04",
+      "body": "sun",
+      "jdTT": 2106215.5,
+      "raDeg": 122.08442,
+      "decDeg": 20.27702
+    },
+    {
+      "label": "2000-05-05",
+      "body": "sun",
+      "jdTT": 2451669.5,
+      "raDeg": 42.3462,
+      "decDeg": 16.27993
+    },
+    {
+      "label": "3000BC-01-01",
+      "body": "moon",
+      "jdTT": 625673.5,
+      "raDeg": 319.17525,
+      "decDeg": -21.61663
+    },
+    {
+      "label": "44BC-07-23",
+      "body": "moon",
+      "jdTT": 1705555.5,
+      "raDeg": 237.73922,
+      "decDeg": -20.59308
+    },
+    {
+      "label": "7BC-05-29",
+      "body": "moon",
+      "jdTT": 1719014.5,
+      "raDeg": 89.14633,
+      "decDeg": 25.83216
+    },
+    {
+      "label": "7BC-09-30",
+      "body": "moon",
+      "jdTT": 1719138.5,
+      "raDeg": 296.80635,
+      "decDeg": -25.90591
+    },
+    {
+      "label": "7BC-12-05",
+      "body": "moon",
+      "jdTT": 1719204.5,
+      "raDeg": 74.29516,
+      "decDeg": 24.69779
+    },
+    {
+      "label": "1054-07-04",
+      "body": "moon",
+      "jdTT": 2106215.5,
+      "raDeg": 63.94455,
+      "decDeg": 21.34235
+    },
+    {
+      "label": "2000-05-05",
+      "body": "moon",
+      "jdTT": 2451669.5,
+      "raDeg": 54.8315,
+      "decDeg": 14.97369
+    }
+  ]
+}

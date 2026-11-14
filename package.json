@@ -1,0 +1,32 @@
+{
+  "name": "lunar-timewalker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Browser-based lunar exploration and time-travel story game built on NASA open data (NASA Space Apps Challenge 2026).",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fontsource-variable/exo-2": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "astronomy-engine": "2.1.19",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "three": "0.187.0",
+    "zustand": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/three": "0.187.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  }
+}
