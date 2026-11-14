@@ -957,5 +957,15 @@
  "The cloud of a solar eruption as strong as that of May 2024 reaches Earth. What happens?": "Le nuage d’une éruption solaire aussi forte que celle de mai 2024 atteint la Terre. Que se passe-t-il ?",
  "A Type II supernova goes off right beside Jupiter. What happens to Jupiter?": "Une supernova de type II explose juste à côté de Jupiter. Qu’arrive-t-il à Jupiter ?",
  "A gamma-ray burst 6,500 light years away points its beam at Earth. What happens?": "Un sursaut gamma situé à 6 500 années-lumière pointe son faisceau vers la Terre. Que se passe-t-il ?",
- "Watching from {0}. The sky is held to the stars: one frame is shown per rotation of the planet. The ground is a model.": "Lieu d’observation : {0}. Le ciel est fixé sur les étoiles : une image est montrée par rotation de la planète. Le sol est un modèle."
+ "Watching from {0}. The sky is held to the stars: one frame is shown per rotation of the planet. The ground is a model.": "Lieu d’observation : {0}. Le ciel est fixé sur les étoiles : une image est montrée par rotation de la planète. Le sol est un modèle.",
+ "Sound (music and effects) [K]": "Son (musique et effets) [K]",
+ "K": "K",
+ "Sound on / off": "Son activé / coupé",
+ "Sound: on": "Son : activé",
+ "Sound: off": "Son : coupé",
+ "Sound": "Son",
+ "Sound [K]": "Son [K]",
+ "Sound on": "Son activé",
+ "Sound off": "Son coupé",
+ "By the time it arrives the cloud is thinner than the ordinary solar wind: the magnetosphere is not squeezed and there is no noticeable effect.": "À son arrivée, le nuage est moins dense que le vent solaire ordinaire : la magnétosphère n’est pas comprimée et il n’y a pas d’effet notable."
 }

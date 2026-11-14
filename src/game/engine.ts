@@ -223,6 +223,11 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
 
   const input = new Input(canvas);
   const audio = createAudio();
+  // The stored settings reach the audio before its first use; later changes go through updateSettings.
+  const storedSettings = getGame().settings;
+  audio.setMasterVolume(storedSettings.masterVolume);
+  audio.setMuted(!storedSettings.soundOn);
+  audio.setNarrationEnabled(storedSettings.narration);
   const nasa = createNasa();
   const sky = createSky(renderer);
   const terrain = createTerrain(renderer);
@@ -1596,6 +1601,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       setGame({ settings: next });
 
       audio.setMasterVolume(next.masterVolume);
+      audio.setMuted(!next.soundOn);
       audio.setNarrationEnabled(next.narration);
 
       if (patch.quality) {
@@ -1875,6 +1881,8 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       // mode the map is the question's.
       const body = prev?.bodies.find((b) => b.id === bodyId);
       if (!prev || prev.quiz || !body || (body.kind !== 'moon' && body.kind !== 'planet')) return;
+      // Already there or already gone: a link can name the same body thousands of times.
+      if (prev.removed.includes(bodyId) !== onMap) return;
       const others = prev.removed.filter((id) => id !== bodyId);
       const removed = onMap ? others : [...others, bodyId];
       const focusId = prev.focusId === bodyId && !onMap ? 'earth' : prev.focusId;
@@ -2022,6 +2030,13 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     const tag = (e.target as HTMLElement | null)?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     const st = getGame();
+    if (e.code === 'KeyK' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      // Sound on / off, in every phase.
+      const soundOn = !st.settings.soundOn;
+      api.updateSettings({ soundOn });
+      showToast(soundOn ? { tr: 'Ses açık', en: 'Sound on' } : { tr: 'Ses kapalı', en: 'Sound off' });
+      return;
+    }
     if (st.spectator && (st.phase === 'surface' || st.phase === 'space')) {
       // Spectator remote: ←/→ events, Space pause, Esc back to the menu.
       if (e.code === 'ArrowRight' || e.code === 'ArrowLeft') {

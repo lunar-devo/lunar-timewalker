@@ -963,5 +963,15 @@
  "The cloud of a solar eruption as strong as that of May 2024 reaches Earth. What happens?": "La nube de una erupción solar tan fuerte como la de mayo de 2024 llega a la Tierra. ¿Qué ocurre?",
  "A Type II supernova goes off right beside Jupiter. What happens to Jupiter?": "Una supernova de tipo II estalla justo al lado de Júpiter. ¿Qué le ocurre a Júpiter?",
  "A gamma-ray burst 6,500 light years away points its beam at Earth. What happens?": "Un estallido de rayos gamma a 6500 años luz apunta su haz hacia la Tierra. ¿Qué ocurre?",
- "Watching from {0}. The sky is held to the stars: one frame is shown per rotation of the planet. The ground is a model.": "Observando desde {0}. El cielo se fija a las estrellas: se muestra una imagen por cada rotación del planeta. El suelo es un modelo."
+ "Watching from {0}. The sky is held to the stars: one frame is shown per rotation of the planet. The ground is a model.": "Observando desde {0}. El cielo se fija a las estrellas: se muestra una imagen por cada rotación del planeta. El suelo es un modelo.",
+ "Sound (music and effects) [K]": "Sonido (música y efectos) [K]",
+ "K": "K",
+ "Sound on / off": "Sonido activado / silenciado",
+ "Sound: on": "Sonido: activado",
+ "Sound: off": "Sonido: silenciado",
+ "Sound": "Sonido",
+ "Sound [K]": "Sonido [K]",
+ "Sound on": "Sonido activado",
+ "Sound off": "Sonido silenciado",
+ "By the time it arrives the cloud is thinner than the ordinary solar wind: the magnetosphere is not squeezed and there is no noticeable effect.": "Al llegar, la nube es más tenue que el viento solar ordinario: la magnetosfera no se comprime y no hay ningún efecto apreciable."
 }

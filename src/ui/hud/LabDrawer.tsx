@@ -414,12 +414,14 @@ function QuizCard({ quiz, lang }: { quiz: LabQuiz; lang: Lang }) {
  */
 function BodyList({ lab, lang, onTable }: { lab: LabState; lang: Lang; onTable: () => void }) {
   const nameOf = (id: string): string => loc(lab.bodies.find((b) => b.id === id)?.name ?? BODY_NAMES.earth, lang);
+  // In the class mode the question's scenario is fixed: bodies are neither taken off the map nor put on it.
+  const fixed = lab.quiz !== null;
   const reached: Array<{ id: string; name: string; level: LabImpactLevel; removable: boolean }> = [
     { id: 'earth', name: nameOf('earth'), level: lab.impact.level, removable: false },
     ...(lab.kind === 'cme' && lab.impact.satellites.length > 0
       ? [{ id: 'satellites', name: loc(SATELLITES_NAME, lang), level: lab.impact.satellitesLevel, removable: false }]
       : []),
-    ...lab.fates.map((f) => ({ id: f.id, name: nameOf(f.id), level: f.level, removable: f.id !== 'sun' })),
+    ...lab.fates.map((f) => ({ id: f.id, name: nameOf(f.id), level: f.level, removable: !fixed && f.id !== 'sun' })),
   ];
   return (
     <div className="hud-card hud-lab-card">
@@ -453,7 +455,7 @@ function BodyList({ lab, lang, onTable }: { lab: LabState; lang: Lang; onTable: 
             )}
           </span>
         ))}
-        {lab.removed.map((id) => (
+        {!fixed && lab.removed.map((id) => (
           <button
             key={id}
             type="button"
@@ -468,13 +470,15 @@ function BodyList({ lab, lang, onTable }: { lab: LabState; lang: Lang; onTable: 
       <button type="button" className="hud-look-chip hud-lab-table-open" onClick={onTable}>
         {tx(lang, 'Tümünü tabloda göster', 'Show all in a table')}
       </button>
-      <p className="hud-lab-hint">
-        {tx(
-          lang,
-          'Nokta rengi cismin ne kadar etkilendiğini gösterir; haritadaki halka da aynı renktedir. Ada tıklayınca o cisme yaklaşılır ve sonucu aşağıda açılır. × cismi haritadan çıkarır; + ile Plüton, Titan, Europa ve çıkarılan cisimler eklenir.',
-          'The colour of the dot shows how badly the body fares; its ring on the map has the same colour. A click on a name goes close to that body and opens its result below. × takes a body off the map; + adds Pluto, Titan, Europa and the bodies taken off.',
-        )}
-      </p>
+      {!fixed && (
+        <p className="hud-lab-hint">
+          {tx(
+            lang,
+            'Nokta rengi cismin ne kadar etkilendiğini gösterir; haritadaki halka da aynı renktedir. Ada tıklayınca o cisme yaklaşılır ve sonucu aşağıda açılır. × cismi haritadan çıkarır; + ile Plüton, Titan, Europa ve çıkarılan cisimler eklenir.',
+            'The colour of the dot shows how badly the body fares; its ring on the map has the same colour. A click on a name goes close to that body and opens its result below. × takes a body off the map; + adds Pluto, Titan, Europa and the bodies taken off.',
+          )}
+        </p>
+      )}
     </div>
   );
 }

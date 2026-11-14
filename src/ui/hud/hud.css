@@ -558,6 +558,11 @@
   backdrop-filter: blur(var(--blur));
 }
 
+/* In the space views the time bar or the lab's transport takes the bottom: the toast sits above them. */
+.hud-toast.is-raised {
+  bottom: 118px;
+}
+
 /* ─────────────────────────── Cinematic / Spectator / Clean Projector Modes ─────────────────────────── */
 
 .is-cinematic .hud-left-col,

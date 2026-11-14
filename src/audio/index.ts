@@ -95,9 +95,12 @@ export function createAudio(): IAudio {
     src.stop(at + riseSec + fallSec + 0.05);
   }
 
-  /** A breath in, then out; faster and louder with exertion. */
+  /**
+   * A breath in, then out; faster and louder with exertion. Not while the context stands still: its clock
+   * would put every breath at the same moment, to sound all at once when it runs again.
+   */
   function triggerBreath(): void {
-    if (!ctx || currentScene !== 'surface' || muted) return;
+    if (!ctx || ctx.state !== 'running' || currentScene !== 'surface' || muted) return;
     const now = ctx.currentTime;
     const peak = 0.008 + exertion * 0.014;
     const inSec = 1.0 - exertion * 0.3;
@@ -243,11 +246,14 @@ export function createAudio(): IAudio {
     setMasterVolume(v: number): void {
       masterVolume = Math.max(0, Math.min(1, v));
       applyMaster();
+      // Speech does not pass through the master gain: at zero it is stopped instead.
+      if (masterVolume === 0) this.stopNarration();
     },
 
     setMuted(m: boolean): void {
       muted = m;
       applyMaster();
+      if (m) this.stopNarration();
     },
 
     cue(c: AudioCue, intensity = 1): void {
@@ -354,12 +360,13 @@ export function createAudio(): IAudio {
     },
 
     narrate(text: string, lang: Lang): void {
-      if (!narrationEnabled || muted || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+      if (!narrationEnabled || muted || masterVolume === 0 || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
       try {
         window.speechSynthesis.cancel();
         const utter = new SpeechSynthesisUtterance(text);
         utter.lang = LOCALE[lang];
         utter.rate = 0.98;
+        utter.volume = masterVolume;
         const voices = window.speechSynthesis.getVoices();
         const match = voices.find((v) => v.lang.toLowerCase().startsWith(lang));
         if (match) utter.voice = match;

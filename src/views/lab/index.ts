@@ -46,7 +46,7 @@ export {
   computeLabFates, computeLabImpact, distanceText, LAB_EXTRA_IDS, LAB_MAX_AU, LAB_MIN_AU, labRunSeconds, LY_AU,
 } from './physics';
 export { labLinkQuery, parseLabLink, type LabLink } from './link';
-export { LAB_QUESTIONS, type LabQuestion } from './quiz';
+export { LAB_QUESTIONS } from './quiz';
 
 const EJECTA_PARTICLES = 4200;
 const DEBRIS_CHUNKS = 260;
@@ -1637,6 +1637,20 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
   const farTurn = new THREE.Quaternion();
   let time = 0;
   let texturesLoaded = false;
+  /** The maps loaded for this view: it disposes them with itself, and one that arrives after that is dropped at once. */
+  const maps: THREE.Texture[] = [];
+  let disposed = false;
+  function loadMap(url: string, use: (map: THREE.Texture) => void): void {
+    texLoader.loadAsync(url).then((map) => {
+      if (disposed) {
+        map.dispose();
+        return;
+      }
+      map.colorSpace = THREE.SRGBColorSpace;
+      maps.push(map);
+      use(map);
+    }).catch(() => undefined);
+  }
   const srcPos = new THREE.Vector3();
   const away = new THREE.Vector3(-1, 0, 0);
   const sunPos = new THREE.Vector3();
@@ -1935,41 +1949,37 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
         const dayUrl = texUrl('earth_day', opts.quality);
         const nightUrl = texUrl('earth_night', opts.quality);
         if (dayUrl) {
-          texLoader.loadAsync(dayUrl).then((t) => {
-            t.colorSpace = THREE.SRGBColorSpace;
-            t.anisotropy = 8;
-            earthUniforms.uDay.value = t;
+          loadMap(dayUrl, (map) => {
+            map.anisotropy = 8;
+            earthUniforms.uDay.value = map;
             earthUniforms.uHasTex.value = 1;
-          }).catch(() => undefined);
+          });
         }
         if (nightUrl) {
-          texLoader.loadAsync(nightUrl).then((t) => {
-            t.colorSpace = THREE.SRGBColorSpace;
-            earthUniforms.uNight.value = t;
-          }).catch(() => undefined);
+          loadMap(nightUrl, (map) => {
+            earthUniforms.uNight.value = map;
+          });
         }
         // The tokens need no more than the smallest maps.
         const tokenQuality: QualityProfile = { ...opts.quality, texTier: '2k' };
         for (const p of tokens) {
           const url = texUrl(`${p.def.id}_color`, tokenQuality);
           if (!url) continue;
-          texLoader.loadAsync(url).then((t) => {
-            t.colorSpace = THREE.SRGBColorSpace;
-            t.anisotropy = 4;
-            p.globe.material.uniforms.uMap.value = t;
+          loadMap(url, (map) => {
+            map.anisotropy = 4;
+            p.globe.material.uniforms.uMap.value = map;
             p.globe.material.uniforms.uHasMap.value = 1;
-          }).catch(() => undefined);
+          });
         }
         const starsUrl = texUrl('stars', { ...opts.quality, texTier: '4k' });
         if (starsUrl) {
-          texLoader.loadAsync(starsUrl).then((t) => {
-            t.colorSpace = THREE.SRGBColorSpace;
-            t.generateMipmaps = false;
-            t.minFilter = THREE.LinearFilter;
-            skyUniforms.uStars.value = t;
+          loadMap(starsUrl, (map) => {
+            map.generateMipmaps = false;
+            map.minFilter = THREE.LinearFilter;
+            skyUniforms.uStars.value = map;
             skyDome.visible = true;
             starPoints.visible = false;
-          }).catch(() => undefined);
+          });
         }
       }
       // Start already framed, in the camera's own framing and with Earth in focus, instead of swinging in.
@@ -1981,8 +1991,10 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     },
 
     update(dt: number): void {
-      time += dt;
-      if (playing && !paused) elapsed += dt;
+      // While the time-lapse is paused the scene holds still (rotation, flicker, shake); the camera still moves.
+      const flow = playing && paused ? 0 : dt;
+      time += flow;
+      elapsed += playing ? flow : 0;
       const o = impact.outcome;
       const look = LOOK[kind];
       // A solar eruption sends a cloud one way, a burst two thin fronts of rays, a supernova shells all round.
@@ -2160,7 +2172,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
         ends.setXYZ(1, earthGroup.position.x, 0, earthGroup.position.z);
         ends.needsUpdate = true;
       }
-      earthMesh.rotation.y += dt * 0.08;
+      earthMesh.rotation.y += flow * 0.08;
 
       // Every named body says where it is on the screen and how big; the names are set out after that.
       const focal = viewH / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
@@ -2208,7 +2220,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
         const radiusPx = size * p.def.reach * px;
         p.holder.visible = p.onMap;
         p.holder.scale.setScalar(size);
-        p.globe.rotation.y += dt * 0.15;
+        p.globe.rotation.y += flow * 0.15;
         p.globe.visible = !gone || sinceGone < 0.7;
         p.globe.scale.setScalar(gone ? Math.max(0.01, 1 - sinceGone / 0.7) : 1);
         const u = p.globe.material.uniforms;
@@ -2402,7 +2414,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
         if (playing) {
           const toAstro = evaPos.clone().sub(srcPos);
           const dAstro = toAstro.length();
-          if (Math.abs(dAstro - blastR) < 1.2 && dAstro > 0.3) evaVel.addScaledVector(toAstro.normalize(), dt * 16 * Math.max(0.2, blastAlpha));
+          if (Math.abs(dAstro - blastR) < 1.2 && dAstro > 0.3) evaVel.addScaledVector(toAstro.normalize(), flow * 16 * Math.max(0.2, blastAlpha));
         }
         evaPos.addScaledVector(evaVel, dt);
         suit.root.position.copy(evaPos);
@@ -2644,13 +2656,16 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
 
     dispose(): void {
       this.detach();
+      disposed = true;
+      for (const map of maps) map.dispose();
       for (const g of [
         starGeo, unitSphere, capGeo, burstCapGeo, beamConeGeo, debrisGeo, fieldGeo, bowGeo, orbitGeo, craftGeo, oneCraftGeo, linkGeo, discGeo, beamGeo,
         ejectaGeo, originGeo, driftGeo, carriedGeo, markGeo, ringGeo, skyDome.geometry, earthMesh.geometry, markerRing.geometry, ...ringGeos,
       ]) g.dispose();
       for (const m of [
         starMat, skyMat, ringMat, sunMat, starMat2, companionMat, earthMat, atmoMat, ozoneMat, fieldMat, bowMat, discMat, beamMat, beamConeMat, ejectaMat,
-        originMat, carriedMat, earthMark.material,
+        originMat, carriedMat, earthMark.material, sunGlow.material, linkLine.material, markerRing.material, progenitorGlow.material, flashSprite.material,
+        pulsarGlow.material,
       ]) m.dispose();
       for (const look of ringLooks) look.line.dispose();
       for (const sat of satMarkers) {

@@ -27,6 +27,8 @@ export interface LabLink {
 const KINDS: LabExplosionKind[] = ['sn2', 'sn1a', 'grb', 'cme'];
 const STRENGTHS: LabCmeStrength[] = ['ordinary', 'may2024', 'carrington'];
 const ID = /^[a-z][a-z0-9_]*$/;
+/** The map holds far fewer bodies than this: a list in a link is read no further, and each id counts once. */
+const MAX_IDS = 32;
 
 /** Writes a number with six significant digits: enough for any place on the map, short in the address. */
 const short = (x: number): string => String(Number(x.toPrecision(6)));
@@ -51,7 +53,7 @@ export function parseLabLink(search: string): LabLink | null {
   const q = new URLSearchParams(search);
   const kind = KINDS.find((k) => k === q.get('lab'));
   if (!kind) return null;
-  const ids = (key: string): string[] => (q.get(key) ?? '').split(',').filter((id) => ID.test(id));
+  const ids = (key: string): string[] => [...new Set((q.get(key) ?? '').split(',', MAX_IDS * 4).filter((id) => ID.test(id)))].slice(0, MAX_IDS);
   const number = (key: string, fallback: number): number => {
     const raw = q.get(key);
     const value = raw === null || raw === '' ? Number.NaN : Number(raw);

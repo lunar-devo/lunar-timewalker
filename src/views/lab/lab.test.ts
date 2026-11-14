@@ -115,6 +115,13 @@ describe('Explosion Lab: gamma-ray bursts', () => {
       last = next;
     }
   });
+
+  it('strikes a body that stands at the burst’s own place instead of counting it as beside the beam', () => {
+    const mars: LabBody = { id: 'mars', name: { tr: 'Mars', en: 'Mars' }, kind: 'planet', angleRad: 0.4, skyAngleRad: 0.4, spotRad: 0.4, distanceAU: 1.5 };
+    const [fate] = computeLabFates({ kind: 'grb', angleRad: 0.4, distanceAU: 1.5, cmeStrength: 'may2024' }, [mars], []);
+    expect(fate.level).toBe('extreme');
+    expect(fate.energyJ).toBeGreaterThan(0);
+  });
 });
 
 describe('Explosion Lab: solar eruptions', () => {
@@ -156,6 +163,16 @@ describe('Explosion Lab: solar eruptions', () => {
     expect(carrington.shockTimeText.en).toBe('18 hours');
     expect(carrington.steps.map((s) => s.id)).toContain('grid');
     expect(rank[impactOf('cme', 1).level]).toBeGreaterThan(rank[ordinary.level]);
+  });
+
+  it('does nothing where the cloud arrives thinner than the ordinary solar wind', () => {
+    const thin = impactOf('cme', 2, 'ordinary');
+    expect(thin.pressureNPa).toBeLessThan(2);
+    expect(thin.level).toBe('safe');
+    // The magnetosphere keeps its quiet size: a thin cloud cannot make it larger, nor is it squeezed.
+    expect(thin.standoffRe).toBeCloseTo(10.5, 6);
+    expect(thin.steps.map((s) => s.id)).toEqual(['light', 'shock']);
+    expect(thin.summary.en).toContain('thinner than the ordinary solar wind');
   });
 
   it('leaves the geostationary ring inside the magnetosphere, at its edge or outside it, by strength', () => {
@@ -365,6 +382,14 @@ describe('Explosion Lab: scenarios as links', () => {
     expect(garbled).toEqual({
       kind: 'grb', cmeStrength: 'may2024', distanceAU: 0.3, angleDeg: 0, anchorId: null, date: null, off: ['mars'], add: [], focusId: 'earth', quiz: false,
     });
+  });
+
+  it('counts a body named many times once, and reads no endless list', () => {
+    const repeated = parseLabLink(`?lab=sn2&off=${'mars,'.repeat(5000)}venus&add=titan,titan`);
+    expect(repeated?.off).toEqual(['mars']);
+    expect(repeated?.add).toEqual(['titan']);
+    const many = parseLabLink(`?lab=sn2&off=${Array.from({ length: 500 }, (_, i) => `b${i}`).join(',')}`);
+    expect(many?.off.length).toBeLessThanOrEqual(32);
   });
 });
 

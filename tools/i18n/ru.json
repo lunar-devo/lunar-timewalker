@@ -957,5 +957,15 @@
  "The cloud of a solar eruption as strong as that of May 2024 reaches Earth. What happens?": "Облако солнечного выброса такой же силы, как в мае 2024 года, доходит до Земли. Что произойдёт?",
  "A Type II supernova goes off right beside Jupiter. What happens to Jupiter?": "Сверхновая типа II взрывается совсем рядом с Юпитером. Что будет с Юпитером?",
  "A gamma-ray burst 6,500 light years away points its beam at Earth. What happens?": "Гамма-всплеск на расстоянии 6500 св. лет направляет луч на Землю. Что произойдёт?",
- "Watching from {0}. The sky is held to the stars: one frame is shown per rotation of the planet. The ground is a model.": "Место наблюдения: {0}. Небо закреплено по звёздам: за один оборот планеты показывается один кадр. Поверхность — модель."
+ "Watching from {0}. The sky is held to the stars: one frame is shown per rotation of the planet. The ground is a model.": "Место наблюдения: {0}. Небо закреплено по звёздам: за один оборот планеты показывается один кадр. Поверхность — модель.",
+ "Sound (music and effects) [K]": "Звук (музыка и эффекты) [K]",
+ "K": "K",
+ "Sound on / off": "Включить / выключить звук",
+ "Sound: on": "Звук: включён",
+ "Sound: off": "Звук: выключен",
+ "Sound": "Звук",
+ "Sound [K]": "Звук [K]",
+ "Sound on": "Звук включён",
+ "Sound off": "Звук выключен",
+ "By the time it arrives the cloud is thinner than the ordinary solar wind: the magnetosphere is not squeezed and there is no noticeable effect.": "К моменту прихода облако разреженнее обычного солнечного ветра: магнитосфера не сжимается, заметного воздействия нет."
 }

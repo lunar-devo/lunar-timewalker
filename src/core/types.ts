@@ -830,6 +830,8 @@ export interface Settings {
   quality: Quality;
   mouseSensitivity: number;   // 0.2 .. 3, default 1
   masterVolume: number;       // 0..1
+  /** Sound as a whole (the score, the suit's sounds, the cues); off silences everything and the volume keeps its value. */
+  soundOn: boolean;
   narration: boolean;
   reducedFlash: boolean;
   showLabels: boolean;

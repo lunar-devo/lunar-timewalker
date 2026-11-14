@@ -844,6 +844,7 @@ export function SurfaceHud() {
   const labReturn = useGame((s) => s.labReturn);
   const showLabels = useGame((s) => s.settings.showLabels);
   const showGuide = useGame((s) => s.settings.showConstellations);
+  const soundOn = useGame((s) => s.settings.soundOn);
 
   const [moreOpen, setMoreOpen] = useState(false);
   const worldInfo = WORLDS[world];
@@ -1009,6 +1010,10 @@ export function SurfaceHud() {
                 <button type="button" className="hud-bar-btn" onClick={() => setGame({ headlamp: !headlamp })}>
                   <span>{tx(lang, 'Kask lambası', 'Helmet lamp')}</span>
                   <span>G</span>
+                </button>
+                <button type="button" className={`hud-bar-btn ${soundOn ? 'is-on' : ''}`} onClick={() => game.updateSettings({ soundOn: !soundOn })}>
+                  <span>{tx(lang, 'Ses', 'Sound')}</span>
+                  <span>K</span>
                 </button>
                 <button type="button" className="hud-bar-btn" onClick={() => game.toggleCleanMode(true)}>
                   <span>{tx(lang, 'Temiz ekran', 'Clean view')}</span>
@@ -1286,8 +1291,11 @@ export function SpaceHud() {
   const spectator = useGame((s) => s.spectator);
   const cleanMode = useGame((s) => s.cleanMode);
   const site = useGame((s) => s.site);
-  // In a narrow window the bar gives up, in turn: the magnitude, the language list, the clean-view button.
-  const [topRef, tight] = useFit(3, `${lang}|${dictRevision()}|${spaceView?.targetId}`);
+  const soundOn = useGame((s) => s.settings.soundOn);
+  const toast = useGame((s) => s.toast);
+  // In a narrow window the bar gives up, in turn: the sound button, the magnitude, the language list, the
+  // clean-view button.
+  const [topRef, tight] = useFit(4, `${lang}|${dictRevision()}|${spaceView?.targetId}`);
 
   if (!spaceView) return null;
   const tid = spaceView.targetId;
@@ -1322,7 +1330,7 @@ export function SpaceHud() {
               ))}
             </select>
           )}
-          {tInfo && tInfo.magnitude < 20 && !isLab && !galDef && tight < 1 && (
+          {tInfo && tInfo.magnitude < 20 && !isLab && !galDef && tight < 2 && (
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--c-dim)' }}>
               {fmt(tInfo.magnitude, 2, lang)} {tx(lang, 'kadir', 'mag')}
             </span>
@@ -1338,12 +1346,17 @@ export function SpaceHud() {
           <button type="button" className="hud-bar-btn" onClick={() => game.togglePanel('info', true)}>
             {tx(lang, 'Arşiv [I]', 'Archive [I]')}
           </button>
-          {tight < 3 && (
+          {tight < 1 && (
+            <button type="button" className={`hud-bar-btn ${soundOn ? 'is-on' : ''}`} aria-pressed={soundOn} onClick={() => game.updateSettings({ soundOn: !soundOn })}>
+              {tx(lang, 'Ses [K]', 'Sound [K]')}
+            </button>
+          )}
+          {tight < 4 && (
             <button type="button" className="hud-bar-btn" onClick={() => game.toggleCleanMode(true)}>
               {tx(lang, 'Temiz [U]', 'Clean [U]')}
             </button>
           )}
-          {tight < 2 && <LangPicker />}
+          {tight < 3 && <LangPicker />}
         </div>
       </div>
 
@@ -1458,6 +1471,8 @@ export function SpaceHud() {
           {tx(lang, 'Kontrolleri göster [U]', 'Show controls [U]')}
         </button>
       )}
+
+      {toast && <div className="hud-toast is-raised">{loc(toast.text, lang)}</div>}
 
       <StagePanel />
       {!isLab && !galDef && <TimeMachineBar />}

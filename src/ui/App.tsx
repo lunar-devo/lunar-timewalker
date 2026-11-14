@@ -75,6 +75,15 @@ function SettingsModal() {
         </div>
 
         <div className="mn-form-row">
+          <span>{tx(lang, 'Ses (müzik ve efektler) [K]', 'Sound (music and effects) [K]')}</span>
+          <input
+            type="checkbox"
+            checked={settings.soundOn}
+            onChange={(e) => game.updateSettings({ soundOn: e.target.checked })}
+          />
+        </div>
+
+        <div className="mn-form-row">
           <span>{tx(lang, 'Ses düzeyi', 'Volume')}</span>
           <input
             type="range"
@@ -83,6 +92,7 @@ function SettingsModal() {
             step={0.05}
             value={settings.masterVolume}
             onChange={(e) => game.updateSettings({ masterVolume: Number(e.target.value) })}
+            disabled={!settings.soundOn}
           />
         </div>
 
@@ -136,6 +146,7 @@ const HELP_ROWS: Array<{ keys: L10n; does: L10n }> = [
   { keys: { tr: 'T + Tekerlek / + −', en: 'T + Wheel / + −' }, does: { tr: 'Teleskop aç/kapat ve yakınlaştır', en: 'Toggle telescope and zoom' } },
   { keys: { tr: 'C', en: 'C' }, does: { tr: 'Gökyüzü rehberi: takımyıldızlar, ekliptik ve yıldız adları', en: 'Sky guide: constellations, ecliptic and star names' } },
   { keys: { tr: 'U', en: 'U' }, does: { tr: 'Temiz ekran (tahta / projeksiyon için yazıları gizle)', en: 'Clean view (hide controls for projector / board)' } },
+  { keys: { tr: 'K', en: 'K' }, does: { tr: 'Sesi aç / kapat', en: 'Sound on / off' } },
   { keys: { tr: 'V / G', en: 'V / G' }, does: { tr: '1. / 3. şahıs görünümü · Kask lambası', en: '1st / 3rd person view · Helmet lamp' } },
   { keys: { tr: 'B', en: 'B' }, does: { tr: 'Ölçüm direği koy (29,5 gün Güneş ve Dünya görünürlüğü)', en: 'Place measuring mast (29.5-day Sun & Earth visibility)' } },
   { keys: { tr: 'M / I / N', en: 'M / I / N' }, does: { tr: 'Ay haritası · NASA fotoğrafları · Veri paneli', en: 'Moon map · NASA photos · Data panel' } },
@@ -541,6 +552,7 @@ const CATEGORY_MAP: Record<Exclude<CategoryFilter, 'all'>, EventCategory[]> = {
 
 function EventMenuScreen() {
   const lang = useLang();
+  const soundOn = useGame((s) => s.settings.soundOn);
   const [tab, setTab] = useState<MenuTab>('events');
   const [cat, setCat] = useState<CategoryFilter>('all');
 
@@ -571,6 +583,9 @@ function EventMenuScreen() {
 
         <div className="mn-top-right">
           <div className="mn-actions">
+            <button type="button" className="mn-btn mn-btn-ghost" aria-pressed={soundOn} onClick={() => game.updateSettings({ soundOn: !soundOn })}>
+              {soundOn ? tx(lang, 'Ses: açık', 'Sound: on') : tx(lang, 'Ses: kapalı', 'Sound: off')}
+            </button>
             <button type="button" className="mn-btn mn-btn-ghost" onClick={() => game.togglePanel('settings', true)}>
               {tx(lang, 'Ayarlar', 'Settings')}
             </button>

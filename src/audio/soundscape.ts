@@ -132,6 +132,10 @@ export function createSoundscape(context: BaseAudioContext, destination: AudioNo
   bellBus.connect(bellDry);
   bellDry.connect(destination);
   bellBus.connect(room);
+  // The bells of the mood that is playing pass through one group, so that a change of scene can fade those
+  // already scheduled along with it.
+  let bellGroup = context.createGain();
+  bellGroup.connect(bellBus);
 
   // One slow wave opens and closes every pad's filter a little: the chords breathe.
   const sway = context.createOscillator();
@@ -191,7 +195,7 @@ export function createSoundscape(context: BaseAudioContext, destination: AudioNo
   function playBell(note: number, at: number): void {
     const pan = context.createStereoPanner();
     pan.pan.value = between(-0.6, 0.6);
-    pan.connect(bellBus);
+    pan.connect(bellGroup);
     const peak = BELL_PEAK * between(0.55, 1);
     for (const [multiple, share, decaySec] of BELL_PARTIALS) {
       const osc = context.createOscillator();
@@ -235,6 +239,10 @@ export function createSoundscape(context: BaseAudioContext, destination: AudioNo
         voice.gain.setTargetAtTime(0, now, SCENE_FADE_TAU_SEC);
       }
       voices = [];
+      // So do its bells, those scheduled ahead included: the new mood gets a group of its own.
+      bellGroup.gain.setTargetAtTime(0, now, 0.4);
+      bellGroup = context.createGain();
+      bellGroup.connect(bellBus);
       mood = next;
       padBus.gain.setTargetAtTime(next ? next.padLevel : 0, now, 0.6);
       bellBus.gain.setTargetAtTime(next ? next.bellLevel : 0, now, 0.6);

@@ -20,6 +20,7 @@ function defaultSettings(): Settings {
     quality: typeof navigator !== 'undefined' ? detectQuality() : 'medium',
     mouseSensitivity: 1,
     masterVolume: 0.7,
+    soundOn: true,
     narration: false,
     reducedFlash: false,
     showLabels: true,
@@ -166,7 +167,14 @@ export const useGame = create<GameState>(() => ({
 export const getGame = useGame.getState;
 export const setGame = useGame.setState;
 
+/** A toast leaves by itself after this long, ms. */
+const TOAST_MS = 2600;
 let toastSeq = 1;
 export function showToast(text: L10n, kind: Toast['kind'] = 'info'): void {
-  setGame({ toast: { id: toastSeq++, text, kind } });
+  const id = toastSeq++;
+  setGame({ toast: { id, text, kind } });
+  // Unless a newer one has taken its place by then.
+  setTimeout(() => {
+    if (getGame().toast?.id === id) setGame({ toast: null });
+  }, TOAST_MS);
 }

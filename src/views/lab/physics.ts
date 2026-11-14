@@ -48,7 +48,7 @@ import type {
 } from '../../core/types';
 import { fmt, lf, tpl } from '../../core/l10n';
 
-export const AU_KM = 149_597_870.7;
+const AU_KM = 149_597_870.7;
 export const LY_AU = 63_241.077;
 const PC_AU = 206_264.806;
 const AU_M = 1.495978707e11;
@@ -136,7 +136,7 @@ const BURST_SECONDS = 10;
 /** From this far, 2 kpc, that burst takes away a third of the ozone layer. */
 const BURST_HAZARD_AU = 6500 * LY_AU;
 /** Half the width of each of the burst's two beams, radians: bodies farther from the axis are missed. */
-export const BURST_HALF_WIDTH_RAD = 0.105;
+const BURST_HALF_WIDTH_RAD = 0.105;
 
 /** The cloud of a solar eruption: its ram pressure at 1 AU, nPa, and its speed on the way, km/s. */
 const CME: Record<LabCmeStrength, { pressureNPa: number; speedKmS: number }> = {
@@ -555,8 +555,11 @@ function satellitesLevel(satellites: LabSatellite[]): LabImpactLevel {
 function cmeImpact(distanceAU: number, strength: LabCmeStrength): LabImpact {
   const model = CME[strength];
   const pressureNPa = model.pressureNPa / (distanceAU * distanceAU);
-  const standoffRe = Math.max(1, 10.5 * (pressureNPa / QUIET_PRESSURE_NPA) ** (-1 / 6));
-  const auroraLatDeg = Math.min(65, Math.max(0, 65 - 9 * Math.log2(Math.max(1, pressureNPa / QUIET_PRESSURE_NPA))));
+  // A cloud no denser than the ordinary solar wind does nothing the wind does not do every day.
+  const calm = pressureNPa <= QUIET_PRESSURE_NPA;
+  const excess = Math.max(1, pressureNPa / QUIET_PRESSURE_NPA);
+  const standoffRe = Math.max(1, 10.5 * excess ** (-1 / 6));
+  const auroraLatDeg = Math.min(65, Math.max(0, 65 - 9 * Math.log2(excess)));
   const lightTimeText = lightTime(distanceAU);
   const shockTimeText = durationText((distanceAU * AU_KM) / model.speedKmS);
   // Kinetic energy of a large CME (10^26 J) thrown into a cone of about 2 steradians, caught by the magnetosphere.
@@ -567,7 +570,12 @@ function cmeImpact(distanceAU: number, strength: LabCmeStrength): LabImpact {
     tr: 'Sıradan bir jeomanyetik fırtına. Kutup ışıkları yüksek enlemlerde görülür; yeryüzünde tehlike yoktur.',
     en: 'An ordinary geomagnetic storm. Auroras are seen at high latitudes; there is no danger on the ground.',
   };
-  if (auroraLatDeg <= 5) {
+  if (calm) {
+    summary = {
+      tr: 'Bulut buraya vardığında sıradan güneş rüzgârından seyrektir: manyetosfer sıkışmaz, belirgin bir etki olmaz.',
+      en: 'By the time it arrives the cloud is thinner than the ordinary solar wind: the magnetosphere is not squeezed and there is no noticeable effect.',
+    };
+  } else if (auroraLatDeg <= 5) {
     level = 'extreme';
     summary = {
       tr: 'Manyetosfer yer sabit uyduların yörüngesinin çok altına kadar sıkışır; kutup ışıkları bütün gökyüzünü kaplar. Uyduların çoğu ve elektrik şebekeleri devre dışı kalır, üst atmosfer ısınıp genişler. Yine de atmosfer yeryüzünü korur: insanlar zarar görmez, zarar gören teknolojidir.',
@@ -591,9 +599,13 @@ function cmeImpact(distanceAU: number, strength: LabCmeStrength): LabImpact {
   const steps: Steps = [
     { id: 'light', atSec: LAB_LIGHT_SEC, text: lf(tpl`Parlamanın ışığı ulaştı: ${lightTimeText} sonra`, tpl`The flare’s light arrives: after ${lightTimeText}`) },
     { id: 'shock', atSec: LAB_SHOCK_SEC, text: lf(tpl`Plazma bulutu ulaştı: ${shockTimeText} sonra`, tpl`The plasma cloud arrives: after ${shockTimeText}`) },
-    { id: 'squeeze', atSec: LAB_SHOCK_SEC + 0.9, text: lf(tpl`Manyetosfer ${standoffText} Dünya yarıçapına sıkıştı`, tpl`The magnetosphere is squeezed to ${standoffText} Earth radii`) },
-    { id: 'aurora', atSec: LAB_SHOCK_SEC + 1.8, text: lf(tpl`Kutup ışıkları ${Math.round(auroraLatDeg)}° enleme iniyor`, tpl`Auroras reach down to latitude ${Math.round(auroraLatDeg)}°`) },
   ];
+  if (!calm) {
+    steps.push(
+      { id: 'squeeze', atSec: LAB_SHOCK_SEC + 0.9, text: lf(tpl`Manyetosfer ${standoffText} Dünya yarıçapına sıkıştı`, tpl`The magnetosphere is squeezed to ${standoffText} Earth radii`) },
+      { id: 'aurora', atSec: LAB_SHOCK_SEC + 1.8, text: lf(tpl`Kutup ışıkları ${Math.round(auroraLatDeg)}° enleme iniyor`, tpl`Auroras reach down to latitude ${Math.round(auroraLatDeg)}°`) },
+    );
+  }
   // The May 2024 storm (auroras to about 30°) did not bring grids down; failures begin with Carrington-class
   // storms (auroras below about 22°).
   const blackout = clamp01((28 - auroraLatDeg) / 22);
@@ -1031,11 +1043,13 @@ export function computeLabFates(setup: LabSetup, bodies: LabBody[], removed: str
       Math.cos(body.angleRad) * labSceneRadius(body.distanceAU) - Math.cos(angleRad) * reach,
       Math.sin(body.angleRad) * labSceneRadius(body.distanceAU) - Math.sin(angleRad) * reach,
     );
+    const away = Math.hypot(bx, by);
     const geo: BodyGeometry = {
       // Never nearer than three of the body's own radii.
-      distanceAU: Math.max(Math.hypot(bx, by), (3 * traits.radiusM) / AU_M),
+      distanceAU: Math.max(away, (3 * traits.radiusM) / AU_M),
       sunAU,
-      offAxisRad: Math.acos(Math.min(1, Math.max(-1, (bx * ex + by * ey) / Math.max(1e-12, Math.hypot(bx, by) * Math.hypot(ex, ey))))),
+      // A body at the explosion's own place has no direction from it: it counts as on the axis, not beside it.
+      offAxisRad: away < 1e-9 ? 0 : Math.acos(Math.min(1, Math.max(-1, (bx * ex + by * ey) / (away * Math.hypot(ex, ey))))),
       lightAtSec: (LAB_LIGHT_SEC * onMap) / reach,
       frontAtSec: frontArrivalSec(reach, onMap),
     };
