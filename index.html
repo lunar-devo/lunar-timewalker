@@ -9,7 +9,8 @@
     <title>Lunar Timewalker</title>
     <style>
       html, body { margin: 0; height: 100%; background: #05070c; overflow: hidden; }
-      #game-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; outline: none; }
+      /* The canvas takes touch gestures itself: one finger turns or looks, two zoom; the browser pans and zooms nothing. */
+      #game-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; outline: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
       #ui-root { position: fixed; inset: 0; pointer-events: none; }
     </style>
   </head>

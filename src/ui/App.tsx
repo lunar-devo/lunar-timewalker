@@ -152,6 +152,7 @@ const HELP_ROWS: Array<{ keys: L10n; does: L10n }> = [
   { keys: { tr: 'M / I / N', en: 'M / I / N' }, does: { tr: 'Ay haritası · NASA fotoğrafları · Veri paneli', en: 'Moon map · NASA photos · Data panel' } },
   { keys: { tr: 'P', en: 'P' }, does: { tr: '8K fotoğraf kaydet (7680×4320)', en: 'Save an 8K photo (7680×4320)' } },
   { keys: { tr: '1 … 6 / R', en: '1 … 6 / R' }, does: { tr: 'Zaman hızı · Olayı baştan oynat', en: 'Time speed · Replay event' } },
+  { keys: { tr: 'Dokunmatik ekran', en: 'Touch screen' }, does: { tr: 'Tek parmakla sürükle: bak ya da döndür · İki parmak: yakınlaş · Dokun: seç · Ekrandaki oklar: yürü', en: 'Drag with one finger: look or turn · Two fingers: zoom · Tap: choose · On-screen arrows: walk' } },
 ];
 
 function HelpModal() {

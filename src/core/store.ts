@@ -81,6 +81,8 @@ export interface GameState {
   telescope: { active: boolean; fovDeg: number };
   viewMode: 'first' | 'third';
   pointerLocked: boolean;
+  /** The last input came from a touch screen: the surface shows its on-screen pad for walking. */
+  touchInput: boolean;
   shadingSun: boolean;
   headlamp: boolean;
 
@@ -138,6 +140,7 @@ export const useGame = create<GameState>(() => ({
   telescope: { active: false, fovDeg: 60 },
   viewMode: 'first',
   pointerLocked: false,
+  touchInput: false,
   shadingSun: false,
   headlamp: false,
 

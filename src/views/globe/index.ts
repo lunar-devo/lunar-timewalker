@@ -584,8 +584,9 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
     }
   }
 
+  // On a touch screen the first finger turns the globe and taps; a second one only zooms (see core/pinch).
   function onPointerDown(e: PointerEvent): void {
-    if (e.button !== 0 || currentOpts?.mode === 'backdrop') return;
+    if (e.button !== 0 || !e.isPrimary || currentOpts?.mode === 'backdrop') return;
     dragging = true;
     dragStartX = e.clientX;
     dragStartY = e.clientY;
@@ -593,7 +594,7 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
   }
 
   function onPointerMove(e: PointerEvent): void {
-    if (!dragging) return;
+    if (!dragging || !e.isPrimary) return;
     const dx = e.clientX - dragStartX;
     const dy = e.clientY - dragStartY;
     dragStartX = e.clientX;
@@ -606,9 +607,12 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
   }
 
   function onPointerUp(e: PointerEvent): void {
-    if (!dragging) return;
+    if (!dragging || !e.isPrimary) return;
     dragging = false;
-    if (dragMoved > 6 || !attachedEl || !currentOpts) return;
+    // A press that hardly moved is a click; a finger is less steady than a mouse. A gesture the browser
+    // took over (pointercancel) is never one.
+    const slop = e.pointerType === 'touch' ? 12 : 6;
+    if (e.type !== 'pointerup' || dragMoved > slop || !attachedEl || !currentOpts) return;
 
     const rect = attachedEl.getBoundingClientRect();
     ndc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -839,6 +843,7 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
       el.addEventListener('pointerdown', onPointerDown);
       window.addEventListener('pointermove', onPointerMove);
       window.addEventListener('pointerup', onPointerUp);
+      window.addEventListener('pointercancel', onPointerUp);
       el.addEventListener('wheel', onWheel, { passive: false });
     },
 
@@ -847,6 +852,7 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
       attachedEl.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
       attachedEl.removeEventListener('wheel', onWheel);
       attachedEl = null;
       dragging = false;

@@ -525,6 +525,48 @@
   z-index: 20;
 }
 
+/* On-screen pad for walking on a touch screen: arrows at the bottom left, the jump button beside them */
+.hud-touchpad {
+  position: fixed;
+  left: 16px;
+  bottom: 70px;
+  display: grid;
+  grid-template-columns: repeat(3, 54px) 92px;
+  grid-template-rows: repeat(2, 54px);
+  grid-template-areas:
+    ". up . act2"
+    "left down right act";
+  gap: 6px;
+  pointer-events: auto;
+  z-index: 22;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.hud-pad-key {
+  border: 1px solid var(--c-line);
+  border-radius: 12px;
+  background: rgba(8, 14, 24, 0.72);
+  color: var(--c-text);
+  font: inherit;
+  font-size: 1rem;
+  touch-action: none;
+  backdrop-filter: blur(var(--blur));
+}
+
+.hud-pad-key:active {
+  background: rgba(125, 211, 252, 0.28);
+  border-color: var(--c-accent);
+}
+
+.hud-pad-key.is-up { grid-area: up; }
+.hud-pad-key.is-left { grid-area: left; }
+.hud-pad-key.is-down { grid-area: down; }
+.hud-pad-key.is-right { grid-area: right; }
+.hud-pad-key.is-act { grid-area: act; font-size: 0.82rem; }
+.hud-pad-key.is-act2 { grid-area: act2; font-size: 0.82rem; }
+
 .hud-step-btn {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--c-line-soft);

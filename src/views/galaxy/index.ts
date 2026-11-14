@@ -512,14 +512,15 @@ export function createGalaxyView(renderer: THREE.WebGLRenderer): ISpaceView {
   let drag = false;
   let sx = 0;
   let sy = 0;
+  // On a touch screen the first finger turns the view; a second one only zooms (see core/pinch).
   const onDown = (e: PointerEvent): void => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || !e.isPrimary) return;
     drag = true;
     sx = e.clientX;
     sy = e.clientY;
   };
   const onMove = (e: PointerEvent): void => {
-    if (!drag) return;
+    if (!drag || !e.isPrimary) return;
     swaying = false;
     idleSec = 0;
     tYaw -= (e.clientX - sx) * 0.005;
@@ -527,8 +528,8 @@ export function createGalaxyView(renderer: THREE.WebGLRenderer): ISpaceView {
     sx = e.clientX;
     sy = e.clientY;
   };
-  const onUp = (): void => {
-    drag = false;
+  const onUp = (e: PointerEvent): void => {
+    if (e.isPrimary) drag = false;
   };
   const onWheel = (e: WheelEvent): void => {
     e.preventDefault();
@@ -628,6 +629,7 @@ export function createGalaxyView(renderer: THREE.WebGLRenderer): ISpaceView {
       dom.addEventListener('pointerdown', onDown);
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
       dom.addEventListener('wheel', onWheel, { passive: false });
       dom.addEventListener('dblclick', onDoubleClick);
     },
@@ -636,6 +638,7 @@ export function createGalaxyView(renderer: THREE.WebGLRenderer): ISpaceView {
       el.removeEventListener('pointerdown', onDown);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
       el.removeEventListener('wheel', onWheel);
       el.removeEventListener('dblclick', onDoubleClick);
       el = null;

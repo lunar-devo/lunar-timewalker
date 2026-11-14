@@ -38,14 +38,15 @@ function attachOrbitControls(
   let sx = 0;
   let sy = 0;
 
+  // On a touch screen the first finger turns the view; a second one only zooms (see core/pinch).
   const onDown = (e: PointerEvent): void => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || !e.isPrimary) return;
     dragging = true;
     sx = e.clientX;
     sy = e.clientY;
   };
   const onMove = (e: PointerEvent): void => {
-    if (!dragging) return;
+    if (!dragging || !e.isPrimary) return;
     const dx = e.clientX - sx;
     const dy = e.clientY - sy;
     sx = e.clientX;
@@ -53,7 +54,9 @@ function attachOrbitControls(
     targetLon -= dx * 0.005;
     targetLat = Math.max(-1.4, Math.min(1.4, targetLat + dy * 0.005));
   };
-  const onUp = (): void => { dragging = false; };
+  const onUp = (e: PointerEvent): void => {
+    if (e.isPrimary) dragging = false;
+  };
   const onWheel = (e: WheelEvent): void => {
     e.preventDefault();
     targetDist = Math.max(minDist, Math.min(maxDist, targetDist * (1 + e.deltaY * 0.001)));
@@ -81,6 +84,7 @@ function attachOrbitControls(
       dom.addEventListener('pointerdown', onDown);
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
       dom.addEventListener('wheel', onWheel, { passive: false });
     },
     detach(): void {
@@ -88,6 +92,7 @@ function attachOrbitControls(
       el.removeEventListener('pointerdown', onDown);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
       el.removeEventListener('wheel', onWheel);
       el = null;
       dragging = false;

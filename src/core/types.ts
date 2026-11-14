@@ -1121,6 +1121,8 @@ export interface GameAPI {
   updateSettings(patch: Partial<Settings>): void;
   /** Grab / release the pointer for mouse look. */
   requestPointerLock(): void;
+  /** Presses or releases a key from the on-screen pad of a touch screen (`code` as KeyboardEvent.code). */
+  pressKey(code: string, down: boolean): void;
   /** Guided walk through the controls at the Apollo 11 site. */
   startTutorial(): Promise<void>;
   /** Skips the current tutorial step (or advances past a finished tutorial). */

@@ -1827,15 +1827,16 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     }).catch(() => undefined);
   }
 
+  // On a touch screen the first finger turns the map and taps; a second one only zooms (see core/pinch).
   const onDown = (e: PointerEvent): void => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || !e.isPrimary) return;
     drag = true;
     moved = 0;
     sx = e.clientX;
     sy = e.clientY;
   };
   const onMove = (e: PointerEvent): void => {
-    if (!drag) return;
+    if (!drag || !e.isPrimary) return;
     const dx = e.clientX - sx;
     const dy = e.clientY - sy;
     moved += Math.hypot(dx, dy);
@@ -1847,9 +1848,12 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     sy = e.clientY;
   };
   const onUp = (e: PointerEvent): void => {
-    if (!drag) return;
+    if (!drag || !e.isPrimary) return;
     drag = false;
-    if (moved >= 5 || !el || !placeCb || evaMode) return;
+    // A press that hardly moved is a click; a finger is less steady than a mouse. A gesture the browser
+    // took over (pointercancel) is never one.
+    const slop = e.pointerType === 'touch' ? 12 : 5;
+    if (e.type !== 'pointerup' || moved >= slop || !el || !placeCb || evaMode) return;
     const rect = el.getBoundingClientRect();
     const cx = e.clientX - rect.left;
     const cy = e.clientY - rect.top;
@@ -2630,6 +2634,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       dom.addEventListener('pointerdown', onDown);
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
       dom.addEventListener('wheel', onWheel, { passive: false });
     },
 
@@ -2638,6 +2643,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       el.removeEventListener('pointerdown', onDown);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
       el.removeEventListener('wheel', onWheel);
       el = null;
       drag = false;

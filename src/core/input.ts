@@ -1,8 +1,12 @@
 /**
- * Keyboard + mouse state for the surface game loop. Keys are tracked by KeyboardEvent.code so the
- * layout (Turkish Q / F keyboards included) does not change the physical WASD cluster.
+ * Keyboard, mouse and touch state for the surface game loop. Keys are tracked by KeyboardEvent.code so the
+ * layout (Turkish Q / F keyboards included) does not change the physical WASD cluster. On a touch screen
+ * one finger looks around and taps, and the keys come from the on-screen pad (`setKey`).
  */
-import { setGame } from './store';
+import { getGame, setGame } from './store';
+
+/** A press that moves less than this many pixels is a click: a finger is less steady than a mouse. */
+const CLICK_SLOP_PX = { mouse: 5, touch: 12 };
 
 /** Keys whose browser default (scrolling, focus change) must be suppressed while playing. */
 const GAME_KEYS: Record<string, true> = {
@@ -29,6 +33,8 @@ export class Input {
   private dragMoved = 0;
   private lastMouseX = 0;
   private lastMouseY = 0;
+  /** The finger that is looking around, by its pointer id; null when none is down. */
+  private finger: number | null = null;
   /** When false, key presses are ignored (menus, text inputs). */
   enabled = false;
 
@@ -40,6 +46,10 @@ export class Input {
     document.addEventListener('mousemove', this.onMouseMove);
     canvas.addEventListener('mousedown', this.onMouseDown);
     window.addEventListener('mouseup', this.onMouseUp);
+    canvas.addEventListener('pointerdown', this.onTouchDown);
+    window.addEventListener('pointermove', this.onTouchMove);
+    window.addEventListener('pointerup', this.onTouchUp);
+    window.addEventListener('pointercancel', this.onTouchUp);
     canvas.addEventListener('wheel', this.onWheel, { passive: false });
     canvas.addEventListener('contextmenu', this.onContextMenu);
   }
@@ -49,7 +59,8 @@ export class Input {
   }
 
   requestLock(): void {
-    if (this.locked) return;
+    // A touch screen has no pointer to lock (the method is missing there).
+    if (this.locked || typeof this.canvas.requestPointerLock !== 'function') return;
     // Browsers reject the request shortly after an Esc-unlock; that rejection is expected and harmless.
     const p = this.canvas.requestPointerLock() as unknown as Promise<void> | undefined;
     p?.catch?.(() => undefined);
@@ -61,6 +72,17 @@ export class Input {
 
   isDown(code: string): boolean {
     return this.down.has(code);
+  }
+
+  /** Presses or releases a key from an on-screen control; it counts exactly as the key itself. */
+  setKey(code: string, down: boolean): void {
+    if (!this.enabled) return;
+    if (!down) {
+      this.down.delete(code);
+      return;
+    }
+    if (!this.down.has(code)) this.pressedThisFrame.add(code);
+    this.down.add(code);
   }
 
   /** True only on the frame the key went down. */
@@ -116,6 +138,10 @@ export class Input {
     document.removeEventListener('mousemove', this.onMouseMove);
     this.canvas.removeEventListener('mousedown', this.onMouseDown);
     window.removeEventListener('mouseup', this.onMouseUp);
+    this.canvas.removeEventListener('pointerdown', this.onTouchDown);
+    window.removeEventListener('pointermove', this.onTouchMove);
+    window.removeEventListener('pointerup', this.onTouchUp);
+    window.removeEventListener('pointercancel', this.onTouchUp);
     this.canvas.removeEventListener('wheel', this.onWheel);
     this.canvas.removeEventListener('contextmenu', this.onContextMenu);
   }
@@ -128,6 +154,8 @@ export class Input {
   private onKeyDown = (e: KeyboardEvent): void => {
     if (!this.enabled || this.isTyping(e) || e.metaKey || e.ctrlKey || e.altKey) return;
     if (GAME_KEYS[e.code]) e.preventDefault();
+    // A real key: the on-screen pad of a touch screen is not needed any more.
+    if (getGame().touchInput) setGame({ touchInput: false });
     if (!this.down.has(e.code)) this.pressedThisFrame.add(e.code);
     this.down.add(e.code);
   };
@@ -183,12 +211,46 @@ export class Input {
   private onMouseUp = (e: MouseEvent): void => {
     if (e.button === 0 && this.leftDown) {
       this.leftDown = false;
-      if (this.enabled && this.dragMoved < 5) {
+      if (this.enabled && this.dragMoved < CLICK_SLOP_PX.mouse) {
         this.clicks++;
         this.clickAt = { x: e.clientX, y: e.clientY };
       }
     }
     if (e.button === 2) this.rightDown = false;
+  };
+
+  /** The first finger on the canvas looks around; without movement it is a click where it was put down. */
+  private onTouchDown = (e: PointerEvent): void => {
+    if (e.pointerType !== 'touch') return;
+    // No mouse events are made up for this touch: they would count the tap a second time.
+    e.preventDefault();
+    if (!getGame().touchInput) setGame({ touchInput: true });
+    if (this.finger !== null) return;
+    this.finger = e.pointerId;
+    this.dragMoved = 0;
+    this.lastMouseX = e.clientX;
+    this.lastMouseY = e.clientY;
+  };
+
+  private onTouchMove = (e: PointerEvent): void => {
+    if (e.pointerId !== this.finger) return;
+    const dx = e.clientX - this.lastMouseX;
+    const dy = e.clientY - this.lastMouseY;
+    this.lastMouseX = e.clientX;
+    this.lastMouseY = e.clientY;
+    this.dragMoved += Math.hypot(dx, dy);
+    if (!this.enabled) return;
+    this.lookX += dx * 1.35;
+    this.lookY += dy * 1.35;
+  };
+
+  private onTouchUp = (e: PointerEvent): void => {
+    if (e.pointerId !== this.finger) return;
+    this.finger = null;
+    if (e.type === 'pointerup' && this.enabled && this.dragMoved < CLICK_SLOP_PX.touch) {
+      this.clicks++;
+      this.clickAt = { x: e.clientX, y: e.clientY };
+    }
   };
 
   private onWheel = (e: WheelEvent): void => {

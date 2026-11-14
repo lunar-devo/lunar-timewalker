@@ -859,6 +859,54 @@ function InfoCentreModal() {
 
 // ─────────────────────────── SurfaceHud ───────────────────────────
 
+/** The arrows of the on-screen pad: the key each one presses and where it sits in the pad's grid. */
+const PAD_ARROWS: Array<{ code: string; glyph: string; cell: string; label: L10n }> = [
+  { code: 'KeyW', glyph: '▲', cell: 'up', label: { tr: 'İleri', en: 'Forward' } },
+  { code: 'KeyA', glyph: '◀', cell: 'left', label: { tr: 'Sola', en: 'Left' } },
+  { code: 'KeyS', glyph: '▼', cell: 'down', label: { tr: 'Geri', en: 'Back' } },
+  { code: 'KeyD', glyph: '▶', cell: 'right', label: { tr: 'Sağa', en: 'Right' } },
+];
+
+/** One key of the pad: held for as long as the finger that pressed it stays down, wherever it slides. */
+function PadKey({ code, cell, label, children }: { code: string; cell: string; label: string; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      className={`hud-pad-key is-${cell}`}
+      aria-label={label}
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        game.pressKey(code, true);
+      }}
+      onPointerUp={() => game.pressKey(code, false)}
+      onPointerCancel={() => game.pressKey(code, false)}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * Walking on a touch screen: arrows that press W A S D and a button for Space; where there is no ground to
+ * stand on, Space rises and a second button (Q) descends.
+ */
+function TouchPad({ zeroG, lang }: { zeroG: boolean; lang: Lang }) {
+  return (
+    <div className="hud-touchpad">
+      {PAD_ARROWS.map((a) => (
+        <PadKey key={a.code} code={a.code} cell={a.cell} label={loc(a.label, lang)}>{a.glyph}</PadKey>
+      ))}
+      <PadKey code="Space" cell="act" label={zeroG ? tx(lang, 'Yüksel', 'Rise') : tx(lang, 'Zıpla', 'Jump')}>
+        {zeroG ? tx(lang, 'Yüksel', 'Rise') : tx(lang, 'Zıpla', 'Jump')}
+      </PadKey>
+      {zeroG && (
+        <PadKey code="KeyQ" cell="act2" label={tx(lang, 'Alçal', 'Descend')}>{tx(lang, 'Alçal', 'Descend')}</PadKey>
+      )}
+    </div>
+  );
+}
+
 export function SurfaceHud() {
   const lang = useLang();
   const world = useGame((s) => s.world);
@@ -881,6 +929,7 @@ export function SurfaceHud() {
   const showLabels = useGame((s) => s.settings.showLabels);
   const showGuide = useGame((s) => s.settings.showConstellations);
   const soundOn = useGame((s) => s.settings.soundOn);
+  const touchInput = useGame((s) => s.touchInput);
 
   const [moreOpen, setMoreOpen] = useState(false);
   const worldInfo = WORLDS[world];
@@ -1082,6 +1131,8 @@ export function SurfaceHud() {
       </div>
 
       {toast && <div className="hud-toast">{loc(toast.text, lang)}</div>}
+
+      {touchInput && !spectator && !cleanMode && <TouchPad zeroG={WORLDS[world].zeroG ?? false} lang={lang} />}
 
       {/* Minimal Crosshair (no scan box) */}
       <div className="hud-crosshair">

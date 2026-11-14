@@ -20,6 +20,7 @@ import { loadManifest, setMaxTextureSize } from '../core/assets';
 import { frame, type FrameProjection } from '../core/frame';
 import { lf, loadDict, loc, tpl } from '../core/l10n';
 import { Input } from '../core/input';
+import { attachPinch } from '../core/pinch';
 import { QUALITY } from '../core/quality';
 import {
   getGame, saveSettings, setGame, showToast,
@@ -222,6 +223,8 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
   const nearCam = new THREE.PerspectiveCamera(60, 1, 0.02, 20);
 
   const input = new Input(canvas);
+  // Two fingers zoom wherever the wheel does: the telescope, the close-up views, the map, the lab.
+  attachPinch(canvas);
   const audio = createAudio();
   // The stored settings reach the audio before its first use; later changes go through updateSettings.
   const storedSettings = getGame().settings;
@@ -1664,6 +1667,11 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     requestPointerLock(): void {
       audio.unlock();
       input.requestLock();
+    },
+
+    pressKey(code: string, down: boolean): void {
+      audio.unlock();
+      input.setKey(code, down);
     },
 
     async startTutorial(): Promise<void> {
