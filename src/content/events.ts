@@ -56,7 +56,7 @@ export const EVENTS: EventDef[] = [
           from: { date: { year: 1969, month: 7, day: 20, hour: 20, minute: 16 } },
           to: { date: { year: 1969, month: 7, day: 20, hour: 20, minute: 17, second: 41 } },
           caption: {
-            tr: 'Eagle doğudan, alçaktaki Güneş’in önünden alçalıyor (4 kat hızlı). Armstrong kayalık bir krateri geçip düz bir yer arıyor. Hava olmadığı için motorun savurduğu toz dümdüz çizgiler hâlinde yayılıyor.',
+            tr: 'Eagle doğudan, alçaktaki Güneş’in önünden alçalıyor (4 kat hızda). Armstrong kayalık bir krateri geçip düz bir yer arıyor. Hava olmadığı için motorun savurduğu toz dümdüz çizgiler hâlinde yayılıyor.',
             en: 'Eagle comes down from the east, in front of the low Sun (4× speed). Armstrong flies past a boulder-strewn crater looking for level ground. With no air, the dust blown by the engine flies out in straight lines.',
           },
         },
@@ -65,7 +65,7 @@ export const EVENTS: EventDef[] = [
           from: { date: { year: 1969, month: 7, day: 20, hour: 20, minute: 17, second: 41 } },
           caption: {
             tr: 'İniş: 20:17:40 UT. İnsanlar ilk kez başka bir gök cismine indi. Hava olmadığı için toz bulutu asılı kalmıyor, hemen yere düşüyor.',
-            en: 'Touchdown: 20:17:40 UT. For the first time, people have landed on another world. With no air, no dust cloud hangs about; it falls straight back down.',
+            en: 'Touchdown: 20:17:40 UT. For the first time, people have landed on another world. With no air, no dust cloud hangs in the air; it falls straight back down.',
           },
         },
         {
@@ -347,7 +347,7 @@ export const EVENTS: EventDef[] = [
     id: 'comet44bc',
     order: 4,
     category: 'comet',
-    title: { tr: 'M.Ö. 44’ün Büyük Kuyruklu Yıldızı', en: 'The Great Comet of 44 BC' },
+    title: { tr: 'M.Ö. 44 Büyük Kuyruklu Yıldızı', en: 'The Great Comet of 44 BC' },
     dateLabel: { tr: '23 Temmuz M.Ö. 44 · Jülyen takvimi', en: '23 July 44 BC · Julian calendar' },
     summary: {
       tr: 'Julius Caesar’ın ölümünden birkaç ay sonra Roma’da, gün batmadan bile görülen parlak kuyruklu yıldızı Ay’dan izleyin.',
@@ -571,7 +571,7 @@ export const EVENTS: EventDef[] = [
     id: 'mars2003',
     order: 7,
     category: 'mars',
-    title: { tr: '2003: Mars 60.000 Yılın En Yakın Noktasında', en: '2003: Mars at Its Closest in 60,000 Years' },
+    title: { tr: '2003: Mars’ın 60.000 Yıldaki En Yakın Geçişi', en: '2003: Mars at Its Closest in 60,000 Years' },
     dateLabel: { tr: '27 Ağustos 2003 · 09:51 UT', en: '27 August 2003 · 09:51 UT' },
     summary: {
       tr: 'Ağustos 2003’te Mars, Dünya’ya yaklaşık 60.000 yıldır olmadığı kadar yaklaştı. Teleskopta Mars’ın aylar içinde nasıl büyüdüğünü izleyin.',

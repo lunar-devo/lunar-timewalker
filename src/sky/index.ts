@@ -18,6 +18,8 @@ const DEG2RAD = Math.PI / 180;
 const SKY_RADIUS = 100;
 /** Sky taken in by one pixel of the finest star map (8192 pixels round), degrees. */
 const STAR_MAP_DEG_PER_PIXEL = 360 / 8192;
+/** How long to wait before asking again for a picture that failed to load. */
+const TEXTURE_RETRY_SEC = 5;
 
 interface BrightStarsPayload {
   columns: string[];
@@ -293,9 +295,10 @@ export function createSky(_renderer: THREE.WebGLRenderer): ISky {
     holder.add(turned);
     holder.visible = false;
     celestialGroup.add(holder);
-    return { def: g, shot, holder, mesh, mat, loaded: false };
+    return { def: g, shot, holder, mesh, mat, loaded: false, loading: false };
   });
-  let galaxyPicturesAsked = false;
+  /** When the galaxies still without their picture are next asked for it, on the clock of `animTime`. */
+  let galaxyPicturesDueAt = 0;
 
   // 2d. World atmosphere dome (Mars, Earth, Venus amber clouds, Uranus/Neptune haze) + sky rings.
   let activeWorld: WorldId = 'moon';
@@ -734,16 +737,25 @@ export function createSky(_renderer: THREE.WebGLRenderer): ISky {
   let animTime = 0;
 
   let currentQuality: QualityProfile | null = null;
+  /** Counts the changes of quality: a texture that arrives for an older one is thrown away. */
+  let qualitySeq = 0;
+  /** The Earth picture on the globe and the one being loaded (empty: none), and the count of such loads. */
   let earthTexName = '';
+  let earthTexLoading = '';
+  let earthTexSeq = 0;
+  /** After a failed load, Earth's picture is not asked for again before this, on the clock of `animTime`. */
+  let earthTexRetryAt = 0;
 
   /** Swaps in the Earth picture for a date (that day's clouds where available); no-op when already shown. */
   function showEarthImagery(name: string): void {
-    if (!currentQuality || name === earthTexName) return;
-    earthTexName = name;
+    if (!currentQuality || name === earthTexName || name === earthTexLoading || animTime < earthTexRetryAt) return;
     const url = texUrl(name, currentQuality) ?? texUrl('earth_day', currentQuality);
     if (!url) return;
+    earthTexLoading = name;
+    earthTexSeq += 1;
+    const seq = earthTexSeq;
     texLoader.loadAsync(url).then((tex) => {
-      if (earthTexName !== name) {
+      if (seq !== earthTexSeq) {
         tex.dispose();
         return;
       }
@@ -752,12 +764,45 @@ export function createSky(_renderer: THREE.WebGLRenderer): ISky {
       const old = earthUniforms.uDayMap.value;
       earthUniforms.uDayMap.value = tex;
       old.dispose();
-    }).catch(() => undefined);
+      earthTexName = name;
+      earthTexLoading = '';
+    }, () => {
+      if (seq !== earthTexSeq) return;
+      earthTexLoading = '';
+      earthTexRetryAt = animTime + TEXTURE_RETRY_SEC;
+    });
+  }
+
+  /** Asks for the sky picture of every galaxy that has none yet; one that fails is asked for again later. */
+  function loadGalaxyPictures(): void {
+    galaxyPicturesDueAt = animTime + TEXTURE_RETRY_SEC;
+    for (const gm of galaxyMeshes) {
+      const rel = `tex/galaxy_${gm.def.id}_${gm.shot.id}_sky.webp`;
+      if (gm.loaded || gm.loading || !hasAsset(rel)) continue;
+      gm.loading = true;
+      texLoader.loadAsync(assetUrl(`assets/${rel}`)).then((gt) => {
+        gt.colorSpace = THREE.SRGBColorSpace;
+        gm.mat.uniforms.uMap.value.dispose();
+        gm.mat.uniforms.uMap.value = gt;
+        // The holder's unit is the picture's width.
+        gm.mesh.scale.set(1, gt.image.height / gt.image.width, 1);
+        gm.loaded = true;
+        gm.loading = false;
+      }, () => {
+        gm.loading = false;
+      });
+    }
   }
 
   async function loadTexturesForQuality(quality: QualityProfile): Promise<void> {
+    qualitySeq += 1;
+    const seq = qualitySeq;
     currentQuality = quality;
+    // Earth's picture is loaded again at the new size; one still on its way at the old size is thrown away.
     earthTexName = '';
+    earthTexLoading = '';
+    earthTexSeq += 1;
+    earthTexRetryAt = 0;
     const starsUrl = texUrl('stars', quality);
     const nightUrl = texUrl('earth_night', quality);
     // Mars is a few dozen pixels wide even at the telescope's narrowest field: 2K is plenty there.
@@ -766,6 +811,11 @@ export function createSky(_renderer: THREE.WebGLRenderer): ISky {
     if (!starsUrl || !marsUrl) throw new Error('Star or Mars texture missing from the asset manifest');
 
     const [starsTex, marsTex] = await Promise.all([texLoader.loadAsync(starsUrl), texLoader.loadAsync(marsUrl)]);
+    if (seq !== qualitySeq) {
+      starsTex.dispose();
+      marsTex.dispose();
+      return;
+    }
     // Mip levels are picked explicitly in the shader (see uLod), which also avoids a seam at RA 0h.
     starsTex.minFilter = THREE.LinearMipmapLinearFilter;
     starsTex.magFilter = THREE.LinearFilter;
@@ -786,6 +836,10 @@ export function createSky(_renderer: THREE.WebGLRenderer): ISky {
     const moonUrl = texUrl('moon_color', { ...quality, texTier: '2k' });
     if (moonUrl) {
       texLoader.loadAsync(moonUrl).then((mt) => {
+        if (seq !== qualitySeq) {
+          mt.dispose();
+          return;
+        }
         mt.colorSpace = THREE.SRGBColorSpace;
         moonSkyUniforms.uMap.value.dispose();
         moonSkyUniforms.uMap.value = mt;
@@ -794,6 +848,10 @@ export function createSky(_renderer: THREE.WebGLRenderer): ISky {
     }
     if (nightUrl) {
       texLoader.loadAsync(nightUrl).then((nt) => {
+        if (seq !== qualitySeq) {
+          nt.dispose();
+          return;
+        }
         nt.colorSpace = THREE.SRGBColorSpace;
         earthUniforms.uNightMap.value.dispose();
         earthUniforms.uNightMap.value = nt;
@@ -801,6 +859,10 @@ export function createSky(_renderer: THREE.WebGLRenderer): ISky {
     }
     if (constUrl) {
       texLoader.loadAsync(constUrl).then((ct) => {
+        if (seq !== qualitySeq) {
+          ct.dispose();
+          return;
+        }
         ct.minFilter = THREE.LinearMipmapLinearFilter;
         ct.magFilter = THREE.LinearFilter;
         domeUniforms.uConstMap.value.dispose();
@@ -808,21 +870,7 @@ export function createSky(_renderer: THREE.WebGLRenderer): ISky {
         domeUniforms.uHasConst.value = 1.0;
       }).catch(() => undefined);
     }
-    if (!galaxyPicturesAsked) {
-      galaxyPicturesAsked = true;
-      for (const gm of galaxyMeshes) {
-        const rel = `tex/galaxy_${gm.def.id}_${gm.shot.id}_sky.webp`;
-        if (!hasAsset(rel)) continue;
-        texLoader.loadAsync(assetUrl(`assets/${rel}`)).then((gt) => {
-          gt.colorSpace = THREE.SRGBColorSpace;
-          gm.mat.uniforms.uMap.value.dispose();
-          gm.mat.uniforms.uMap.value = gt;
-          // The holder's unit is the picture's width.
-          gm.mesh.scale.set(1, gt.image.height / gt.image.width, 1);
-          gm.loaded = true;
-        }).catch(() => undefined);
-      }
-    }
+    loadGalaxyPictures();
   }
 
   return {
@@ -919,6 +967,8 @@ export function createSky(_renderer: THREE.WebGLRenderer): ISky {
         gm.mat.uniforms.uColour.value = THREE.MathUtils.smoothstep(diskPx, 70, 220);
         gm.holder.visible = gm.loaded && gm.mat.uniforms.uAlpha.value > 0.02;
       }
+      // Once the sky's own textures have been asked for, a galaxy picture that failed is asked for again.
+      if (currentQuality && animTime >= galaxyPicturesDueAt) loadGalaxyPictures();
 
       starPointUniforms.uFovScale.value = Math.max(0.7, Math.min(1.2, Math.sqrt(60 / Math.max(0.2, frame.fovDeg))));
 

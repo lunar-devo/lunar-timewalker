@@ -27,6 +27,13 @@ const FOLLOW_CLEAR_M = 0.45;
 const MAX_CLIMB_TAN = 0.7;
 /** Layer the main camera never renders: the first-person world body still casts its shadow from there. */
 const SHADOW_ONLY_LAYER = 1;
+/** How high above the ground a bootprint decal lies. */
+const FOOTPRINT_LIFT_M = 0.012;
+/** A teleport that sets the body down this close to where it stood (the world switch does) keeps the tracks. */
+const KEEP_TRACKS_WITHIN_M = 1;
+/** The raised glove covers the Sun fully while the view is within 45° of it, and not at all beyond 75°. */
+const SHADE_FULL_COS = Math.cos(45 * DEG2RAD);
+const SHADE_NONE_COS = Math.cos(75 * DEG2RAD);
 
 function createScannerProp(): THREE.Group {
   const g = new THREE.Group();
@@ -190,7 +197,7 @@ export function createPlayer(_renderer: THREE.WebGLRenderer): IPlayer {
     nextFootLeft = !nextFootLeft;
     const fx = state.position.x + Math.cos(yawRad) * sideSign * 0.13;
     const fz = state.position.z + Math.sin(yawRad) * sideSign * 0.13;
-    const fy = ground.heightAt(fx, fz) + 0.012;
+    const fy = ground.heightAt(fx, fz) + FOOTPRINT_LIFT_M;
     ground.normalAt(fx, fz, tmpNormal);
     tmpQuat.setFromUnitVectors(upVec, tmpNormal).multiply(new THREE.Quaternion().setFromAxisAngle(upVec, -yawRad));
     tmpPos.set(fx, fy, fz);
@@ -198,6 +205,25 @@ export function createPlayer(_renderer: THREE.WebGLRenderer): IPlayer {
     footprints.setMatrixAt(footprintCursor % MAX_FOOTPRINTS, tmpMat);
     footprintCursor++;
     footprints.instanceMatrix.needsUpdate = true;
+  }
+
+  /** True while the newest bootprint still lies on the ground: false once another site has been loaded. */
+  function tracksLieOn(ground: GroundQuery): boolean {
+    if (footprintCursor === 0) return true;
+    footprints.getMatrixAt((footprintCursor - 1) % MAX_FOOTPRINTS, tmpMat);
+    tmpPos.setFromMatrixPosition(tmpMat);
+    return Math.abs(ground.heightAt(tmpPos.x, tmpPos.z) + FOOTPRINT_LIFT_M - tmpPos.y) < 0.03;
+  }
+
+  /** Removes every bootprint and every dust grain: they belong to the place the astronaut has left. */
+  function clearTracks(): void {
+    for (let i = 0; i < MAX_FOOTPRINTS; i++) footprints.setMatrixAt(i, zeroMat);
+    footprints.instanceMatrix.needsUpdate = true;
+    footprintCursor = 0;
+    stepAccumulatorM = 0;
+    dustLife.fill(0);
+    dustPositions.fill(-9999);
+    dustGeo.getAttribute('position').needsUpdate = true;
   }
 
   /**
@@ -274,6 +300,9 @@ export function createPlayer(_renderer: THREE.WebGLRenderer): IPlayer {
     },
 
     teleport(x: number, z: number, headingDeg: number, ground: GroundQuery, pitchDeg = 0): void {
+      // The tracks stay only when the body is set down where it stood, on the ground they were made on.
+      const movedM = Math.hypot(x - state.position.x, z - state.position.z);
+      if (movedM > KEEP_TRACKS_WITHIN_M || !tracksLieOn(ground)) clearTracks();
       const y = ground.heightAt(x, z);
       state.position.set(x, y, z);
       state.velocity.set(0, 0, 0);
@@ -474,8 +503,9 @@ export function createPlayer(_renderer: THREE.WebGLRenderer): IPlayer {
       scanBlend += ((gesture.scan ? 1 : 0) - scanBlend) * Math.min(1, clampedDt * 9);
       landingDip = Math.max(0, landingDip - clampedDt * 0.55);
 
-      // How well the raised glove blocks the Sun (holding F while facing within ~75° of it shades the visor)
+      // How completely the raised glove covers the Sun: the hand is up (F held) and the view is turned toward it.
       const cosSun = lookDirX * lighting.sunDir[0] + lookDirY * lighting.sunDir[1] + lookDirZ * lighting.sunDir[2];
+      shadeAmount = shadeBlend * THREE.MathUtils.smoothstep(cosSun, SHADE_NONE_COS, SHADE_FULL_COS);
 
       // 4. Bodies
       bodyQuat.setFromAxisAngle(upVec, -yawRad);

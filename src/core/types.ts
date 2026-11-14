@@ -636,7 +636,7 @@ export interface DonkiEvent {
   halfAngleDeg?: number;
   latDeg?: number;
   lonDeg?: number;
-  /** GST only: peak Kp. */
+  /** GST only: the highest Kp among the storm's samples; absent when DONKI gave no usable sample. */
   kp?: number;
   /** FLR only: class like "X5.8". */
   classType?: string;
@@ -650,7 +650,13 @@ export interface DonkiResult {
 }
 
 export interface INasa {
-  getTopic(topicId: string): Promise<NasaTopicResult>;
+  /**
+   * Pictures of a topic: those of the bundled snapshot and, added to them, what the live library returns
+   * now. The live request can take seconds, so `onArchive` (when given) receives the bundled pictures as
+   * soon as they are read, ahead of the final answer the promise resolves with. It is not called when the
+   * snapshot has no picture of the topic or when the final answer is already known.
+   */
+  getTopic(topicId: string, onArchive?: (bundled: NasaTopicResult) => void): Promise<NasaTopicResult>;
   search(query: string, limit?: number): Promise<NasaTopicResult>;
   /** Space-weather events between two ISO dates (YYYY-MM-DD). */
   donki(startDate: string, endDate: string): Promise<DonkiResult>;

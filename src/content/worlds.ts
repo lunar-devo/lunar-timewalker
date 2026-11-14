@@ -29,7 +29,7 @@ export const WORLDS: Record<WorldId, WorldPhysics> = {
     zeroG: false,
     solidSurface: true,
     note: {
-      tr: '3,70 m/s² çekim, hava yok. Güneş gökte Dünya’dakinden yaklaşık 2,5 kat daha büyük ve parlak görünür; kraterli koyu yüzey.',
+      tr: '3,70 m/s² çekim, hava yok. Güneş gökte Dünya’dakinden yaklaşık 2,5 kat daha büyük ve çok daha parlak görünür; kraterli koyu yüzey.',
       en: '3.70 m/s² gravity, no air. The Sun appears ~2.5x wider and far brighter than from Earth over dark cratered terrain.',
     },
   },
@@ -57,7 +57,7 @@ export const WORLDS: Record<WorldId, WorldPhysics> = {
     zeroG: false,
     solidSurface: true,
     note: {
-      tr: '9,81 m/s² çekim, mavi gökyüzü ve hava direnci. Gökte Ay’ı gerçek evresinde ve boyutunda görürsünüz.',
+      tr: '9,81 m/s² çekim, mavi gökyüzü ve hava direnci. Gökte Ay’ı gerçek evresinde ve gerçek açısal boyutunda görürsünüz.',
       en: '9.81 m/s² gravity, blue sky and air drag. You see the Moon in its real phase and angular size overhead.',
     },
   },
@@ -71,13 +71,13 @@ export const WORLDS: Record<WorldId, WorldPhysics> = {
     zeroG: false,
     solidSurface: true,
     note: {
-      tr: '3,72 m/s² çekim (Dünya’nın %38’i), ince CO₂ havası, somon-pas rengi gökyüzü ve Dünya’yı parlak bir yıldız gibi gösteren ufuk.',
+      tr: '3,72 m/s² çekim (Dünya’nın %38’i), ince CO₂ atmosferi ve karamel rengi gökyüzü. Dünya gökte parlak bir yıldız gibi görünür.',
       en: '3.72 m/s² gravity (38% of Earth’s), thin CO₂ air, butterscotch sky, and Earth visible as a bright star.',
     },
   },
   jupiter: {
     id: 'jupiter',
-    name: { tr: 'Jüpiter (üst atmosfer)', en: 'Jupiter (upper clouds)' },
+    name: { tr: 'Jüpiter (bulut tepeleri)', en: 'Jupiter (cloud tops)' },
     gravityMs2: 0,
     jumpSpeedMs: 0,
     walkSpeedMs: 8,
@@ -91,7 +91,7 @@ export const WORLDS: Record<WorldId, WorldPhysics> = {
   },
   saturn: {
     id: 'saturn',
-    name: { tr: 'Satürn (üst atmosfer)', en: 'Saturn (upper clouds)' },
+    name: { tr: 'Satürn (bulut tepeleri)', en: 'Saturn (cloud tops)' },
     gravityMs2: 0,
     jumpSpeedMs: 0,
     walkSpeedMs: 8,
@@ -105,7 +105,7 @@ export const WORLDS: Record<WorldId, WorldPhysics> = {
   },
   uranus: {
     id: 'uranus',
-    name: { tr: 'Uranüs (üst atmosfer)', en: 'Uranus (upper clouds)' },
+    name: { tr: 'Uranüs (bulut tepeleri)', en: 'Uranus (cloud tops)' },
     gravityMs2: 0,
     jumpSpeedMs: 0,
     walkSpeedMs: 8,
@@ -119,7 +119,7 @@ export const WORLDS: Record<WorldId, WorldPhysics> = {
   },
   neptune: {
     id: 'neptune',
-    name: { tr: 'Neptün (üst atmosfer)', en: 'Neptune (upper clouds)' },
+    name: { tr: 'Neptün (bulut tepeleri)', en: 'Neptune (cloud tops)' },
     gravityMs2: 0,
     jumpSpeedMs: 0,
     walkSpeedMs: 8,
@@ -141,7 +141,7 @@ export const WORLDS: Record<WorldId, WorldPhysics> = {
     zeroG: true,
     solidSurface: false,
     note: {
-      tr: 'Ağırlıksız ortam (0 m/s²): W A S D ile yönelin, Boşluk ile yükselin, Q ile alçalın.',
+      tr: 'Ağırlıksız ortam (0 m/s²): W A S D ile itki verin, Boşluk ile yükselin, Q ile alçalın.',
       en: 'Weightless (0 m/s²): thrust with W A S D, rise with Space, descend with Q.',
     },
   },

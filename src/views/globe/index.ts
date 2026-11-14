@@ -15,7 +15,7 @@
  */
 import * as THREE from 'three';
 import type {
-  GlobeMarker, ISpaceView, SiteCoord, SpaceViewOptions,
+  GlobeMarker, ISpaceView, Lang, QualityProfile, SiteCoord, SpaceViewOptions,
 } from '../../core/types';
 import { hasAsset, texUrl } from '../../core/assets';
 import { loc } from '../../core/l10n';
@@ -28,6 +28,17 @@ import { SATURN_RING_GLSL, SATURN_RING_INNER, SATURN_RING_OUTER } from '../rings
 const DEG2RAD = Math.PI / 180;
 const RAD2DEG = 180 / Math.PI;
 const GLOBE_RADIUS = 10;
+/** How long the date must stay with another picture of Earth before it is loaded: a date being dragged across
+ * the months, or a fast clock, does not load one picture after another. */
+const EARTH_PICTURE_SETTLE_SEC = 0.4;
+/** How long to wait before asking again for a picture of Earth that failed to load. */
+const EARTH_PICTURE_RETRY_SEC = 5;
+
+/** The globe view, with what the engine tells it beyond the common close-up view. */
+export interface GlobeController extends ISpaceView {
+  /** Rewrites the marker labels in another language; called when the language changes while the view is open. */
+  setLang(lang: Lang): void;
+}
 
 function latLonToLocalVec(latDeg: number, lonDeg: number, radius = GLOBE_RADIUS): THREE.Vector3 {
   const phi = latDeg * DEG2RAD;
@@ -77,7 +88,7 @@ function makeMarkerLabelTexture(text: string, colorHex: string, dimmed: boolean)
   return tex;
 }
 
-export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
+export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, window.innerWidth / Math.max(1, window.innerHeight), 0.1, 2000);
   const texLoader = new THREE.TextureLoader();
@@ -457,13 +468,26 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
 
   interface MarkerVisual {
     data: GlobeMarker;
-    pin: THREE.Mesh;
+    pin: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
     label: THREE.Sprite;
     surfaceNormal: THREE.Vector3;
   }
   const markerVisuals: MarkerVisual[] = [];
+  /** One sphere serves every marker pin. */
+  const pinGeo = new THREE.SphereGeometry(0.19, 14, 14);
 
   let currentOpts: SpaceViewOptions | null = null;
+  /** The language the marker labels are written in. */
+  let labelLang: Lang = 'en';
+  /** Counts the calls of enter(): a call that finds a newer one after waiting for a texture changes nothing more. */
+  let enterSeq = 0;
+  /** Earth's day picture on the globe, the one the date now asks for, and for how long it has asked. */
+  let earthMapKey: string | null = null;
+  let earthAskedKey: string | null = null;
+  let earthAskedSec = 0;
+  let earthMapLoading = false;
+  /** True once Earth's night picture is on the globe: the strength of the city lights then follows the year. */
+  let cityLightsReady = false;
   let camLonRad = 0.35;
   let camLatRad = 0.15;
   let targetLonRad = 0.35;
@@ -520,15 +544,20 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
     }
   }
 
-  function rebuildMarkers(markers: GlobeMarker[]): void {
-    while (markersGroup.children.length > 0) {
-      markersGroup.remove(markersGroup.children[0]);
+  /** Takes the pins and labels off the globe and frees the materials and label pictures made for them. */
+  function clearMarkers(): void {
+    for (const mv of markerVisuals) {
+      mv.pin.material.dispose();
+      mv.label.material.map?.dispose();
+      mv.label.material.dispose();
     }
+    markersGroup.clear();
     markerVisuals.length = 0;
-    if (!currentOpts) return;
+  }
 
-    const lang = currentOpts.lang;
-    const pinGeo = new THREE.SphereGeometry(0.19, 14, 14);
+  function rebuildMarkers(markers: GlobeMarker[]): void {
+    clearMarkers();
+    if (!currentOpts) return;
 
     for (const m of markers) {
       const pos = latLonToLocalVec(m.latDeg, m.lonDeg, GLOBE_RADIUS * 1.008);
@@ -545,7 +574,7 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
       pin.userData = { markerId: m.id };
       markersGroup.add(pin);
 
-      const tex = makeMarkerLabelTexture(loc(m.label, lang), colHex, Boolean(m.dimmed));
+      const tex = makeMarkerLabelTexture(loc(m.label, labelLang), colHex, Boolean(m.dimmed));
       const spriteMat = new THREE.SpriteMaterial({
         map: tex,
         transparent: true,
@@ -568,6 +597,12 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
     showcaseSeq += 1;
     const seq = showcaseSeq;
     showcaseGroup.clear();
+    // The model is a clone with materials of its own; its geometry and textures belong to the model cache.
+    showcaseModel?.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      const own: THREE.Material[] = Array.isArray(o.material) ? o.material : [o.material];
+      for (const m of own) m.dispose();
+    });
     showcaseModel = null;
     if (!selectedMarkerId) return;
     const mv = markerVisuals.find((v) => v.data.id === selectedMarkerId);
@@ -582,6 +617,38 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
     } catch {
       // Ignore model load error
     }
+  }
+
+  /**
+   * Keeps Earth's picture and the strength of its city lights with the date shown. One picture is loaded at a
+   * time, and one that arrives after the date has moved on to another is not put on the globe.
+   */
+  function followEarthDate(dt: number, jdTT: number, quality: QualityProfile): void {
+    if (cityLightsReady) globeUniforms.uCity.value = cityLightsFor(calendarUTFromJdTT(jdTT).year);
+    const key = earthImageryFor(jdTT).texName;
+    if (key !== earthAskedKey) {
+      earthAskedKey = key;
+      earthAskedSec = 0;
+    }
+    if (key === earthMapKey || earthMapLoading) return;
+    earthAskedSec += dt;
+    if (earthAskedSec < EARTH_PICTURE_SETTLE_SEC) return;
+    const url = texUrl(key, quality) ?? texUrl('earth_day', quality);
+    if (!url) return;
+    earthMapLoading = true;
+    const seq = enterSeq;
+    cachedTexture(url, true).then((tex) => {
+      if (seq !== enterSeq) return;
+      earthMapLoading = false;
+      if (key !== earthAskedKey) return;
+      globeUniforms.uMap.value = tex;
+      globeUniforms.uHasMap.value = 1.0;
+      earthMapKey = key;
+    }, () => {
+      if (seq !== enterSeq) return;
+      earthMapLoading = false;
+      earthAskedSec = -EARTH_PICTURE_RETRY_SEC;
+    });
   }
 
   // On a touch screen the first finger turns the globe and taps; a second one only zooms (see core/pinch).
@@ -657,7 +724,10 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
     camera,
 
     async enter(opts: SpaceViewOptions): Promise<void> {
+      enterSeq += 1;
+      const seq = enterSeq;
       currentOpts = opts;
+      labelLang = opts.lang;
       selectedMarkerId = null;
       // The model of a marker chosen on the globe shown before does not follow into this one.
       updateShowcaseForSelectedMarker().catch(() => undefined);
@@ -686,18 +756,28 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
       const texKey = tid === 'earth' ? earthImageryFor(opts.jdTT).texName : `${tid}_color`;
       const url = texUrl(texKey, opts.quality) ?? (tid === 'earth' ? texUrl('earth_day', opts.quality) : null);
       globeUniforms.uHasMap.value = 0.0;
+      earthMapKey = null;
+      earthAskedKey = null;
+      earthAskedSec = 0;
+      cityLightsReady = false;
+      // While this call waits for Earth's picture, update() does not ask for it too.
+      earthMapLoading = tid === 'earth' && url !== null;
       if (url) {
         const tex = await cachedTexture(url, true).catch(() => null);
-        if (tex && currentOpts === opts) {
+        // A newer call has taken the view over: nothing more is changed here.
+        if (seq !== enterSeq) return;
+        earthMapLoading = false;
+        if (tex) {
           globeUniforms.uMap.value = tex;
           globeUniforms.uHasMap.value = 1.0;
+          if (tid === 'earth') earthMapKey = texKey;
         }
       }
       const reliefUrl = tid === 'moon' ? texUrl('moon_relief', opts.quality) : null;
       globeUniforms.uHasRelief.value = 0.0;
       if (reliefUrl) {
         cachedTexture(reliefUrl, false).then((t) => {
-          if (currentOpts !== opts) return;
+          if (seq !== enterSeq) return;
           globeUniforms.uRelief.value = t;
           globeUniforms.uHasRelief.value = 1.0;
         }).catch(() => undefined);
@@ -706,15 +786,17 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
       globeUniforms.uCity.value = 0.0;
       if (nightUrl) {
         cachedTexture(nightUrl, true).then((t) => {
-          if (currentOpts !== opts) return;
+          if (seq !== enterSeq) return;
           globeUniforms.uNight.value = t;
           globeUniforms.uCity.value = cityLightsFor(calendarUTFromJdTT(opts.jdTT).year);
+          cityLightsReady = true;
         }).catch(() => undefined);
       }
 
       const starsUrl = texUrl('stars', opts.quality);
       if (starsUrl) {
         cachedTexture(starsUrl, true).then((st) => {
+          if (seq !== enterSeq) return;
           bgDomeMat.map = st;
           bgDomeMat.color.setHex(0x55606f);
           bgDomeMat.needsUpdate = true;
@@ -754,6 +836,7 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
       const target = rate > 1e7 ? fastness : Math.min(1, Math.max(0, (rate - 3000) / 30000));
       fastness += (target - fastness) * Math.min(1, dt * 3);
       syncLightingFromAstro(jdTT);
+      if (currentOpts.targetId === 'earth') followEarthDate(dt, jdTT, currentOpts.quality);
 
       if (currentOpts.mode === 'backdrop') {
         targetLonRad += dt * 0.08;
@@ -806,6 +889,11 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
 
     setMarkers(markers: GlobeMarker[]): void {
       rebuildMarkers(markers);
+    },
+
+    setLang(lang: Lang): void {
+      labelLang = lang;
+      rebuildMarkers(markerVisuals.map((v) => v.data));
     },
 
     setSelection(sel: SiteCoord | null, flyTo = false): void {
@@ -865,6 +953,8 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): ISpaceView {
 
     dispose(): void {
       this.detach();
+      clearMarkers();
+      pinGeo.dispose();
       globeMesh.geometry.dispose();
       globeMat.dispose();
       saturnRingGeo.dispose();

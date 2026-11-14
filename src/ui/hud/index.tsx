@@ -29,6 +29,7 @@ import { LAB_WATCH_EVENT_ID, LAB_WATCH_NAME, LAB_WATCH_TARGET_ID } from '../../v
 import { LangPicker } from '../LangPicker';
 import { LabDrawer } from './LabDrawer';
 import { useFit } from '../useFit';
+import { useDialog } from '../useDialog';
 
 const nasaClient = createNasa();
 
@@ -350,7 +351,7 @@ function StagePanel() {
                   tpl`Watching from ${WORLDS[world].name}; the narration was written for the view from the Moon. The sky is held to the stars: one frame is shown per rotation of the planet. The ground is a model.`,
                 )}
               {EVENTS.find((e) => e.id === activeEventId)?.seenFrom === 'earthMoon' && (
-                <> {tx(lang, 'Bu dizilim Dünya ve Ay’a özgüdür; buradan açılar farklıdır.', 'This arrangement belongs to Earth and the Moon; from here the angles differ.')}</>
+                <> {tx(lang, 'Bu dizilim Dünya ve Ay’a özgüdür; buradan açılar farklıdır.', 'This alignment is specific to Earth and the Moon; the angles are different from here.')}</>
               )}
               {focus && sunGapDeg !== null && sunGapDeg < 20 && (
                 <> {tx(
@@ -480,13 +481,13 @@ function TimeMachineBar() {
 function AssetCardModal() {
   const lang = useLang();
   const focusAssetId = useGame((s) => s.focusAssetId);
-  if (!focusAssetId) return null;
   const asset = SURFACE_ASSETS.find((a) => a.id === focusAssetId);
+  const dialog = useDialog(asset !== undefined);
   if (!asset) return null;
 
   return (
     <div className="mn-modal-backdrop" onClick={() => setGame({ focusAssetId: null })}>
-      <div className="mn-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="mn-modal" ref={dialog} role="dialog" aria-modal="true" aria-label={loc(asset.name, lang)} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
         <div className="mn-modal-head">
           <div>
             <div className="mn-brand-tag">{loc(asset.mission, lang)} · {asset.agency}</div>
@@ -527,7 +528,7 @@ function AssetCardModal() {
                 game.openArchive(asset.topicId);
               }}
             >
-              {tx(lang, 'NASA fotoğraflarını aç', 'Open NASA photographs')}
+              {tx(lang, 'NASA görsellerini aç', 'Open NASA images')}
             </button>
           </div>
         )}
@@ -540,13 +541,13 @@ function AboutEventModal() {
   const lang = useLang();
   const open = useGame((s) => s.panels.about);
   const activeEventId = useGame((s) => s.activeEventId);
-  if (!open) return null;
   const ev = EVENTS.find((e) => e.id === activeEventId);
-  if (!ev) return null;
+  const dialog = useDialog(open && ev !== undefined);
+  if (!open || !ev) return null;
 
   return (
     <div className="mn-modal-backdrop" onClick={() => game.togglePanel('about', false)}>
-      <div className="mn-modal" style={{ maxWidth: 680 }} onClick={(e) => e.stopPropagation()}>
+      <div className="mn-modal" ref={dialog} role="dialog" aria-modal="true" aria-label={loc(ev.title, lang)} tabIndex={-1} style={{ maxWidth: 680 }} onClick={(e) => e.stopPropagation()}>
         <div className="mn-modal-head">
           <div>
             <div className="mn-brand-tag" style={{ color: ev.accent }}>{loc(ev.dateLabel, lang)}</div>
@@ -565,7 +566,7 @@ function AboutEventModal() {
 
         <div style={{ borderTop: '1px solid var(--c-line-soft)', paddingTop: 10 }}>
           <div className="mn-section-label" style={{ marginBottom: 6 }}>
-            {tx(lang, 'Ne gerçek, ne model?', 'What is real, what is a model?')}
+            {tx(lang, 'Ne gerçek, ne model?', 'What is real and what is a model?')}
           </div>
           <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.84rem', lineHeight: 1.5, color: 'var(--c-dim)' }}>
             {ev.notes.map((n) => <li key={n.en}>{loc(n, lang)}</li>)}
@@ -581,7 +582,7 @@ function AboutEventModal() {
               game.openArchive(ev.infoTopicIds[0]);
             }}
           >
-            {tx(lang, 'NASA fotoğraflarını aç', 'Open NASA photographs')}
+            {tx(lang, 'NASA görsellerini aç', 'Open NASA images')}
           </button>
         </div>
       </div>
@@ -676,11 +677,11 @@ function InfoCentreModal() {
     let wanted = true;
     setSelectedImg(null);
     setTopicData(null);
-    nasaClient.getTopic(currentTopicId)
-      .then((data) => {
-        if (wanted) setTopicData(data);
-      })
-      .catch(() => undefined);
+    // The pictures that came with the app show at once; those fetched from NASA replace them when they arrive.
+    const show = (data: NasaTopicResult): void => {
+      if (wanted) setTopicData(data);
+    };
+    nasaClient.getTopic(currentTopicId, show).then(show).catch(() => undefined);
     if (currentTopicId === 'solar_storm') {
       nasaClient.donki('2024-05-07', '2024-05-15')
         .then((data) => {
@@ -693,16 +694,17 @@ function InfoCentreModal() {
     };
   }, [open, currentTopicId]);
 
+  const dialog = useDialog(open);
   if (!open) return null;
   const meta = INFO_TOPICS[currentTopicId];
 
   return (
     <div className="mn-modal-backdrop" onClick={() => game.togglePanel('info', false)}>
-      <div className="mn-modal" style={{ width: 'min(960px, 95vw)' }} onClick={(e) => e.stopPropagation()}>
+      <div className="mn-modal" ref={dialog} role="dialog" aria-modal="true" aria-label={tx(lang, 'NASA Görsel ve Veri Arşivi', 'NASA Image and Data Archive')} tabIndex={-1} style={{ width: 'min(960px, 95vw)' }} onClick={(e) => e.stopPropagation()}>
         <div className="mn-modal-head">
           <div>
             <div className="mn-brand-tag">
-              {tx(lang, 'NASA Fotoğraf ve Veri Arşivi', 'NASA Image and Data Archive')}
+              {tx(lang, 'NASA Görsel ve Veri Arşivi', 'NASA Image and Data Archive')}
               {topicData && (
                 <span className={`mn-badge ${topicData.source === 'live' ? 'ok' : 'warn'}`} style={{ marginLeft: 10 }}>
                   {topicData.source === 'live'
@@ -785,7 +787,7 @@ function InfoCentreModal() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
               <strong>{cleanText(selectedImg.title)} ({selectedImg.date})</strong>
               <button type="button" className="mn-btn" style={{ flexShrink: 0 }} onClick={() => setSelectedImg(null)}>
-                {tx(lang, '← Fotoğraflara dön', '← Back to photos')}
+                {tx(lang, '← Görsellere dön', '← Back to the images')}
               </button>
             </div>
             <img
@@ -844,8 +846,8 @@ function InfoCentreModal() {
                   <span style={{ color: 'var(--c-accent)' }}>{ev.type} · {ev.time.slice(0, 16)}</span>
                   <span>
                     {ev.type === 'CME' && `${ev.speedKmS} km/s (±${ev.halfAngleDeg}°)`}
-                    {ev.type === 'GST' && `Kp = ${ev.kp}`}
-                    {ev.type === 'FLR' && `Class ${ev.classType}`}
+                    {ev.type === 'GST' && (ev.kp === undefined ? tx(lang, 'Kp bildirilmedi', 'Kp not reported') : `Kp = ${ev.kp}`)}
+                    {ev.type === 'FLR' && ev.classType !== undefined && tx(lang, tpl`${ev.classType} sınıfı`, tpl`Class ${ev.classType}`)}
                   </span>
                 </div>
               ))}
@@ -938,7 +940,7 @@ export function SurfaceHud() {
   // into the ⋯ menu, least needed first.
   const [topRef, tight] = useFit(3, `${lang}|${dictRevision()}|${site?.id}|${activeEventId}|${world}|${telescope.active}|${labReturn !== null}`);
   const barActions: Array<{ id: string; group: 'look' | 'read'; label: string; hotkey: string; on: boolean; dropAt: number; run: () => void }> = [
-    { id: 'guide', group: 'look', label: tx(lang, 'Yıldızlar', 'Sky guide'), hotkey: 'C', on: showGuide, dropAt: 2, run: () => game.updateSettings({ showConstellations: !showGuide }) },
+    { id: 'guide', group: 'look', label: tx(lang, 'Gökyüzü rehberi', 'Sky guide'), hotkey: 'C', on: showGuide, dropAt: 2, run: () => game.updateSettings({ showConstellations: !showGuide }) },
     { id: 'data', group: 'read', label: tx(lang, 'Veriler', 'Data'), hotkey: 'N', on: panels.telemetry, dropAt: 3, run: () => game.togglePanel('telemetry') },
     { id: 'archive', group: 'read', label: tx(lang, 'Arşiv', 'Archive'), hotkey: 'I', on: panels.info, dropAt: 1, run: () => (panels.info ? game.togglePanel('info', false) : game.openArchive()) },
   ];
@@ -1036,7 +1038,7 @@ export function SurfaceHud() {
           <select
             className="hud-bar-select"
             value={world}
-            aria-label={tx(lang, 'Ortam / Gezegen', 'World / Gravity')}
+            aria-label={tx(lang, 'Ortam / Çekim', 'World / Gravity')}
             onChange={(e) => game.setWorld(e.target.value as WorldId)}
           >
             {WORLD_ORDER.map((wid) => {
@@ -1130,7 +1132,7 @@ export function SurfaceHud() {
         </div>
       </div>
 
-      {toast && <div className="hud-toast">{loc(toast.text, lang)}</div>}
+      {toast && <div className={`hud-toast is-${toast.kind}`}>{loc(toast.text, lang)}</div>}
 
       {touchInput && !spectator && !cleanMode && <TouchPad zeroG={WORLDS[world].zeroG ?? false} lang={lang} />}
 
@@ -1303,7 +1305,7 @@ export function SurfaceHud() {
                     <span className="hud-telem-val">{fmt(moonT.azDeg, 1, lang)}° / {fmt(moonT.elDeg, 2, lang)}°</span>
                   </div>
                   <div className="hud-telem-row">
-                    <span>{tx(lang, 'Parlaklık / Durum', 'Magnitude / State')}</span>
+                    <span>{tx(lang, 'Kadir / Durum', 'Magnitude / State')}</span>
                     <span className="hud-telem-val">{fmt(moonT.magnitude, 1, lang)} · {moonT.visible ? (tx(lang, 'Ufuk üstü', 'Visible')) : (tx(lang, 'Ufuk altı', 'Below'))}</span>
                   </div>
                 </div>
@@ -1440,7 +1442,7 @@ export function SpaceHud() {
           )}
           {tight < 4 && (
             <button type="button" className="hud-bar-btn" onClick={() => game.toggleCleanMode(true)}>
-              {tx(lang, 'Temiz [U]', 'Clean [U]')}
+              {tx(lang, 'Temiz ekran [U]', 'Clean view [U]')}
             </button>
           )}
           {tight < 3 && <LangPicker />}
@@ -1535,7 +1537,7 @@ export function SpaceHud() {
             className="mn-btn mn-btn-primary"
             onClick={() => game.openArchive(galDef.topicId)}
           >
-            {tx(lang, 'NASA fotoğraflarını aç', 'Open NASA photographs')}
+            {tx(lang, 'NASA görsellerini aç', 'Open NASA images')}
           </button>
         </div>
       )}
@@ -1559,7 +1561,7 @@ export function SpaceHud() {
         </button>
       )}
 
-      {toast && <div className="hud-toast is-raised">{loc(toast.text, lang)}</div>}
+      {toast && <div className={`hud-toast is-raised is-${toast.kind}`}>{loc(toast.text, lang)}</div>}
 
       <StagePanel />
       {!isLab && !galDef && <TimeMachineBar />}

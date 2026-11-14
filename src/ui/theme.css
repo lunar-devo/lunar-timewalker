@@ -447,6 +447,11 @@ button, input, select {
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7);
 }
 
+/* A dialog takes the keyboard's focus as a whole when it opens; it shows no ring for that. */
+.mn-modal:focus {
+  outline: none;
+}
+
 .mn-modal-head {
   display: flex;
   align-items: center;

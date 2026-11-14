@@ -4,11 +4,11 @@
  */
 import { create } from 'zustand';
 import type {
-  L10n, LabState, LightReading, PanelId, Phase, Settings, SiteDef, SkyTarget, StageStatus, Subtitle,
+  L10n, LabState, LightReading, PanelId, Phase, Quality, Settings, SiteDef, SkyTarget, StageStatus, Subtitle,
   Telemetry, TerrainLoadInfo, WorldId,
 } from './types';
 import { isLang } from './l10n';
-import { detectQuality } from './quality';
+import { QUALITY, detectQuality } from './quality';
 
 const SETTINGS_KEY = 'lunar-timewalker.settings.v1';
 
@@ -29,16 +29,49 @@ function defaultSettings(): Settings {
   };
 }
 
+/** The settings that are numbers, with the range each may have (see `Settings`). */
+const NUMBER_RANGE: Record<'mouseSensitivity' | 'masterVolume', { min: number; max: number }> = {
+  mouseSensitivity: { min: 0.2, max: 3 },
+  masterVolume: { min: 0, max: 1 },
+};
+
+/** The settings that are switches. */
+const SWITCHES = ['soundOn', 'narration', 'reducedFlash', 'showLabels', 'showConstellations', 'invertY'] as const;
+
+function isQuality(value: unknown): value is Quality {
+  return typeof value === 'string' && Object.hasOwn(QUALITY, value);
+}
+
+/**
+ * Settings from whatever was found in storage: a saved value is taken only when it is of the kind its
+ * setting needs (a known language or quality, a number inside the setting's range, a boolean); every
+ * other setting keeps its default, and keys that are not settings are dropped.
+ */
+export function sanitiseSettings(saved: unknown, defaults: Settings): Settings {
+  const settings = { ...defaults };
+  if (typeof saved !== 'object' || saved === null) return settings;
+  const found: Partial<Record<keyof Settings, unknown>> = saved;
+  if (isLang(found.lang)) settings.lang = found.lang;
+  if (isQuality(found.quality)) settings.quality = found.quality;
+  for (const key of Object.keys(NUMBER_RANGE) as Array<keyof typeof NUMBER_RANGE>) {
+    const value = found[key];
+    // The comparisons also turn away NaN and the infinities.
+    if (typeof value === 'number' && value >= NUMBER_RANGE[key].min && value <= NUMBER_RANGE[key].max) settings[key] = value;
+  }
+  for (const key of SWITCHES) {
+    const value = found[key];
+    if (typeof value === 'boolean') settings[key] = value;
+  }
+  return settings;
+}
+
 function loadSettings(): Settings {
-  const base = defaultSettings();
+  const defaults = defaultSettings();
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (raw) {
-      const saved = { ...base, ...(JSON.parse(raw) as Partial<Settings>) };
-      return isLang(saved.lang) ? saved : { ...saved, lang: base.lang };
-    }
-  } catch { /* storage unavailable: defaults are fine */ }
-  return base;
+    if (raw) return sanitiseSettings(JSON.parse(raw), defaults);
+  } catch { /* storage unavailable or not JSON: defaults are fine */ }
+  return defaults;
 }
 
 export function saveSettings(s: Settings): void {
@@ -122,7 +155,7 @@ export const useGame = create<GameState>(() => ({
   phase: 'boot',
   loading: { fraction: 0, label: null },
   fatal: null,
-  settings: typeof localStorage !== 'undefined' ? loadSettings() : defaultSettings(),
+  settings: loadSettings(),
 
   activeEventId: null,
   world: 'moon',

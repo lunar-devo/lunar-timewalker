@@ -11,6 +11,7 @@ import type { EventCategory, L10n, Lang, Quality, SiteDef, WorldId } from '../co
 import { fmt, lf, loc, tpl, tx, useLang } from '../core/i18n';
 import { useGame } from '../core/store';
 import { formatDate } from '../core/time';
+import { useDialog } from './useDialog';
 import { targetAltAz } from '../astro';
 import {
   BODY_NAMES, EVENTS, GALAXIES, SITES, TRANSIENTS, WORLD_ORDER, WORLDS,
@@ -27,6 +28,7 @@ function SettingsModal() {
   const open = useGame((s) => s.panels.settings);
   const settings = useGame((s) => s.settings);
   const gpu = useGame((s) => s.gpu);
+  const dialog = useDialog(open);
   if (!open) return null;
 
   const qualities: Array<{ id: Quality; label: string }> = [
@@ -45,7 +47,7 @@ function SettingsModal() {
 
   return (
     <div className="mn-modal-backdrop" onClick={() => game.togglePanel('settings', false)}>
-      <div className="mn-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="mn-modal" ref={dialog} role="dialog" aria-modal="true" aria-label={tx(lang, 'Ayarlar', 'Settings')} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
         <div className="mn-modal-head">
           <h2 className="mn-modal-title">{tx(lang, 'Ayarlar', 'Settings')}</h2>
           <button type="button" className="mn-btn" onClick={() => game.togglePanel('settings', false)}>
@@ -66,6 +68,7 @@ function SettingsModal() {
                 key={q.id}
                 type="button"
                 className={`mn-btn ${settings.quality === q.id ? 'mn-btn-primary' : ''}`}
+                aria-pressed={settings.quality === q.id}
                 onClick={() => game.updateSettings({ quality: q.id })}
               >
                 {q.label}
@@ -78,6 +81,7 @@ function SettingsModal() {
           <span>{tx(lang, 'Ses (müzik ve efektler) [K]', 'Sound (music and effects) [K]')}</span>
           <input
             type="checkbox"
+            aria-label={tx(lang, 'Ses (müzik ve efektler) [K]', 'Sound (music and effects) [K]')}
             checked={settings.soundOn}
             onChange={(e) => game.updateSettings({ soundOn: e.target.checked })}
           />
@@ -87,6 +91,7 @@ function SettingsModal() {
           <span>{tx(lang, 'Ses düzeyi', 'Volume')}</span>
           <input
             type="range"
+            aria-label={tx(lang, 'Ses düzeyi', 'Volume')}
             min={0}
             max={1}
             step={0.05}
@@ -100,6 +105,7 @@ function SettingsModal() {
           <span>{tx(lang, 'Fare hassasiyeti', 'Mouse sensitivity')}</span>
           <input
             type="range"
+            aria-label={tx(lang, 'Fare hassasiyeti', 'Mouse sensitivity')}
             min={0.3}
             max={2.5}
             step={0.1}
@@ -113,6 +119,7 @@ function SettingsModal() {
             <span>{loc(t.label, lang)}</span>
             <input
               type="checkbox"
+              aria-label={loc(t.label, lang)}
               checked={settings[t.key]}
               onChange={(e) => game.updateSettings({ [t.key]: e.target.checked })}
             />
@@ -138,31 +145,35 @@ function SettingsModal() {
 const HELP_ROWS: Array<{ keys: L10n; does: L10n }> = [
   { keys: { tr: 'Sürükle / Fare', en: 'Drag / Mouse' }, does: { tr: 'Sürükleyerek etrafa bakın (Tab isteğe bağlı fare kilidini açar)', en: 'Drag to look around (Tab toggles optional mouse lock)' } },
   { keys: { tr: 'W A S D / Oklar', en: 'W A S D / Arrows' }, does: { tr: 'Yürü (veya 0g uzayda itki ver)', en: 'Walk (or thrust in 0g space)' } },
-  { keys: { tr: 'Shift + W', en: 'Shift + W' }, does: { tr: 'Koş (Ay/Mars’ta küçük sıçramalar; 0g’de hızlı itki)', en: 'Run (low bounds on Moon/Mars; fast thrust in 0g)' } },
+  { keys: { tr: 'Shift + W', en: 'Shift + W' }, does: { tr: 'Koş (Ay/Mars’ta küçük sıçramalar; 0g’de hızlı itki)', en: 'Run (small hops on the Moon and Mars; fast thrust in 0g)' } },
   { keys: { tr: 'Boşluk / Q', en: 'Space / Q' }, does: { tr: 'Zıpla (katı yüzeyde) · yüksel / alçal (0g uzayda)', en: 'Jump (solid ground) · rise / descend (0g space)' } },
   { keys: { tr: 'E', en: 'E' }, does: { tr: 'Ortadaki cisim veya araç hakkında bilgi aç', en: 'Open information for the object in view' } },
   { keys: { tr: 'Tıklayın', en: 'Click' }, does: { tr: 'Gökteki bir cisme tıkla: yakın görünümü açılır · Araca tıkla: bilgi kartı açılır', en: 'Click an object in the sky: its close-up view opens · Click hardware: its info card opens' } },
   { keys: { tr: 'F (basılı tut)', en: 'F (hold)' }, does: { tr: 'Güneş’i elle kapat: sönük yıldızlar ve gezegenler belirir', en: 'Shade the Sun with your hand: faint stars and planets appear' } },
   { keys: { tr: 'T + Tekerlek / + −', en: 'T + Wheel / + −' }, does: { tr: 'Teleskop aç/kapat ve yakınlaştır', en: 'Toggle telescope and zoom' } },
+  { keys: { tr: 'Enter', en: 'Enter' }, does: { tr: 'Teleskop açıkken ortadaki cismin yakın görünümünü aç', en: 'With the telescope up: open the close-up of the object in the centre' } },
   { keys: { tr: 'C', en: 'C' }, does: { tr: 'Gökyüzü rehberi: takımyıldızlar, ekliptik ve yıldız adları', en: 'Sky guide: constellations, ecliptic and star names' } },
   { keys: { tr: 'U', en: 'U' }, does: { tr: 'Temiz ekran (tahta / projeksiyon için yazıları gizle)', en: 'Clean view (hide controls for projector / board)' } },
   { keys: { tr: 'K', en: 'K' }, does: { tr: 'Sesi aç / kapat', en: 'Sound on / off' } },
   { keys: { tr: 'V / G', en: 'V / G' }, does: { tr: '1. / 3. şahıs görünümü · Kask lambası', en: '1st / 3rd person view · Helmet lamp' } },
   { keys: { tr: 'B', en: 'B' }, does: { tr: 'Ölçüm direği koy (29,5 gün Güneş ve Dünya görünürlüğü)', en: 'Place measuring mast (29.5-day Sun & Earth visibility)' } },
-  { keys: { tr: 'M / I / N', en: 'M / I / N' }, does: { tr: 'Ay haritası · NASA fotoğrafları · Veri paneli', en: 'Moon map · NASA photos · Data panel' } },
+  { keys: { tr: 'M / I / N', en: 'M / I / N' }, does: { tr: 'Ay haritası · NASA görselleri · Veri paneli', en: 'Moon map · NASA images · Data panel' } },
   { keys: { tr: 'P', en: 'P' }, does: { tr: '8K fotoğraf kaydet (7680×4320)', en: 'Save an 8K photo (7680×4320)' } },
   { keys: { tr: '1 … 6 / R', en: '1 … 6 / R' }, does: { tr: 'Zaman hızı · Olayı baştan oynat', en: 'Time speed · Replay event' } },
+  { keys: { tr: 'H', en: 'H' }, does: { tr: 'Bu kontrol listesini aç / kapat', en: 'Open / close this list of controls' } },
+  { keys: { tr: 'Esc', en: 'Esc' }, does: { tr: 'Açık kartı kapat · Yakın görünümden dön · Yüzeyde menüyü aç', en: 'Close the open card · Leave the close-up · Open the menu on the surface' } },
   { keys: { tr: 'Dokunmatik ekran', en: 'Touch screen' }, does: { tr: 'Tek parmakla sürükle: bak ya da döndür · İki parmak: yakınlaş · Dokun: seç · Ekrandaki oklar: yürü', en: 'Drag with one finger: look or turn · Two fingers: zoom · Tap: choose · On-screen arrows: walk' } },
 ];
 
 function HelpModal() {
   const lang = useLang();
   const open = useGame((s) => s.panels.help);
+  const dialog = useDialog(open);
   if (!open) return null;
 
   return (
     <div className="mn-modal-backdrop" onClick={() => game.togglePanel('help', false)}>
-      <div className="mn-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="mn-modal" ref={dialog} role="dialog" aria-modal="true" aria-label={tx(lang, 'Kontroller', 'Controls')} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
         <div className="mn-modal-head">
           <h2 className="mn-modal-title">{tx(lang, 'Kontroller', 'Controls')}</h2>
           <button type="button" className="mn-btn" onClick={() => game.togglePanel('help', false)}>
@@ -222,7 +233,7 @@ const CREDIT_GROUPS: Array<{ title: L10n; items: string[] }> = [
     title: { tr: 'Uzay havası ve arşiv', en: 'Space weather and archive' },
     items: [
       'NASA CCMC DONKI — May 2024 CME and flare records',
-      'NASA Image and Video Library — archive photographs in the info panel',
+      'NASA Image and Video Library — archive images in the info panel',
     ],
   },
   {
@@ -236,11 +247,12 @@ const CREDIT_GROUPS: Array<{ title: L10n; items: string[] }> = [
 function CreditsModal() {
   const lang = useLang();
   const open = useGame((s) => s.panels.credits);
+  const dialog = useDialog(open);
   if (!open) return null;
 
   return (
     <div className="mn-modal-backdrop" onClick={() => game.togglePanel('credits', false)}>
-      <div className="mn-modal" style={{ maxWidth: 760 }} onClick={(e) => e.stopPropagation()}>
+      <div className="mn-modal" ref={dialog} role="dialog" aria-modal="true" aria-label={tx(lang, 'Veri Kaynakları', 'Data Sources')} tabIndex={-1} style={{ maxWidth: 760 }} onClick={(e) => e.stopPropagation()}>
         <div className="mn-modal-head">
           <h2 className="mn-modal-title">{tx(lang, 'Veri Kaynakları', 'Data Sources')}</h2>
           <button type="button" className="mn-btn" onClick={() => game.togglePanel('credits', false)}>
@@ -249,12 +261,13 @@ function CreditsModal() {
         </div>
         <div className="mn-credits">
           <p style={{ margin: 0, color: 'var(--c-dim)' }}>
-            {tx(lang, 'Görüntü ve veriler NASA’nın herkese açık arşivlerinden alındı ve uygulamayla birlikte gelir. İnternet bağlantısı varken bilgi paneli NASA Görüntü Kütüphanesi’nden arşiv fotoğrafları da getirir. Hiçbiri canlı yayın değildir. Parlaklık eğrileri, Patlama Laboratuvarı’ndaki etki hesapları, koronal kütle atımlarının ilerleyişi, galaksi görüntülerine verilen 3B derinlik, Venüs’ün ve dev gezegenlerin bulut katmanları, başka gezegenlerdeki zemin ve toz fırtınasının yayılışı eğitim amaçlı modellerdir. Bu proje NASA tarafından onaylanmış değildir.', 'Imagery and data come from NASA’s public archives and ship with the app. When online, the info panel also fetches archive photographs from the NASA Image Library. None of it is a live feed. Brightness curves, the Explosion Lab’s impact estimates, the travel of coronal mass ejections, the 3D depth given to the galaxy pictures, the cloud decks of Venus and the giant planets, the ground on other planets and the spread of the dust storm are educational models. This project is not endorsed by NASA.')}
+            {tx(lang, 'Görüntü ve veriler NASA’nın herkese açık arşivlerinden alındı ve uygulamayla birlikte gelir. İnternet bağlantısı varken bilgi paneli NASA Görüntü Kütüphanesi’nden arşiv görselleri de getirir. Hiçbiri canlı yayın değildir. Parlaklık eğrileri, Patlama Laboratuvarı’ndaki etki hesapları, koronal kütle atımlarının ilerleyişi, galaksi görüntülerine verilen 3B derinlik, Venüs’ün ve dev gezegenlerin bulut katmanları, başka gezegenlerdeki zemin ve toz fırtınasının yayılışı eğitim amaçlı modellerdir. Bu proje NASA tarafından onaylanmış değildir.', 'Imagery and data come from NASA’s public archives and ship with the app. When online, the info panel also fetches archive images from the NASA Image Library. None of it is a live feed. Brightness curves, the Explosion Lab’s impact estimates, the travel of coronal mass ejections, the 3D depth given to the galaxy pictures, the cloud decks of Venus and the giant planets, the ground on other planets and the spread of the dust storm are educational models. This project is not endorsed by NASA.')}
           </p>
           {CREDIT_GROUPS.map((g) => (
             <div key={g.title.en}>
               <h3>{loc(g.title, lang)}</h3>
-              <ul>{g.items.map((it) => <li key={it}>{it}</li>)}</ul>
+              {/* Credit lines stay as their owners word them, in English, and say so to a screen reader. */}
+              <ul lang="en">{g.items.map((it) => <li key={it}>{it}</li>)}</ul>
             </div>
           ))}
           <h3>{tx(lang, 'Ekip', 'Team')}</h3>
@@ -270,12 +283,14 @@ function PauseModal() {
   const open = useGame((s) => s.panels.pause);
   const phase = useGame((s) => s.phase);
   const activeEventId = useGame((s) => s.activeEventId);
-  if (!open || (phase !== 'surface' && phase !== 'space')) return null;
+  const shown = open && (phase === 'surface' || phase === 'space');
+  const dialog = useDialog(shown);
+  if (!shown) return null;
 
   const close = (): void => game.togglePanel('pause', false);
   return (
     <div className="mn-modal-backdrop" onClick={close}>
-      <div className="mn-modal" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+      <div className="mn-modal" ref={dialog} role="dialog" aria-modal="true" aria-label={tx(lang, 'Menü', 'Menu')} tabIndex={-1} style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
         <div className="mn-modal-head">
           <h2 className="mn-modal-title">{tx(lang, 'Menü', 'Menu')}</h2>
         </div>
@@ -447,7 +462,7 @@ function MapScreen() {
             ))}
             <div style={{ borderTop: '1px solid var(--c-line-soft)', paddingTop: 10 }}>
               <div className="mn-section-label" style={{ marginBottom: 6 }}>
-                {tx(lang, 'Ne gerçek, ne model?', 'What is real, what is a model?')}
+                {tx(lang, 'Ne gerçek, ne model?', 'What is real and what is a model?')}
               </div>
               <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.8rem', lineHeight: 1.5, color: 'var(--c-dim)' }}>
                 {activeEvent.notes.map((n) => (
@@ -720,7 +735,7 @@ function EventMenuScreen() {
                 <div key={wid} className="mn-card" onClick={() => game.setWorld(wid)}>
                   <div>
                     <div className="mn-card-top">
-                      <span>{w.zeroG ? (tx(lang, 'Sıfır çekim (0g)', 'Zero-g orbit')) : `${fmt(w.gravityMs2, 2, lang)} m/s²`}</span>
+                      <span>{w.zeroG ? (tx(lang, 'Sıfır çekim (0g)', 'Zero gravity (0g)')) : `${fmt(w.gravityMs2, 2, lang)} m/s²`}</span>
                       <span>{kindLabel}</span>
                     </div>
                     <h3 className="mn-card-title">{loc(w.name, lang)}</h3>
@@ -761,6 +776,7 @@ export default function App() {
   const phase = useGame((s) => s.phase);
   const loading = useGame((s) => s.loading);
   const fatal = useGame((s) => s.fatal);
+  const toast = useGame((s) => s.toast);
 
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -803,6 +819,8 @@ export default function App() {
 
       {phase === 'surface' && <SurfaceHud />}
       {phase === 'space' && <SpaceHud />}
+      {/* Outside the two HUDs (the menu, the map, the loading screen) a toast is shown here. */}
+      {toast && phase !== 'surface' && phase !== 'space' && <div className={`hud-toast is-${toast.kind}`}>{loc(toast.text, lang)}</div>}
 
       <PauseModal />
       <SettingsModal />

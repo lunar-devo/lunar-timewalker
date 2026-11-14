@@ -163,12 +163,14 @@ export function formatDate(jdTT: number, lang: Lang, opts: FormatDateOptions = {
 /** "3 sa 12 dk" / "3 h 12 min", "2,4 gün" / "2.4 d". */
 export function formatDuration(hours: number, lang: Lang): string {
   const h = Math.abs(hours);
-  if (h >= 48) {
+  // Whole minutes first, then the split, so that 59.6 minutes is "1 h 00 min" and never "60 min".
+  const totalMinutes = Math.round(h * 60);
+  if (totalMinutes >= 48 * 60) {
     const days = (h / 24).toFixed(1);
     return `${lang === 'en' ? days : days.replace('.', ',')} ${UNIT_DAY[lang]}`;
   }
-  const hh = Math.floor(h);
-  const mm = Math.round((h - hh) * 60);
+  const hh = Math.floor(totalMinutes / 60);
+  const mm = totalMinutes % 60;
   if (hh === 0) return `${mm} ${UNIT_MINUTE[lang]}`;
   return `${hh} ${UNIT_HOUR[lang]} ${pad2(mm)} ${UNIT_MINUTE[lang]}`;
 }

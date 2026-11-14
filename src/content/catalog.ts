@@ -1096,7 +1096,7 @@ export const INFO_TOPICS: Record<string, { title: L10n; blurb: L10n; query: stri
   mercury: {
     title: { tr: 'Merkür', en: 'Mercury' },
     blurb: {
-      tr: 'Güneş’e en yakın, atmosferi olmayan kraterli gezegen. Gündüz ve gece arasındaki sıcaklık farkı 600 K’i aşar.',
+      tr: 'Güneş’e en yakın, atmosferi olmayan kraterli gezegen. Gündüz ve gece arasındaki sıcaklık farkı 600 K’yi aşar.',
       en: 'The innermost airless cratered planet, with day-to-night temperature swings exceeding 600 K.',
     },
     query: 'Mercury MESSENGER global mosaic',

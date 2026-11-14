@@ -96,7 +96,7 @@ export const GALAXIES: GalaxyDef[] = [
       { id: 'visible', caption: HUBBLE, centre: [0.392, 0.485], fieldDeg: 0.1669, skyCentre: [202.4676, 47.2133], northUpDeg: 91, fromStarMap: false },
     ],
     summary: {
-      tr: 'Sarmal kolları neredeyse tam karşıdan görünen klasik sarmal galaksi. Küçük komşusu NGC 5195 ile kütleçekimsel olarak etkileşim içindedir.',
+      tr: 'Sarmal kolları neredeyse tam karşıdan görünen klasik sarmal galaksi. Kollarından birinin ucundaki küçük komşusu NGC 5195 ile kütleçekimsel olarak etkileşim içindedir.',
       en: 'A classic spiral galaxy seen almost face-on, interacting gravitationally with its smaller companion NGC 5195 at the tip of one arm.',
     },
     facts: [
@@ -127,7 +127,7 @@ export const GALAXIES: GalaxyDef[] = [
     },
     facts: [
       { tr: 'Uzaklık: yaklaşık 29–31 milyon ışık yılı.', en: 'Distance: roughly 29–31 million light years.' },
-      { tr: 'Çevresindeki hâlede çok sayıda (yaklaşık 2.000) küresel yıldız kümesi bulunur.', en: 'Its outer halo holds roughly 2,000 globular star clusters, far more than the Milky Way.' },
+      { tr: 'Çevresindeki hâlede, Samanyolu’nunkinden çok daha fazla sayıda (yaklaşık 2.000) küresel yıldız kümesi bulunur.', en: 'Its outer halo holds roughly 2,000 globular star clusters, far more than the Milky Way.' },
     ],
     topicId: 'm104',
   },
@@ -176,7 +176,7 @@ export const GALAXIES: GalaxyDef[] = [
     ],
     summary: {
       tr: 'Samanyolu’nun uydu galaksisi ve güney yarımküreden çıplak gözle kolayca görülen parlak cüce galaksi. 1987’de burada yakın tarihin en iyi incelenen süpernovası (SN 1987A) patladı.',
-      en: 'A satellite galaxy of the Milky Way, easily visible to the naked eye from the southern sky. In 1987 it hosted SN 1987A, the best-studied supernova of modern times.',
+      en: 'A satellite galaxy of the Milky Way, easily visible to the naked eye from the southern hemisphere. In 1987 it hosted SN 1987A, the best-studied supernova of modern times.',
     },
     facts: [
       { tr: 'Uzaklık: ~163.000 ışık yılı.', en: 'Distance: ~163,000 light years.' },

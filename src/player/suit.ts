@@ -326,7 +326,11 @@ async function buildSource(): Promise<SuitSource> {
  * camera can sit inside the suit.
  */
 export async function createSuitRig(firstPerson: boolean): Promise<SuitRig> {
-  sourcePromise ??= buildSource();
+  // A failed load is forgotten, so that the next rig tries again.
+  sourcePromise ??= buildSource().catch((err: unknown) => {
+    sourcePromise = null;
+    throw err;
+  });
   const src = await sourcePromise;
   const j = src.joints;
   const group = (parent: THREE.Object3D, at: THREE.Vector3, from = new THREE.Vector3()): THREE.Group => {

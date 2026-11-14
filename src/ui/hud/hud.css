@@ -605,6 +605,12 @@
   bottom: 118px;
 }
 
+/* A warning (a place that could not be loaded, an event that cannot be watched from here) is amber. */
+.hud-toast.is-warn {
+  color: var(--c-warn);
+  border-color: rgba(251, 191, 36, 0.45);
+}
+
 /* ─────────────────────────── Cinematic / Spectator / Clean Projector Modes ─────────────────────────── */
 
 .is-cinematic .hud-left-col,

@@ -96,6 +96,26 @@ function metal(color: number, roughness = 0.4, metalness = 0.7): THREE.MeshStand
 }
 
 /**
+ * Frees the materials of the meshes under `root`, each once. Hardware built in this file (`builtHere`) also
+ * gives up its geometries and the pictures on its materials; a model cloned from the shared cache
+ * (core/gltf.ts) owns only its materials.
+ */
+function disposeMeshes(root: THREE.Object3D, builtHere: boolean): void {
+  const geometries = new Set<THREE.BufferGeometry>();
+  const materials = new Set<THREE.Material>();
+  root.traverse((o) => {
+    if (!(o instanceof THREE.Mesh)) return;
+    geometries.add(o.geometry);
+    for (const m of Array.isArray(o.material) ? o.material : [o.material]) materials.add(m);
+  });
+  for (const m of materials) {
+    if (builtHere && m instanceof THREE.MeshStandardMaterial) m.map?.dispose();
+    m.dispose();
+  }
+  if (builtHere) for (const g of geometries) g.dispose();
+}
+
+/**
  * NASA 3D Resources "Apollo Lunar Module" split into its two stages. In the GLB, everything that starts
  * above the descent-stage deck belongs to the ascent stage, plus one propellant tank that reaches below it.
  */
@@ -345,6 +365,20 @@ export function createArtifacts(): IArtifacts {
     if (beacon) shadowCasters.push(beacon.root);
   }
 
+  /** Takes the site's hardware off the surface and frees what was built for it. The beacon is not part of it. */
+  function clearHardware(): void {
+    for (const m of managed) {
+      m.root.remove(m.ring);
+      disposeMeshes(m.ring, true);
+      // The lunar module is a clone from the model cache; every other piece is built here.
+      disposeMeshes(m.root, m.visual !== 'apollo_lm_descent');
+    }
+    object3d.clear();
+    managed.length = 0;
+    lm = null;
+    flag = null;
+  }
+
   function emitDust(cx: number, cz: number, perSecond: number, dt: number): void {
     dustDebt += perSecond * dt;
     while (dustDebt >= 1) {
@@ -445,10 +479,7 @@ export function createArtifacts(): IArtifacts {
     shadowCasters,
 
     async load(placements: ArtifactPlacement[], assets: SurfaceAsset[], ground: GroundQuery): Promise<void> {
-      object3d.clear();
-      managed.length = 0;
-      lm = null;
-      flag = null;
+      clearHardware();
       dustLife.fill(0);
       dustPos.fill(-9999);
       object3d.add(dust);
@@ -564,13 +595,15 @@ export function createArtifacts(): IArtifacts {
     removeBeacon(): void {
       if (!beacon) return;
       object3d.remove(beacon.root);
+      disposeMeshes(beacon.root, true);
       beacon = null;
       syncShadowCasters();
     },
 
     dispose(): void {
-      object3d.clear();
-      managed.length = 0;
+      clearHardware();
+      if (beacon) disposeMeshes(beacon.root, true);
+      beacon = null;
       shadowCasters.length = 0;
       dustGeo.dispose();
       dustMat.dispose();

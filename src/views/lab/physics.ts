@@ -296,12 +296,12 @@ const kickText = (kickKmS: number): L10n => {
 
 // What becomes of Earth once the energy that strikes it passes each threshold, the same whatever brought it.
 const EARTH_DESTROYED: L10n = {
-  tr: 'Dünya yok olur. Çarpan enerji, gezegeni bir arada tutan kütleçekim enerjisinden fazladır: atmosfer ve okyanuslar saniyeler içinde buharlaşır, kabuk erir, gezegen parçalanır ve kalıntıları patlamanın tersine savrulur.',
+  tr: 'Dünya yok olur. Çarpan enerji, gezegeni bir arada tutan kütleçekim enerjisinden fazladır: atmosfer ve okyanuslar saniyeler içinde buharlaşır, kabuk erir, gezegen parçalanır ve kalıntıları patlamadan uzağa savrulur.',
   en: 'Earth is destroyed. The energy that strikes it exceeds the gravity holding the planet together: air and oceans flash to vapour, the crust melts, the planet comes apart and its remains are blown away from the blast.',
 };
 const EARTH_MOLTEN: L10n = {
-  tr: 'Yüzey erir. Atmosfer ve okyanuslar uzaya savrulur, kabuk bir magma okyanusuna döner. Gezegen yerinde kalır ama üzerinde hiçbir şey kalmaz.',
-  en: 'The surface melts. The air and oceans are blown into space and the crust becomes a magma ocean. The planet survives, but nothing on it does.',
+  tr: 'Yüzey erir. Atmosfer ve okyanuslar uzaya savrulur, kabuk bir magma okyanusuna döner. Gezegen varlığını sürdürür ama üzerindeki hiçbir canlı hayatta kalmaz.',
+  en: 'The surface melts. The air and oceans are blown into space and the crust becomes a magma ocean. The planet survives, but no life on it does.',
 };
 const EARTH_BOILED: L10n = {
   tr: 'Okyanuslar kaynayıp buharlaşır, atmosferin büyük bölümü uzaya kaçar. Yüzey kavrulur.',
@@ -785,7 +785,7 @@ function struckFate(id: string, traits: BodyTraits, geo: BodyGeometry, strike: S
   if (breakup >= LAB_BREAKUP_AT) {
     summary.push(solid
       ? {
-        tr: 'Parçalanır. Çarpan enerji, onu bir arada tutan kütleçekim enerjisinden fazladır; kalıntıları patlamanın tersine savrulur.',
+        tr: 'Parçalanır. Çarpan enerji, onu bir arada tutan kütleçekim enerjisinden fazladır; kalıntıları patlamadan uzağa savrulur.',
         en: 'It is destroyed. The energy that strikes it exceeds the gravity holding it together; its remains are blown away from the blast.',
       }
       : {

@@ -17,6 +17,65 @@ interface BundledDonkiFile {
   fetched: string;
   events: DonkiEvent[];
 }
+
+/** What every DONKI record needs: a name to tell it apart by and a start time `Date` can read. */
+interface DonkiStamp { id: string; time: string }
+
+function donkiStamp(id: unknown, time: unknown): DonkiStamp | null {
+  if (typeof id !== 'string' || id === '' || typeof time !== 'string' || Number.isNaN(Date.parse(time))) return null;
+  return { id, time };
+}
+
+/** The objects in a list from the API; a value that is no list, and whatever else is in a list, gives none. */
+function recordsOf(value: unknown): Array<Record<string, unknown>> {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null);
+}
+
+/** Whether a value from the API is a number inside [min, max]; the comparisons also turn away NaN and the infinities. */
+function isWithin(value: unknown, min: number, max: number): value is number {
+  return typeof value === 'number' && value >= min && value <= max;
+}
+
+/**
+ * The events in DONKI's answers to a CME and a GST request, oldest first. Nothing is made up: a coronal mass
+ * ejection is kept only with a measured speed, half angle and direction that are physically possible, a
+ * storm keeps its highest measured Kp and has none when no sample is usable, and a record without an id or
+ * a readable start time is left out.
+ */
+export function parseDonki(cmes: unknown, gsts: unknown): DonkiEvent[] {
+  const events: DonkiEvent[] = [];
+  for (const it of recordsOf(cmes)) {
+    const stamp = donkiStamp(it.activityID, it.startTime);
+    const analyses = recordsOf(it.cmeAnalyses);
+    const best = analyses.find((a) => a.isMostAccurate === true) ?? analyses[0];
+    if (!stamp || !best) continue;
+    const { speed, halfAngle, latitude, longitude } = best;
+    // The fastest ejections on record are a few thousand km/s; 10,000 is a bound no real one reaches.
+    if (typeof speed !== 'number' || !(speed > 0 && speed < 10000)) continue;
+    if (!isWithin(halfAngle, 0, 180) || !isWithin(latitude, -90, 90) || !isWithin(longitude, -180, 180)) continue;
+    events.push({
+      ...stamp,
+      type: 'CME',
+      speedKmS: speed,
+      halfAngleDeg: halfAngle,
+      latDeg: latitude,
+      lonDeg: longitude,
+      note: typeof it.note === 'string' ? it.note.slice(0, 260) : '',
+      link: typeof it.link === 'string' ? it.link : '',
+    });
+  }
+  for (const it of recordsOf(gsts)) {
+    const stamp = donkiStamp(it.gstID, it.startTime);
+    if (!stamp) continue;
+    const kps = recordsOf(it.allKpIndex).map((sample) => sample.kpIndex).filter((kp) => isWithin(kp, 0, 9));
+    const storm: DonkiEvent = { ...stamp, type: 'GST', link: typeof it.link === 'string' ? it.link : '' };
+    if (kps.length > 0) storm.kp = Math.max(...kps);
+    events.push(storm);
+  }
+  return events.sort((a, b) => a.time.localeCompare(b.time));
+}
+
 function cleanNasaText(raw: string, maxLen = 480): string {
   const stripped = raw
     .replace(/<[^>]+>/g, ' ')
@@ -115,13 +174,15 @@ export function createNasa(): INasa {
   }
 
   return {
-    async getTopic(topicId: string): Promise<NasaTopicResult> {
+    async getTopic(topicId: string, onArchive?: (bundled: NasaTopicResult) => void): Promise<NasaTopicResult> {
       const cached = topicCache.get(topicId);
       if (cached) return cached;
 
       const bundled = await getBundledTopics();
       const entry = bundled.topics[topicId];
       const archiveImages = entry?.images ?? [];
+      // The snapshot's pictures need not wait for the live request, which can take seconds.
+      if (archiveImages.length > 0) onArchive?.({ topicId, source: 'archive', images: archiveImages.slice(0, 12) });
       const query = entry?.query ?? INFO_TOPICS[topicId]?.query ?? topicId;
       // A free-text search also returns unrelated pictures: keep those that name the topic, as the snapshot does.
       const keywords = entry?.keywords ?? [];
@@ -166,58 +227,8 @@ export function createNasa(): INasa {
           fetch(`https://api.nasa.gov/DONKI/GST?startDate=${startDate}&endDate=${endDate}&api_key=${apiKey}`, { signal: ctrl.signal }),
         ]);
         if (cmeRes.ok && gstRes.ok) {
-          interface RawCmeAnalysis {
-            isMostAccurate?: boolean;
-            speed?: number;
-            halfAngle?: number;
-            latitude?: number;
-            longitude?: number;
-          }
-          interface RawCmeItem {
-            activityID?: string;
-            startTime?: string;
-            note?: string;
-            link?: string;
-            cmeAnalyses?: RawCmeAnalysis[];
-          }
-          interface RawGstItem {
-            gstID?: string;
-            startTime?: string;
-            link?: string;
-            allKpIndex?: Array<{ kpIndex?: number }>;
-          }
-          const cmes = (await cmeRes.json()) as RawCmeItem[];
-          const gsts = (await gstRes.json()) as RawGstItem[];
-          const events: DonkiEvent[] = [];
-          for (const it of cmes) {
-            const analyses = it.cmeAnalyses ?? [];
-            const best = analyses.find((a) => a.isMostAccurate) ?? analyses[0];
-            if (best && typeof best.speed === 'number') {
-              events.push({
-                id: String(it.activityID ?? ''),
-                type: 'CME',
-                time: String(it.startTime ?? ''),
-                speedKmS: Number(best.speed),
-                halfAngleDeg: Number(best.halfAngle ?? 35),
-                latDeg: Number(best.latitude ?? 0),
-                lonDeg: Number(best.longitude ?? 0),
-                note: String(it.note ?? '').slice(0, 260),
-                link: String(it.link ?? ''),
-              });
-            }
-          }
-          for (const it of gsts) {
-            const kps = (it.allKpIndex ?? []).map((k) => Number(k.kpIndex ?? 0));
-            events.push({
-              id: String(it.gstID ?? ''),
-              type: 'GST',
-              time: String(it.startTime ?? ''),
-              kp: kps.length ? Math.max(...kps) : 7,
-              link: String(it.link ?? ''),
-            });
-          }
+          const events = parseDonki(await cmeRes.json(), await gstRes.json());
           if (events.length > 0) {
-            events.sort((a, b) => a.time.localeCompare(b.time));
             const res: DonkiResult = { source: 'live', events };
             donkiCache.set(key, res);
             return res;

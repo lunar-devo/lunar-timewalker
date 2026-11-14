@@ -164,10 +164,18 @@ export class Input {
     this.down.delete(e.code);
   };
 
+  /** The window lost the keyboard: nothing stays held, and nothing queued acts when it comes back. */
   private onBlur = (): void => {
     this.down.clear();
+    this.pressedThisFrame.clear();
     this.leftDown = false;
     this.rightDown = false;
+    this.finger = null;
+    this.lookX = 0;
+    this.lookY = 0;
+    this.wheel = 0;
+    this.clicks = 0;
+    this.clickAt = null;
   };
 
   private onLockChange = (): void => {

@@ -14,7 +14,7 @@ import type {
   BodyId, CmeVisual, Collider, EventDef, GameAPI, GlobeMarker, ISpaceView, L10n, LabBody, LabConfigPatch,
   LabExplosionKind, LabFate, LabFraming, LabImpactLevel, LabQuiz, LabSetup, LabState, LightingState, LightReading,
   PanelId, Settings, SiteCoord, SiteDef, SkyState, SkyTarget, StageDef, StagingDef, SupernovaDef, Telemetry,
-  TransientDef, TransientState, WorldId,
+  TerrainLoadInfo, TransientDef, TransientState, WorldId,
 } from '../core/types';
 import { loadManifest, setMaxTextureSize } from '../core/assets';
 import { frame, type FrameProjection } from '../core/frame';
@@ -789,10 +789,20 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
   }
 
   /**
+   * Counts the pages entered. A landing whose data is still loading when another page is entered must not
+   * arrive after all: it compares the count it started with.
+   */
+  let journey = 0;
+  /** The loads of the landing begun last, finished or not: the next landing waits for them. */
+  let landingLoads: Promise<unknown> = Promise.resolve();
+
+  /**
    * What belonged to the page being left must not show on the next: the hardware card, the open panels (the
-   * data panel is a preference and stays), the caption with its speech, the toast.
+   * data panel is a preference and stays), the caption with its speech, the toast. A landing still under
+   * way for the page being left is void.
    */
   function clearPageState(): void {
+    journey += 1;
     if (subtitleClearTimer !== null) window.clearTimeout(subtitleClearTimer);
     subtitleClearTimer = null;
     audio.stopNarration();
@@ -1135,6 +1145,8 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       audio.unlock();
       audio.cue('ui-open');
       audio.setScene('menu');
+      // Before the keys are taken away: leaving a mode on the ground gives them back.
+      leaveModes();
       input.enabled = false;
       input.exitLock();
       activeSpaceView.detach();
@@ -1150,7 +1162,6 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         quality: QUALITY[st.settings.quality],
         mode: 'backdrop',
       }).catch(() => undefined);
-      leaveModes();
       leaveLabWatch();
       endStaging(false);
       clearPageState();
@@ -1172,9 +1183,10 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     selectEvent(eventId: string | null): void {
       audio.unlock();
       audio.cue('ui-open');
+      // Before the keys are taken away: leaving a mode on the ground gives them back.
+      leaveModes();
       input.enabled = false;
       input.exitLock();
-      leaveModes();
       const site = prepareEvent(eventId);
       clearPageState();
       // A new chapter has to be landed: the map's back button leads to the menu, not to the old scene.
@@ -1217,6 +1229,8 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       audio.unlock();
       audio.cue('teleport');
       clearPageState();
+      // This landing is the page now being entered: it is void once another page is.
+      const mine = journey;
       activeSpaceView.detach();
       input.enabled = false;
       endStaging(false);
@@ -1231,26 +1245,42 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         },
       });
 
-      if (!coreAssetsLoaded) {
-        await Promise.all([
-          sky.load(q, (f) => setGame({ loading: { fraction: 0.05 + f * 0.25, label: site.name } })),
-          player.load(),
-        ]);
-        coreAssetsLoaded = true;
-      }
-
-      const terrainInfo = await terrain.load(site, q, (f, lbl) => {
-        setGame({
-          loading: {
-            fraction: 0.3 + f * 0.55,
-            label: lbl ? { tr: lbl, en: lbl } : site.name,
-          },
+      // One landing loads at a time (the sky, the terrain and the hardware hold a single site): this one
+      // waits for the loads of the one before, and does not start its own if it has been overtaken by then.
+      const before = landingLoads;
+      const loads = (async (): Promise<TerrainLoadInfo | null> => {
+        await before.catch(() => undefined);
+        if (mine !== journey) return null;
+        if (!coreAssetsLoaded) {
+          await Promise.all([
+            sky.load(q, (f) => {
+              if (mine === journey) setGame({ loading: { fraction: 0.05 + f * 0.25, label: site.name } });
+            }),
+            player.load(),
+          ]);
+          coreAssetsLoaded = true;
+        }
+        const info = await terrain.load(site, q, (f, lbl) => {
+          if (mine === journey) setGame({ loading: { fraction: 0.3 + f * 0.55, label: lbl ? { tr: lbl, en: lbl } : site.name } });
         });
-      });
-
-      const sitePlacements = ARTIFACT_PLACEMENTS.filter((p) => p.siteId === site.id);
-      await artifacts.load(sitePlacements, SURFACE_ASSETS, terrain);
-      artifacts.removeBeacon();
+        await artifacts.load(ARTIFACT_PLACEMENTS.filter((p) => p.siteId === site.id), SURFACE_ASSETS, terrain);
+        artifacts.removeBeacon();
+        return info;
+      })();
+      landingLoads = loads;
+      let terrainInfo: TerrainLoadInfo | null;
+      try {
+        terrainInfo = await loads;
+      } catch (err) {
+        if (mine !== journey) return;
+        // The terrain, a model or a picture did not load: back to the menu, saying why, instead of a
+        // loading screen that never ends.
+        const reason = err instanceof Error ? err.message : String(err);
+        api.openMenu();
+        showToast(lf(tpl`${site.name} yüklenemedi: ${reason}`, tpl`${site.name} could not be loaded: ${reason}`), 'warn');
+        return;
+      }
+      if (terrainInfo === null || mine !== journey) return;
 
       // Compute initial sky state so we can orient the astronaut toward the chapter's primary target
       const sky0 = computeSky(st.clock.jdTT, site);
@@ -1464,14 +1494,18 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         remnantView.attach(canvas);
       } else if (GALAXIES.some((g) => g.id === targetId)) {
         activeSpaceView = galaxyView;
+        const galaxy = GALAXIES.find((g) => g.id === targetId);
         galaxyView.enter({
           targetId,
           jdTT: st.clock.jdTT,
           lang: st.settings.lang,
           quality: q,
           mode: 'explore',
-          galaxy: GALAXIES.find((g) => g.id === targetId),
-        }).catch(() => undefined);
+          galaxy,
+        }).catch(() => {
+          // The view is empty without its picture: say why.
+          if (galaxy) showToast(lf(tpl`${galaxy.name} görüntüsü yüklenemedi.`, tpl`The picture of ${galaxy.name} could not be loaded.`), 'warn');
+        });
         galaxyView.attach(canvas);
       } else {
         activeSpaceView = globeView;
@@ -1521,6 +1555,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       const galaxy = GALAXIES.find((g) => g.id === st.spaceView?.targetId);
       if (!galaxy || !st.spaceView || st.spaceView.galaxyPictureId === pictureId) return;
       audio.cue('ui-click');
+      const previousId = st.spaceView.galaxyPictureId;
       galaxyView.enter({
         targetId: galaxy.id,
         jdTT: st.clock.jdTT,
@@ -1529,7 +1564,12 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         mode: 'explore',
         galaxy,
         galaxyPictureId: pictureId,
-      }).catch(() => undefined);
+      }).catch(() => {
+        // The picture before is still on show: the choice goes back to it, unless another was made meanwhile.
+        const now = getGame().spaceView;
+        if (now?.targetId === galaxy.id && now.galaxyPictureId === pictureId) setGame({ spaceView: { ...now, galaxyPictureId: previousId } });
+        showToast({ tr: 'Bu görüntü yüklenemedi; önceki gösteriliyor.', en: 'This picture could not be loaded; the previous one is still shown.' }, 'warn');
+      });
       setGame({ spaceView: { ...st.spaceView, galaxyPictureId: pictureId } });
     },
 
@@ -1661,7 +1701,13 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       }
       // The language's dictionary is fetched if it is not in yet; the screen follows when it arrives, and texts
       // drawn into textures (map labels) are redrawn then.
-      if (patch.lang) loadDict(next.lang).then(() => labView.setLang(getGame().settings.lang));
+      if (patch.lang) {
+        loadDict(next.lang).then(() => {
+          const lang = getGame().settings.lang;
+          labView.setLang(lang);
+          globeView.setLang(lang);
+        });
+      }
     },
 
     requestPointerLock(): void {
@@ -1686,7 +1732,8 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       });
       player.setViewMode('first');
       await api.landAt(site);
-      enterTutorialStep(0);
+      // Only where the landing arrived: the menu or another page may have been opened while it loaded.
+      if (getGame().phase === 'surface' && getGame().site?.id === site.id) enterTutorialStep(0);
     },
 
     skipTutorialStep(): void {
@@ -1756,7 +1803,9 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       };
       if (!st.site) {
         this.selectEvent(null);
-        this.landAt(SITES[0]).then(apply).catch(() => undefined);
+        this.landAt(SITES[0]).then(() => {
+          if (getGame().phase === 'surface') apply();
+        }).catch(() => undefined);
       } else {
         apply();
       }
@@ -2073,19 +2122,35 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
   // ─────────────────────────── Global Key Shortcuts & Resize ───────────────────────────
 
   window.addEventListener('resize', () => {
-    const w = window.innerWidth;
-    const h = Math.max(1, window.innerHeight);
-    renderer.setSize(w, h, false);
-    composer.setSize(w, h);
-    player.camera.aspect = w / h;
+    // Through the pixel ratio: the window may have moved to a screen of another density, or the page's zoom changed.
+    applyPixelRatio();
+    player.camera.aspect = window.innerWidth / Math.max(1, window.innerHeight);
     player.camera.updateProjectionMatrix();
-    activeSpaceView.resize(w, h);
+  });
+
+  // A lost WebGL context (a driver reset, the tab starved of memory) stops the picture: time and the sequences
+  // wait for it, and what existed only on the graphics card is made again when it comes back.
+  let contextLost = false;
+  canvas.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    contextLost = true;
+  });
+  canvas.addEventListener('webglcontextrestored', () => {
+    const environment = createLunarEnvironment(renderer);
+    mainScene.environment = environment;
+    nearScene.environment = environment;
+    contextLost = false;
   });
 
   window.addEventListener('keydown', (e) => {
     const tag = (e.target as HTMLElement | null)?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    // Space and Enter on a button, a link or a fold belong to that control.
+    if ((tag === 'BUTTON' || tag === 'A' || tag === 'SUMMARY') && (e.code === 'Space' || e.code === 'Enter')) return;
     const st = getGame();
+    // A card or a panel over the page: Tab moves through its controls instead of grabbing the pointer.
+    const covered = st.focusAssetId !== null || st.panels.info || st.panels.about || st.panels.settings
+      || st.panels.help || st.panels.credits || st.panels.pause;
     if (e.code === 'KeyK' && !e.ctrlKey && !e.metaKey && !e.altKey) {
       // Sound on / off, in every phase.
       const soundOn = !st.settings.soundOn;
@@ -2136,7 +2201,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       // The archive, as the bar of the close-up views says; on the ground the surface hotkeys handle it.
       if (st.panels.info) api.togglePanel('info', false);
       else api.openArchive();
-    } else if (e.code === 'Tab' && st.phase === 'surface') {
+    } else if (e.code === 'Tab' && st.phase === 'surface' && !covered) {
       e.preventDefault();
       if (input.locked) input.exitLock();
       else input.requestLock();
@@ -2188,6 +2253,11 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
   }
 
   function tick(nowMs: number): void {
+    if (contextLost) {
+      lastFrameMs = nowMs;
+      window.requestAnimationFrame(tick);
+      return;
+    }
     const dt = Math.min(0.1, Math.max(0.0005, (nowMs - lastFrameMs) / 1000));
     lastFrameMs = nowMs;
     fpsSmooth = fpsSmooth * 0.92 + (1 / dt) * 0.08;
@@ -2440,7 +2510,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         - (input.isDown('KeyS') || input.isDown('ArrowDown') ? 1 : 0);
       const run = input.isDown('ShiftLeft') || input.isDown('ShiftRight');
       const jump = !covered && input.wasPressed('Space');
-      const moveY = covered ? 0 : (input.isDown('Space') ? 1 : 0) - (input.isDown('KeyQ') || input.isDown('ControlLeft') ? 1 : 0);
+      const moveY = covered ? 0 : (input.isDown('Space') ? 1 : 0) - (input.isDown('KeyQ') ? 1 : 0);
       const shadeHold = (!covered && input.isDown('KeyF')) || stageShade;
       const scanHold = !covered && input.isDown('KeyE');
 
@@ -2768,7 +2838,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       if (st.phase === 'space' && st.spaceView?.targetId === 'lab' && st.lab?.evaMode) {
         const mx = (input.isDown('KeyD') || input.isDown('ArrowRight') ? 1 : 0) - (input.isDown('KeyA') || input.isDown('ArrowLeft') ? 1 : 0);
         const mz = (input.isDown('KeyW') || input.isDown('ArrowUp') ? 1 : 0) - (input.isDown('KeyS') || input.isDown('ArrowDown') ? 1 : 0);
-        const my = (input.isDown('Space') ? 1 : 0) - (input.isDown('KeyQ') || input.isDown('ControlLeft') ? 1 : 0);
+        const my = (input.isDown('Space') ? 1 : 0) - (input.isDown('KeyQ') ? 1 : 0);
         labView.setEvaKeys(mx, mz, my, input.isDown('ShiftLeft') || input.isDown('ShiftRight'));
       }
       activeSpaceView.update(dt, jdTT);

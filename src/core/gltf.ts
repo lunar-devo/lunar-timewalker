@@ -23,7 +23,11 @@ export async function loadGlb(file: string): Promise<THREE.Group> {
   }
   let pending = cache.get(file);
   if (!pending) {
-    pending = loader.loadAsync(assetUrl('assets/models/' + file)).then((gltf) => gltf.scene);
+    // A failed load is forgotten, so that the next call tries again.
+    pending = loader.loadAsync(assetUrl('assets/models/' + file)).then((gltf) => gltf.scene, (err: unknown) => {
+      cache.delete(file);
+      throw err;
+    });
     cache.set(file, pending);
   }
   const original = await pending;

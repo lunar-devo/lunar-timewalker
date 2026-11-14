@@ -8,9 +8,14 @@
  *   bun tools/i18n.ts merge     take tools/i18n/done/<lang>.*.json into tools/i18n/<lang>.json and
  *                               write public/assets/i18n/<lang>.json (only texts the app uses)
  *
- * todo files:  [{ "i": 0, "en": "Close", "tr": "Kapat" }, …]
- * done files:  { "0": "Schließen", … }   (index → translation; {0}, {1}… placeholders must be kept)
+ * todo files:  [{ "i": "3fa9c01b2e", "en": "Close", "tr": "Kapat" }, …]
+ * done files:  { "3fa9c01b2e": "Schließen", … }   (the entry's "i" → translation; {0}, {1}… placeholders must be kept)
+ *
+ * "i" is made from the English text itself, so `merge` can only put a translation on the text it was written
+ * for: an entry of a done file whose text has since changed or gone (or a file in the older numbered format)
+ * is refused, whatever was extracted in between.
  */
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -116,9 +121,51 @@ function readJson<T>(path: string, fallback: T): T {
 
 const placeholders = (s: string): string => (s.match(/\{\d+\}/g) ?? []).sort().join('');
 
+/** The name of a text in todo and done files: a fingerprint of its English wording. */
+export function textKey(en: string): string {
+  return createHash('sha256').update(en).digest('hex').slice(0, 10);
+}
+
+/** The English texts by their key in todo and done files. */
+export function keyedTexts(texts: Iterable<string>): Map<string, string> {
+  const byKey = new Map<string, string>();
+  for (const en of texts) {
+    const key = textKey(en);
+    const other = byKey.get(key);
+    if (other !== undefined && other !== en) throw new Error(`"${en}" and "${other}" get the same key ${key}: lengthen textKey()`);
+    byKey.set(key, en);
+  }
+  return byKey;
+}
+
+/**
+ * Takes the translations of one done file into `have` (English text → translation) and returns what is
+ * wrong with the entries it refused. An entry is looked up by its key, never by its place in a list, so it
+ * cannot land on another text than the one it was written for.
+ */
+export function mergeDone(done: Record<string, unknown>, byKey: Map<string, string>, have: Record<string, string>): string[] {
+  const wrong: string[] = [];
+  const unknown: string[] = [];
+  for (const [key, text] of Object.entries(done)) {
+    const en = byKey.get(key);
+    if (en === undefined) unknown.push(key);
+    else if (typeof text !== 'string' || text.trim() === '') wrong.push(`entry ${key} is empty`);
+    else if (placeholders(en) !== placeholders(text)) wrong.push(`entry ${key} changes the {n} placeholders: "${en}" → "${text}"`);
+    else have[en] = text;
+  }
+  if (unknown.length > 0) {
+    wrong.push(
+      `${unknown.length} entries (${unknown.slice(0, 5).join(', ')}${unknown.length > 5 ? ', …' : ''}) are for texts the source no longer has, `
+      + 'or the file was made from an older todo file: run "bun tools/i18n.ts extract" again and translate from the new todo file',
+    );
+  }
+  return wrong;
+}
+
 function main(): void {
   const mode = process.argv[2] ?? 'scan';
   const { texts, problems } = collect();
+  const byKey = keyedTexts(texts.keys());
   mkdirSync(WORK, { recursive: true });
 
   if (mode === 'scan') {
@@ -130,7 +177,7 @@ function main(): void {
   if (mode === 'extract') {
     for (const lang of TRANSLATED_LANGS) {
       const have = readJson<Record<string, string>>(join(WORK, `${lang}.json`), {});
-      const todo = [...texts.values()].filter((t) => !(t.en in have)).map((t, i) => ({ i, en: t.en, tr: t.tr }));
+      const todo = [...texts.values()].filter((t) => !(t.en in have)).map((t) => ({ i: textKey(t.en), en: t.en, tr: t.tr }));
       writeFileSync(join(WORK, `todo.${lang}.json`), JSON.stringify(todo, null, 1));
       console.log(`${lang}: ${todo.length} of ${texts.size} texts to translate`);
     }
@@ -142,25 +189,12 @@ function main(): void {
     let failed = false;
     for (const lang of TRANSLATED_LANGS) {
       const have = readJson<Record<string, string>>(join(WORK, `${lang}.json`), {});
-      const todo = readJson<Array<{ i: number; en: string }>>(join(WORK, `todo.${lang}.json`), []);
       const doneDir = join(WORK, 'done');
       const parts = existsSync(doneDir) ? readdirSync(doneDir).filter((f) => f.startsWith(`${lang}.`) && f.endsWith('.json')).sort() : [];
       for (const part of parts) {
-        const done = readJson<Record<string, string>>(join(doneDir, part), {});
-        for (const [index, text] of Object.entries(done)) {
-          const src = todo[Number(index)];
-          if (!src || src.i !== Number(index)) {
-            console.log(`${lang}: ${part} has index ${index}, which is not in todo.${lang}.json`);
-            failed = true;
-          } else if (typeof text !== 'string' || text.trim() === '') {
-            console.log(`${lang}: ${part} index ${index} is empty`);
-            failed = true;
-          } else if (placeholders(src.en) !== placeholders(text)) {
-            console.log(`${lang}: ${part} index ${index} changes the {n} placeholders: "${src.en}" → "${text}"`);
-            failed = true;
-          } else {
-            have[src.en] = text;
-          }
+        for (const what of mergeDone(readJson<Record<string, unknown>>(join(doneDir, part), {}), byKey, have)) {
+          console.log(`${lang}: ${part}: ${what}`);
+          failed = true;
         }
       }
       writeFileSync(join(WORK, `${lang}.json`), JSON.stringify(have, null, 1));

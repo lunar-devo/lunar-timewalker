@@ -436,6 +436,8 @@ export function createGalaxyView(renderer: THREE.WebGLRenderer): ISpaceView {
   /** The picture that is on show, and the one last asked for (it may still be on its way): `<galaxy id>_<picture id>`. */
   let shownKey = '';
   let wantedKey = '';
+  /** The galaxy whose picture is on show. */
+  let shownGalaxyId = '';
   let pictureHeight = PICTURE_WIDTH;
   /** Scene units to one degree of sky in the picture on show. */
   let unitsPerDeg = 1;
@@ -477,6 +479,7 @@ export function createGalaxyView(renderer: THREE.WebGLRenderer): ISpaceView {
     maxPitch = depth.maxPitchDeg * DEG;
     unitsPerDeg = PICTURE_WIDTH / shot.fieldDeg;
     shownKey = `${def.id}_${shot.id}`;
+    shownGalaxyId = def.id;
     fitPicture();
   }
 
@@ -565,16 +568,25 @@ export function createGalaxyView(renderer: THREE.WebGLRenderer): ISpaceView {
       const key = `${def.id}_${shot.id}`;
       wantedKey = key;
       if (key === shownKey) return;
-      picture.visible = false;
-      cloud.visible = false;
-      dustRing.visible = false;
-      shownKey = '';
+      // Another picture of the same galaxy stays on show until the new one has arrived. Another galaxy's
+      // picture goes at once: it must not stand under this galaxy's name.
+      if (def.id !== shownGalaxyId) {
+        picture.visible = false;
+        cloud.visible = false;
+        dustRing.visible = false;
+        shownKey = '';
+        shownGalaxyId = '';
+      }
       const rel = `tex/galaxy_${key}.webp`;
       const depth = DEPTH[def.id];
-      if (!depth || !hasAsset(rel)) return;
-      const image = await imageLoader.loadAsync(assetUrl(`assets/${rel}`));
+      const image = depth && hasAsset(rel) ? await imageLoader.loadAsync(assetUrl(`assets/${rel}`)).catch(() => null) : null;
       // Another picture may have been chosen while this one was on its way.
       if (wantedKey !== key) return;
+      if (!image) {
+        // What is on show stays and is again what is wanted; the caller hears of it and can tell the user.
+        wantedKey = shownKey;
+        throw new Error(`Galaxy picture not available: ${rel}`);
+      }
       show(def, shot, depth, image, Math.min(MAX_PARTICLES, Math.round(PARTICLES * opts.quality.particles)));
     },
 

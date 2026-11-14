@@ -18,6 +18,7 @@ import { calendarUTFromJdTT, formatDate, jdTTFromCalendarUT, jdTTNow } from '../
 import { BODY_NAMES, WORLDS } from '../../content';
 import { game } from '../../game/api';
 import { distanceText, LAB_MAX_AU, LAB_MIN_AU, LY_AU } from '../../views/lab';
+import { useDialog } from '../useDialog';
 
 const SUPERSCRIPT = '⁰¹²³⁴⁵⁶⁷⁸⁹';
 
@@ -156,7 +157,7 @@ function EarthResult({ impact, kind, lang }: { impact: LabImpact; kind: LabExplo
         <div className="hud-lab-rows">
           <Row label={tx(lang, 'Gama ışını akısı', 'Gamma-ray fluence')} value={`${scientific(impact.fluenceJm2, lang)} J/m²`} />
           <Row label={tx(lang, '10 saniye boyunca Güneş’e göre', 'Against the Sun, for 10 seconds')} value={`× ${scientific(impact.fluxSolar, lang)}`} />
-          <Row label={tx(lang, 'Işınların varışı', 'Rays arrive after')} value={loc(impact.shockTimeText, lang)} />
+          <Row label={tx(lang, 'Işınların varışı', 'Ray arrival')} value={loc(impact.shockTimeText, lang)} />
           {impact.beamWidthLabel && (
             <Row label={tx(lang, 'Hüzmenin Dünya’daki genişliği', 'Width of the beam at Earth')} value={loc(impact.beamWidthLabel, lang)} />
           )}
@@ -166,8 +167,8 @@ function EarthResult({ impact, kind, lang }: { impact: LabImpact; kind: LabExplo
         <div className="hud-lab-rows">
           <Row label={tx(lang, 'Gökteki parlaklığı', 'Brightness in the sky')} value={tx(lang, tpl`${fmt(impact.apparentMag, 1, lang)} kadir`, tpl`magnitude ${fmt(impact.apparentMag, 1, lang)}`)} />
           <Row label={tx(lang, 'Güneş’e göre', 'Compared with the Sun')} value={`× ${scientific(impact.fluxSolar, lang)}`} />
-          <Row label={tx(lang, 'Işığın varışı', 'Light arrives after')} value={loc(impact.lightTimeText, lang)} />
-          <Row label={tx(lang, 'Şok dalgasının varışı', 'Blast arrives after')} value={loc(impact.shockTimeText, lang)} />
+          <Row label={tx(lang, 'Işığın varışı', 'Light arrival')} value={loc(impact.lightTimeText, lang)} />
+          <Row label={tx(lang, 'Şok dalgasının varışı', 'Blast arrival')} value={loc(impact.shockTimeText, lang)} />
           <Row label={tx(lang, 'Yüzey sıcaklığı', 'Surface temperature')} value={`${scientific(impact.surfaceTempK, lang)} K`} />
           <Row label={tx(lang, 'Dünya’ya çarpan enerji', 'Energy striking Earth')} value={`${scientific(impact.energyJ, lang)} J`} />
         </div>
@@ -207,15 +208,15 @@ function FateResult({ fate, kind, lang }: { fate: LabFate; kind: LabExplosionKin
         <div className="hud-lab-rows">
           <Row label={tx(lang, 'Patlamaya uzaklığı', 'Distance from the explosion')} value={loc(fate.distanceLabel, lang)} />
           <Row label={tx(lang, 'Gama ışını akısı', 'Gamma-ray fluence')} value={`${scientific(fate.fluenceJm2, lang)} J/m²`} />
-          <Row label={tx(lang, 'Işınların varışı', 'Rays arrive after')} value={loc(fate.shockTimeText, lang)} />
+          <Row label={tx(lang, 'Işınların varışı', 'Ray arrival')} value={loc(fate.shockTimeText, lang)} />
           <Row label={tx(lang, 'Çarpan enerji', 'Energy striking it')} value={`${scientific(fate.energyJ, lang)} J`} />
         </div>
       ) : (
         <div className="hud-lab-rows">
           <Row label={tx(lang, 'Patlamaya uzaklığı', 'Distance from the explosion')} value={loc(fate.distanceLabel, lang)} />
           {!star && <Row label={tx(lang, 'Oradaki Güneş’e göre', 'Compared with the Sun there')} value={`× ${scientific(fate.fluxLocal, lang)}`} />}
-          <Row label={tx(lang, 'Işığın varışı', 'Light arrives after')} value={loc(fate.lightTimeText, lang)} />
-          <Row label={tx(lang, 'Şok dalgasının varışı', 'Blast arrives after')} value={loc(fate.shockTimeText, lang)} />
+          <Row label={tx(lang, 'Işığın varışı', 'Light arrival')} value={loc(fate.lightTimeText, lang)} />
+          <Row label={tx(lang, 'Şok dalgasının varışı', 'Blast arrival')} value={loc(fate.shockTimeText, lang)} />
           {!star && <Row label={tx(lang, 'Sıcaklık', 'Temperature')} value={`${scientific(fate.tempK, lang)} K`} />}
           <Row label={tx(lang, 'Çarpan enerji', 'Energy striking it')} value={`${scientific(fate.energyJ, lang)} J`} />
         </div>
@@ -230,8 +231,8 @@ function MapDate({ jdTT, lang }: { jdTT: number; lang: Lang }) {
   const day = calendarUTFromJdTT(jdTT);
   const value = `${String(day.year).padStart(4, '0')}-${String(day.month).padStart(2, '0')}-${String(day.day).padStart(2, '0')}`;
   const label = tx(lang, 'Haritanın tarihi', 'Date of the map');
-  const back = tx(lang, '30 gün geri', '30 days back');
-  const on = tx(lang, '30 gün ileri', '30 days on');
+  const back = tx(lang, '30 gün geri', 'Back 30 days');
+  const on = tx(lang, '30 gün ileri', 'Forward 30 days');
   return (
     <div className="hud-lab-date">
       <span className="hud-lab-label">{label}</span>
@@ -496,6 +497,7 @@ interface TableRow {
  */
 function LabTable({ lab, lang, onClose }: { lab: LabState; lang: Lang; onClose: () => void }) {
   const { impact, fates, kind } = lab;
+  const dialog = useDialog(true);
   const body = tx(lang, 'Cisim', 'Body');
   const result = tx(lang, 'Sonuç', 'Result');
   const distance = tx(lang, 'Uzaklık', 'Distance');
@@ -545,7 +547,21 @@ function LabTable({ lab, lang, onClose }: { lab: LabState; lang: Lang; onClose: 
   }
   return (
     <div className="mn-modal-backdrop" onClick={onClose}>
-      <div className="mn-modal hud-lab-table-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="mn-modal hud-lab-table-modal"
+        ref={dialog}
+        role="dialog"
+        aria-modal="true"
+        aria-label={tx(lang, 'Bütün cisimler', 'All bodies')}
+        tabIndex={-1}
+        onClick={(e) => e.stopPropagation()}
+        // Esc closes the table; it must not reach the page's own Esc, which leaves the lab.
+        onKeyDown={(e) => {
+          if (e.key !== 'Escape') return;
+          e.stopPropagation();
+          onClose();
+        }}
+      >
         <div className="mn-modal-head">
           <h2 className="mn-modal-title hud-lab-table-title">
             <span>{tx(lang, 'Bütün cisimler', 'All bodies')}</span>
@@ -859,7 +875,7 @@ export function LabDrawer() {
 
               <details className="hud-lab-sources">
                 <summary>{tx(lang, 'Hesap neye dayanıyor?', 'What is the estimate based on?')}</summary>
-                <p>{tx(lang, 'Büyüklük mertebesinde bir modeldir: amacı kesin tahmin değil, uzaklıkları karşılaştırmaktır. “ZARARSIZ”, “YIKICI” gibi etiketler ve sonuçların anlatımı bu uygulamaya aittir.', 'It is an order-of-magnitude model: it is for comparing distances, not for forecasting. Labels such as “HARMLESS” and “DEVASTATING”, and the wording of the consequences, are this app’s own.')}</p>
+                <p>{tx(lang, 'Bu bir büyüklük mertebesi modelidir: amacı kesin tahmin değil, uzaklıkları karşılaştırmaktır. “ZARARSIZ”, “YIKICI” gibi etiketler ve sonuçların anlatımı bu uygulamaya aittir.', 'It is an order-of-magnitude model: it is for comparing distances, not for forecasting. Labels such as “HARMLESS” and “DEVASTATING”, and the wording of the consequences, are this app’s own.')}</p>
                 <ul>
                   <li>{tx(lang, 'NASA araştırmasından: 26 ışık yılı tehlike sınırı (Gehrels ve ark. 2003, NASA Goddard; ozon tabakası).', 'From NASA research: the 26-light-year hazard limit (Gehrels et al. 2003, NASA Goddard; ozone layer).')}</li>
                   <li>{tx(lang, 'Gama ışını patlaması: NASA Goddard ortak yazarlı Thomas ve ark. (2005) çalışmasındaki patlama; 6.500 ışık yılından metrekareye 100 kJ düşer ve ozon tabakası ortalama %35 azalır. Daha yakın ve daha uzak değerler bu noktadan ölçeklenir. Hüzme 12° genişliğinde alınır; logaritmik haritada geniş görünür.', 'Gamma-ray burst: the burst of Thomas et al. (2005, with NASA Goddard); from 6,500 light years 100 kJ falls on every square metre and the ozone layer thins by 35% on average. Nearer and farther values are scaled from that point. The beam is taken to be 12° wide; on the logarithmic map it looks wide.')}</li>
@@ -868,7 +884,7 @@ export function LabDrawer() {
                   <li>{tx(lang, 'Uydular: yörünge yükseklikleri gerçektir; manyetosferin içinde mi dışında mı kaldıkları modelin hesabıdır. L1’deki gözcüler bulutu Dünya’dan önce görür.', 'Satellites: the heights of the orbits are real; whether they end up inside or outside the magnetosphere is the model’s estimate. The sentinels at L1 meet the cloud before Earth does.')}</li>
                   <li>{tx(lang, 'Modelden: parlaklık (ters kare yasası), Dünya’ya düşen enerji payı, yıkım eşikleri (üst sınır) ve şok dalgasının varış süresi.', 'From the model: brightness (inverse-square law), the share of the energy that strikes Earth, the destruction thresholds (upper bounds) and the arrival time of the blast wave.')}</li>
                   <li>{tx(lang, 'Diğer cisimler: Ay, Güneş ve gezegenlerin her biri gerçek yarıçapı, kütlesi ve patlamaya gerçek uzaklığıyla aynı modelden geçer; parlaklık, o cismin normalde aldığı güneş ışığıyla karşılaştırılır. Güneş patlamasının bulutu yaklaşık 70° genişliğindedir ve Dünya’ya yöneliktir: dışında kalan cisimleri ıskalar.', 'The other bodies: the Moon, the Sun and each planet go through the same model with their real radius, mass and distance from the explosion; the brightness is compared with the sunlight that body normally gets. The cloud of a solar eruption is about 70° wide and aimed at Earth: it misses the bodies outside it.')}</li>
-                  <li>{tx(lang, 'Eklenen cisimler: Plüton (New Horizons haritası; güneyi görülmedi), Europa (Voyager ve Galileo mozaiği), Titan (pusu model renktir). Uydular gezegenlerinin yerinde sayılır.', 'Added bodies: Pluto (New Horizons map; its far south was not seen), Europa (Voyager and Galileo mosaic), Titan (its haze is a model colour). Moons are taken to stand where their planets do.')}</li>
+                  <li>{tx(lang, 'Eklenen cisimler: Plüton (New Horizons haritası; güneyi görülmedi), Europa (Voyager ve Galileo mozaiği), Titan (pusunun rengi bir model varsayımıdır). Uydular gezegenlerinin yerinde sayılır.', 'Added bodies: Pluto (New Horizons map; its far south was not seen), Europa (Voyager and Galileo mosaic), Titan (its haze colour is a model assumption). Moons are taken to stand where their planets do.')}</li>
                   <li>{tx(lang, 'Gezegenlerin yerleri: astronomy-engine ile hesaplanır (NASA JPL Horizons ile sınanmış bir kütüphane). Haritada üst üste gelecek cisimler en çok 11° yana kaydırılır.', 'Planet positions: computed with astronomy-engine (a library tested against NASA JPL Horizons). Bodies that would overlap on the map are moved aside by at most 11°.')}</li>
                   <li>{tx(lang, 'Gezegen görüntüleri: NASA görev haritaları ve Hubble (OPAL); ayrıntılar ana menüdeki Kaynaklar’da.', 'Planet pictures: NASA mission maps and Hubble (OPAL); details under Sources in the main menu.')}</li>
                 </ul>

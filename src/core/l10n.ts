@@ -53,17 +53,34 @@ export function setDict(lang: Lang, dict: Record<string, string>): void {
   for (const cb of listeners) cb();
 }
 
-/** Fetches the dictionary of a translated language (no-op for Turkish and English). Never rejects. */
+/**
+ * The dictionary in a downloaded file: its entries that are texts (anything else in it is dropped), or null
+ * when the file does not hold a dictionary at all.
+ */
+export function dictFromJson(json: unknown): Record<string, string> | null {
+  if (typeof json !== 'object' || json === null || Array.isArray(json)) return null;
+  const dict: Record<string, string> = {};
+  for (const [en, text] of Object.entries(json)) {
+    if (typeof text === 'string') dict[en] = text;
+  }
+  return dict;
+}
+
+/**
+ * Fetches the dictionary of a translated language (no-op for Turkish and English). Never rejects: when the
+ * download fails nothing is installed, the texts stay English, and the next call tries again.
+ */
 export function loadDict(lang: Lang): Promise<void> {
   if (lang === 'tr' || lang === 'en' || dicts[lang]) return Promise.resolve();
   let job = pending.get(lang);
   if (!job) {
     job = fetch(assetUrl(`assets/i18n/${lang}.json`))
-      .then((res) => (res.ok ? (res.json() as Promise<Record<string, string>>) : {}))
-      .catch(() => ({}))
-      .then((dict) => {
+      .then((res) => (res.ok ? res.json() : null))
+      .catch(() => null)
+      .then((json: unknown) => {
         pending.delete(lang);
-        setDict(lang, dict);
+        const dict = dictFromJson(json);
+        if (dict) setDict(lang, dict);
       });
     pending.set(lang, job);
   }
