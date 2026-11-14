@@ -599,11 +599,14 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     item.widthShare = drawn.widthShare;
   }
 
-  /** Gives every ring its look: the hazard limit of the kind of explosion now set is red and says so. */
+  /**
+   * Gives every ring its look: the hazard limit of the kind of explosion now set is red and says so. Not
+   * while the class mode waits for a prediction: the mark would give the answer away.
+   */
   function styleRings(): void {
     RINGS.forEach((ring, i) => {
       const { line, item } = ringLooks[i];
-      const limit = ring.hazard?.kinds.includes(kind) ? ring.hazard : undefined;
+      const limit = !concealed && ring.hazard?.kinds.includes(kind) ? ring.hazard : undefined;
       const color = limit ? RING_HAZARD : ring.color;
       line.color.setHex(color);
       line.opacity = color === RING_GREY ? 0.3 : 0.5;
@@ -2552,6 +2555,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
 
     setConcealed(on: boolean): void {
       concealed = on;
+      styleRings();
     },
 
     detonate(): void {

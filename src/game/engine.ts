@@ -2230,34 +2230,40 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     frame.rate = st.clock.paused ? 0 : getGame().clock.rate;
 
     if (st.phase === 'surface' && st.site) {
+      // A card or a panel over the scene takes the keys: under it only the key that closes it acts (and Esc,
+      // in the key listener); nothing is toggled, photographed or walked behind it.
+      const covered = st.focusAssetId !== null || st.panels.info || st.panels.about || st.panels.settings
+        || st.panels.help || st.panels.credits || st.panels.pause;
       // 1. Handle surface mode hotkeys
-      if (input.wasPressed('KeyT')) api.setTelescope(!st.telescope.active);
-      if (input.wasPressed('KeyV')) api.setViewMode(st.viewMode === 'first' ? 'third' : 'first');
-      if (input.wasPressed('KeyG')) {
-        audio.cue('ui-click');
-        setGame({ headlamp: !st.headlamp });
-      }
-      if (input.wasPressed('KeyM')) api.openMap();
       if (input.wasPressed('KeyI')) {
         if (st.panels.info) api.togglePanel('info', false);
-        else api.openArchive();
+        else if (!covered) api.openArchive();
       }
-      if (input.wasPressed('KeyN')) api.togglePanel('telemetry');
-      if (input.wasPressed('KeyH')) api.togglePanel('help');
-      if (input.wasPressed('KeyC')) api.updateSettings({ showConstellations: !st.settings.showConstellations });
-      if (input.wasPressed('KeyP')) {
-        api.capture('8k').then((b) => downloadBlob(b, `lunar-timewalker-8k-${Date.now()}.png`)).catch(() => undefined);
+      if (input.wasPressed('KeyH') && (!covered || st.panels.help)) api.togglePanel('help');
+      if (!covered) {
+        if (input.wasPressed('KeyT')) api.setTelescope(!st.telescope.active);
+        if (input.wasPressed('KeyV')) api.setViewMode(st.viewMode === 'first' ? 'third' : 'first');
+        if (input.wasPressed('KeyG')) {
+          audio.cue('ui-click');
+          setGame({ headlamp: !st.headlamp });
+        }
+        if (input.wasPressed('KeyM')) api.openMap();
+        if (input.wasPressed('KeyN')) api.togglePanel('telemetry');
+        if (input.wasPressed('KeyC')) api.updateSettings({ showConstellations: !st.settings.showConstellations });
+        if (input.wasPressed('KeyP')) {
+          api.capture('8k').then((b) => downloadBlob(b, `lunar-timewalker-8k-${Date.now()}.png`)).catch(() => undefined);
+        }
+        if (input.wasPressed('KeyR')) api.resetEventTime();
+        if (input.wasPressed('Digit1')) api.setPaused(!st.clock.paused);
+        if (input.wasPressed('Digit2')) api.setRate(1);
+        if (input.wasPressed('Digit3')) api.setRate(60);
+        if (input.wasPressed('Digit4')) api.setRate(3600);
+        if (input.wasPressed('Digit5')) api.setRate(86400);
+        if (input.wasPressed('Digit6')) api.setRate(864000);
       }
-      if (input.wasPressed('KeyR')) api.resetEventTime();
-      if (input.wasPressed('Digit1')) api.setPaused(!st.clock.paused);
-      if (input.wasPressed('Digit2')) api.setRate(1);
-      if (input.wasPressed('Digit3')) api.setRate(60);
-      if (input.wasPressed('Digit4')) api.setRate(3600);
-      if (input.wasPressed('Digit5')) api.setRate(86400);
-      if (input.wasPressed('Digit6')) api.setRate(864000);
 
       // [B] places (or moves) the measuring mast: Sun and Earth visibility here over the next lunar day.
-      if (input.wasPressed('KeyB')) {
+      if (!covered && input.wasPressed('KeyB')) {
         audio.cue('confirm');
         const fwdX = Math.sin(player.state.headingDeg * DEG2RAD);
         const fwdZ = -Math.cos(player.state.headingDeg * DEG2RAD);
@@ -2428,15 +2434,15 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       }
       const zoomScale = player.camera.fov / 60;
       const sens = 0.0022 * st.settings.mouseSensitivity * zoomScale;
-      const moveX = (input.isDown('KeyD') || input.isDown('ArrowRight') ? 1 : 0)
+      const moveX = covered ? 0 : (input.isDown('KeyD') || input.isDown('ArrowRight') ? 1 : 0)
         - (input.isDown('KeyA') || input.isDown('ArrowLeft') ? 1 : 0);
-      const moveZ = (input.isDown('KeyW') || input.isDown('ArrowUp') ? 1 : 0)
+      const moveZ = covered ? 0 : (input.isDown('KeyW') || input.isDown('ArrowUp') ? 1 : 0)
         - (input.isDown('KeyS') || input.isDown('ArrowDown') ? 1 : 0);
       const run = input.isDown('ShiftLeft') || input.isDown('ShiftRight');
-      const jump = input.wasPressed('Space');
-      const moveY = (input.isDown('Space') ? 1 : 0) - (input.isDown('KeyQ') || input.isDown('ControlLeft') ? 1 : 0);
-      const shadeHold = input.isDown('KeyF') || stageShade;
-      const scanHold = input.isDown('KeyE');
+      const jump = !covered && input.wasPressed('Space');
+      const moveY = covered ? 0 : (input.isDown('Space') ? 1 : 0) - (input.isDown('KeyQ') || input.isDown('ControlLeft') ? 1 : 0);
+      const shadeHold = (!covered && input.isDown('KeyF')) || stageShade;
+      const scanHold = !covered && input.isDown('KeyE');
 
       obstacles.length = 0;
       terrain.collidersNear(player.state.position.x, player.state.position.z, 8, obstacles);
@@ -2679,7 +2685,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       artifacts.setHighlight(bestReticleKind === 'artifact' ? bestReticleId : null);
 
       // 6. [E] opens the information about whatever is under the crosshair.
-      if (input.wasPressed('KeyE') && bestReticleId) {
+      if (!covered && input.wasPressed('KeyE') && bestReticleId) {
         audio.cue('ui-open');
         if (bestReticleKind === 'artifact') {
           input.exitLock();

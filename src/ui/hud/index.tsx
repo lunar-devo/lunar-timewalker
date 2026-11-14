@@ -138,7 +138,7 @@ function GalaxyScale({ galaxy, shot, lang }: { galaxy: GalaxyDef; shot: GalaxyPi
     <div ref={rootRef} className="hud-galaxy-scale" style={{ visibility: 'hidden' }}>
       <div ref={moonRef} className="hud-galaxy-moon">
         <div ref={discRef} />
-        <span>{tx(lang, 'Dolunay, aynı ölçekte', 'Full Moon, to the same scale')}</span>
+        <span>{tx(lang, 'Dolunay gökyüzünde bu kadar yer kaplar', 'The full Moon covers this much sky')}</span>
       </div>
       <div className="hud-galaxy-bar">
         <div ref={barRef} />
