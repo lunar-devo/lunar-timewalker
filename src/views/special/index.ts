@@ -334,7 +334,6 @@ export function createSunView(_renderer: THREE.WebGLRenderer): ISpaceView {
     ecliptic.add(line, mesh);
     return { label, body, periodDays: A.PlanetOrbitalPeriod(body), line, mesh };
   });
-  const earth = planets[2];
 
   /** The clock's value the orbit lines were drawn for and the planets placed for. */
   let orbitsJd = Infinity;
@@ -364,8 +363,8 @@ export function createSunView(_renderer: THREE.WebGLRenderer): ISpaceView {
       const v = A.RotateVector(eqjToEcl, A.HelioVector(p.body, t));
       p.mesh.position.set(v.x * HELIO_AU_UNITS, v.z * HELIO_AU_UNITS, -v.y * HELIO_AU_UNITS);
     }
-    earthAU = earth.mesh.position.length() / HELIO_AU_UNITS;
-    ecliptic.rotation.y = Math.atan2(earth.mesh.position.z, earth.mesh.position.x);
+    earthAU = earthMarker.position.length() / HELIO_AU_UNITS;
+    ecliptic.rotation.y = Math.atan2(earthMarker.position.z, earthMarker.position.x);
     // The Moon's direction from Earth is the real one; its distance is drawn some 150 times too large.
     const moon = A.RotateVector(eqjToEcl, A.GeoMoon(t));
     moonDot.position.set(moon.x, moon.z, -moon.y).setLength(1.05);

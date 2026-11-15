@@ -1,8 +1,8 @@
 # LUNAR TIMEWALKER — Tasarım Dokümanı
 
 > Çalışma adı (değiştirilebilir). NASA Space Apps Challenge 2026 — Sakarya.
-> Durum (14 Kasım 2026): oynanabilir; `npm run typecheck`, `npm test` (JPL Horizons, sahneleme, Patlama Laboratuvarı modeli, çeviri kapsamı) ve `npm run build` temiz. Her ekran 7 dilde 1280×720 ve 1024×640 boyutlarında otomatik DOM denetiminden (ekran dışı / üstü kapalı / üst üste binen düğme, taşan panel, bozuk görsel, ham metin) geçirildi.
-> Tarih: 2026-11-14.
+> Durum (15 Kasım 2026): oynanabilir; `npm run typecheck`, `npm test` (JPL Horizons, sahneleme, Patlama Laboratuvarı modeli, bağlantılar, ayarlar, DONKI ayrıştırma, çeviri kapsamı) ve `npm run build` temiz. Her ekran 7 dilde 1280×720 ve 1024×640 boyutlarında otomatik DOM denetiminden (ekran dışı / üstü kapalı / üst üste binen düğme, taşan panel, bozuk görsel, ham metin) geçirildi; 11 olay, 9 ortam, 21 yakın görünüm ve laboratuvar akışları tarayıcıda baştan sona çalıştırıldı.
+> Tarih: 2026-11-15.
 > **Yapıldığı hâliyle (plandan sapmalar):** Three.js 0.187 `WebGLRenderer` + GLSL (WebGPU değil); dokular WebP (KTX2 değil); arazi = SVS #4720 `ldem_16` tam çözünürlük + PGDA LOLA 5 m/px `Site04` (Shackleton) ve `Site01` (Bağlantı Sırtı) + CPU/GPU ortak istatistiksel krater alanı, kamera merkezli clipmap ve 4 kademeli Güneş gölge haritası; astronot = NASA Mark III giysi modelinin eklemlere bölünmesi; her bölümde “önce → olay → sonra” sahneleme yönetmeni (`src/game/director.ts`). Aşağıdaki bölümler ilk tasarımı anlatır; güncel davranış için README’ye ve şu eklere bakın:
 >
 > - **Diller (`src/core/l10n.ts`, `tools/i18n.ts`):** her metin kaynakta `{ tr, en }` olarak durur; Almanca, Fransızca, İspanyolca, İtalyanca ve Rusça, İngilizce metne anahtarlanmış sözlüklerdir (`public/assets/i18n/<dil>.json`, dil seçilince indirilir; eksik metin İngilizce görünür). Değer içeren metinler `tpl\`…\`` şablonlarıdır ve sözlükte `{0}`, `{1}` yer tutucularıyla aranır. `tools/i18n.test.ts` her dilin her metni kapsadığını ve yer tutucuların korunduğunu sınar.

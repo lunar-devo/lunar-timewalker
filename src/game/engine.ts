@@ -45,7 +45,7 @@ import { createSky, OVERCAST_WORLDS } from '../sky';
 import { createTerrain } from '../terrain';
 import { createGlobeView } from '../views/globe';
 import { createRemnantView, createSunView } from '../views/special';
-import { createGalaxyView } from '../views/galaxy';
+import { createGalaxyView, GALAXY_NO_INSETS } from '../views/galaxy';
 import {
   computeLabFates, computeLabImpact, createLabView, LAB_EXTRA_IDS, LAB_FIRST_YEAR, LAB_LAST_YEAR, LAB_MAX_AU, LAB_MIN_AU,
   LAB_QUESTIONS, labLandmarkLatitudeDeg, labLinkQuery, labRunSeconds, parseLabLink, type LabLink,
@@ -1362,6 +1362,8 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       endStaging(false);
       clearPageState();
       artifacts.removeBeacon();
+      // The clean view ends with the visit: the galaxy view allows for the panels again.
+      galaxyView.setInsets(null);
       setGame({
         phase: 'menu',
         spaceView: null,
@@ -1669,29 +1671,29 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         sunView.attach(canvas);
         if (cachedCmes.length === 0) {
           nasa.donki('2024-05-07', '2024-05-15').then((res) => {
-            cachedCmes = res.events
-              .filter((e) => e.type === 'CME' && e.speedKmS)
-              .map((e) => {
-                const d = new Date(e.time);
-                const jd = Number.isFinite(d.getTime())
-                  ? jdTTFromCalendarUT({
-                    year: d.getUTCFullYear(),
-                    month: d.getUTCMonth() + 1,
-                    day: d.getUTCDate(),
-                    hour: d.getUTCHours(),
-                    minute: d.getUTCMinutes(),
-                  })
-                  : st.clock.jdTT - 0.5;
-                return {
-                  id: e.id,
-                  startJdTT: jd,
-                  speedKmS: e.speedKmS ?? 900,
-                  halfAngleDeg: e.halfAngleDeg ?? 40,
-                  latDeg: e.latDeg ?? 0,
-                  lonDeg: e.lonDeg ?? 0,
-                  note: e.note,
-                };
-              });
+            // A record without a readable time or one of its measurements is left out: nothing about an
+            // eruption is made up.
+            cachedCmes = res.events.flatMap((e) => {
+              const startMs = Date.parse(e.time);
+              if (e.type !== 'CME' || !Number.isFinite(startMs) || e.speedKmS === undefined || e.halfAngleDeg === undefined
+                || e.latDeg === undefined || e.lonDeg === undefined) return [];
+              const d = new Date(startMs);
+              return [{
+                id: e.id,
+                startJdTT: jdTTFromCalendarUT({
+                  year: d.getUTCFullYear(),
+                  month: d.getUTCMonth() + 1,
+                  day: d.getUTCDate(),
+                  hour: d.getUTCHours(),
+                  minute: d.getUTCMinutes(),
+                }),
+                speedKmS: e.speedKmS,
+                halfAngleDeg: e.halfAngleDeg,
+                latDeg: e.latDeg,
+                lonDeg: e.lonDeg,
+                note: e.note,
+              }];
+            });
             if (getGame().spaceView?.targetId === 'sun') {
               sunView.enter({
                 targetId: 'sun',
@@ -2006,6 +2008,8 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       const next = on ?? !getGame().cleanMode;
       audio.cue('ui-click');
       setGame({ cleanMode: next });
+      // With the panels hidden the galaxy has the whole window to itself.
+      galaxyView.setInsets(next ? GALAXY_NO_INSETS : null);
     },
 
     setWorld(world: WorldId): void {
