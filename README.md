@@ -2,7 +2,7 @@
 
 **NASA Space Apps Challenge 2026 (Sakarya)** için geliştirilen **Lunar Timewalker**, öğretmenlerin sınıfta gösterebileceği ve herkesin serbestçe dolaşabileceği, tarayıcıda çalışan etkileşimli bir Ay, Mars ve gökyüzü sergisidir. Gerçek **NASA LRO/LOLA** (Ay) ve **MGS/MOLA** (Mars) arazi verisi üzerinde yürünür; M.Ö. 3000 – M.S. 2035 arasındaki gerçek gökyüzü olayları **önce → olay → sonra** sırasıyla izlenir. Gök cisimlerinin konumları **JPL Horizons DE441** ile karşılaştırılarak doğrulanmış bir efemeris motorundan gelir.
 
-**Canlı demo:** https://lunar-devo.github.io/lunar-timewalker/ · **Kaynak kod:** https://github.com/lunar-devo/lunar-timewalker
+**Canlı demo:** https://lunar-devo.github.io/ · **Kaynak kod:** https://github.com/lunar-devo/lunar-timewalker
 
 ---
 
@@ -20,7 +20,7 @@ npm test           # efemeris (JPL Horizons), sahneleme, Patlama Laboratuvarı m
 npm run build
 ```
 
-**Yayın:** `npm run deploy` uygulamayı derler ve derlemeyi tek commit olarak `gh-pages` dalına gönderir (`tools/deploy_pages.sh`); GitHub Pages bu dalı yayımlar. Derleme göreli yollar kullanır (`vite.config.ts`: `base: './'`), bu yüzden `dist/` klasörü herhangi bir sunucuda, herhangi bir alt dizinden sunulabilir.
+**Yayın:** `npm run deploy` uygulamayı derler ve derlemeyi tek commit olarak site deposuna (`lunar-devo/lunar-devo.github.io`, git’te `site` adlı uzak depo) gönderir (`tools/deploy_pages.sh`); GitHub Pages o depoyu alan adının kökünde yayımlar. Derleme göreli yollar kullanır (`vite.config.ts`: `base: './'`), bu yüzden `dist/` klasörü herhangi bir sunucuda, kökten ya da bir alt dizinden sunulabilir.
 
 Varlık paketini ham NASA kaynaklarından yeniden üretmek (tamamı ya da seçili adımlar):
 ```bash
