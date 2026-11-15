@@ -11,13 +11,13 @@ import { isLang } from './l10n';
 import { QUALITY, detectQuality } from './quality';
 import { jdTTNow } from './time';
 
-const SETTINGS_KEY = 'lunar-timewalker.settings.v1';
+// v2: the app starts in English. Settings saved as v1 carry the language that was guessed from the browser, so they are not read.
+const SETTINGS_KEY = 'lunar-timewalker.settings.v2';
 
 function defaultSettings(): Settings {
-  // The browser's language when the app speaks it, Turkish otherwise.
-  const browserLang = typeof navigator !== 'undefined' ? navigator.language?.toLowerCase().slice(0, 2) : undefined;
   return {
-    lang: isLang(browserLang) ? browserLang : 'tr',
+    // English until the visitor picks another language; the choice is then saved with the other settings.
+    lang: 'en',
     quality: typeof navigator !== 'undefined' ? detectQuality() : 'medium',
     mouseSensitivity: 1,
     masterVolume: 0.7,
