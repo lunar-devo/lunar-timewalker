@@ -876,7 +876,7 @@ export const ARTIFACT_PLACEMENTS: ArtifactPlacement[] = [
   { assetId: 'a11_psep', siteId: 'apollo11', eastM: -2.0, southM: 19.2, headingDeg: 0, visual: 'psep', radiusM: 3.5 },
   { assetId: 'a11_bootprints', siteId: 'apollo11', eastM: -3.8, southM: 1.8, headingDeg: 0, visual: 'bootprints', radiusM: 3.5 },
   { assetId: 'ingenuity', siteId: 'mars_jezero', eastM: 0, southM: -24, headingDeg: 0, visual: 'model', heightM: 0.59, radiusM: 3.5 },
-  { assetId: 'perseverance', siteId: 'mars_jezero', eastM: 46, southM: -68, headingDeg: 225, visual: 'model', heightM: 1.85, radiusM: 6 },
+  { assetId: 'perseverance', siteId: 'mars_jezero', eastM: 46, southM: -68, headingDeg: 45, visual: 'model', heightM: 1.85, radiusM: 6 },
   { assetId: 'viking1', siteId: 'mars_viking1', eastM: 0, southM: -18, headingDeg: 0, visual: 'model', heightM: 2.1, radiusM: 6 },
   { assetId: 'viking2', siteId: 'mars_viking2', eastM: 0, southM: -18, headingDeg: 0, visual: 'model', heightM: 2.1, radiusM: 6 },
   { assetId: 'insight', siteId: 'mars_insight', eastM: 0, southM: -18, headingDeg: 0, visual: 'model', heightM: 1.65, radiusM: 7 },
