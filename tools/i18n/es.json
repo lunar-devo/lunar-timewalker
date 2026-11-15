@@ -1213,5 +1213,6 @@
  "{0}° N, {1}° E": "{0}° N, {1}° E",
  "{0}° N, {1}° W": "{0}° N, {1}° O",
  "{0}° S, {1}° E": "{0}° S, {1}° E",
- "{0}° S, {1}° W": "{0}° S, {1}° O"
+ "{0}° S, {1}° W": "{0}° S, {1}° O",
+ "Light dimmed: the real explosion would be far brighter; the brightness is reduced so the waves stay visible.": "Luz atenuada: la explosión real sería mucho más brillante; el brillo se ha reducido para que las ondas sigan viéndose."
 }

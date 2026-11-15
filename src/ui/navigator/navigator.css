@@ -57,6 +57,57 @@
   max-width: 300px;
 }
 
+/* Chrome on macOS opens a plain select's list as a system menu, which ignores the page's colours and can fill the
+   screen in white; the customizable select draws the list inside the page instead. Other browsers keep their own list. */
+@supports (appearance: base-select) {
+  .nav-select,
+  .nav-select::picker(select) {
+    appearance: base-select;
+  }
+
+  .nav-select::picker(select) {
+    background: #0b111b;
+    border: 1px solid var(--c-line);
+    border-radius: 8px;
+    color: var(--c-text);
+    max-height: min(60vh, 520px);
+    padding: 4px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  }
+
+  .nav-select optgroup {
+    color: var(--c-dim);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .nav-select option {
+    color: var(--c-text);
+    font-size: 0.88rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+    padding: 5px 10px;
+    border-radius: 6px;
+  }
+
+  .nav-select option:hover,
+  .nav-select option:focus-visible {
+    background: rgba(125, 211, 252, 0.14);
+  }
+
+  .nav-select option:disabled {
+    color: var(--c-dim);
+    opacity: 0.55;
+  }
+
+  .nav-select option::checkmark {
+    display: none;
+  }
+}
+
 .nav-modal input[aria-invalid='true'] {
   border-color: var(--c-bad);
 }

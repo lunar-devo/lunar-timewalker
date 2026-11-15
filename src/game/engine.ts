@@ -1342,6 +1342,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     labView.resetExplosion();
     labView.setPaused(false);
     labView.setConcealed(false);
+    labView.setReducedFlash(st.settings.reducedFlash);
     labView.setEvaMode(false);
     labView.enter({
       targetId: 'lab',
@@ -2079,6 +2080,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
           globeView.setLang(lang);
         });
       }
+      if (patch.reducedFlash !== undefined) labView.setReducedFlash(next.reducedFlash);
     },
 
     requestPointerLock(): void {

@@ -876,6 +876,15 @@ export function LabDrawer() {
 
       <div className="hud-lab-views" style={{ left: insets.left + 12, right: insets.right + 12 }}>
         {lab.playing && (
+          <span>
+            {tx(
+              lang,
+              'Işık kısıldı: gerçek patlama çok daha parlak olurdu; dalgalar görünsün diye parlaklık azaltıldı.',
+              'Light dimmed: the real explosion would be far brighter; the brightness is reduced so the waves stay visible.',
+            )}
+          </span>
+        )}
+        {lab.playing && (
           <div className="hud-lab-transport">
             {lab.elapsedSec >= lab.runSec ? (
               // The run has reached its end and waits there: the button plays it again from the start.

@@ -16,6 +16,9 @@
  *     own (./physics.ts sets its clock); the real travel times are shown in the panel. It can be halted and
  *     moved by hand: everything drawn follows from the time since detonation. It stops at its last second
  *     and holds that picture; until the explosion is reset, a click on the map moves nothing.
+ *   - The explosion's own light is shown dimmed (FLASH_DIM): the glare round it, its fireball and the light
+ *     it casts on the bodies are a fraction of what the scene could draw, so that the fronts and the bodies
+ *     stay readable through the flash. A display choice: the model and the timing do not know of it.
  *   - What happens to Earth follows ./physics.ts: the flash lights and scorches the facing side, the ozone
  *     layer thins, the blast strips the air, boils the oceans, melts the crust or takes the planet apart and
  *     pushes what is left away; a CME squeezes the magnetosphere and drives the auroras toward the equator,
@@ -88,6 +91,16 @@ const EVA_SHOVE = 3;
 const CLOSE_DIST = 21;
 /** Share of their glow that a burst's fronts lose in the close view, so that the bodies show through them. */
 const BURST_CLOSE_THIN = 0.7;
+/**
+ * How much of the explosion's own light is drawn, with the "reduce flashes" setting off and on. `glare`: the
+ * soft glow that spreads from the explosion over the view (at full strength it whites out a close view);
+ * `light`: the fireball, and the light of the flash on the bodies. The fronts are not light of this kind
+ * and keep their brightness: they are what the dimming is for.
+ */
+const FLASH_DIM: Record<'usual' | 'reduced', { glare: number; light: number }> = {
+  usual: { glare: 0.1, light: 0.35 },
+  reduced: { glare: 0.05, light: 0.2 },
+};
 /** Seconds after the last arrival over which the fronts fade out. */
 const FRONT_FADE_SEC = 5;
 /**
@@ -567,6 +580,8 @@ export interface LabController extends ISpaceView {
   /** Width in pixels that panels cover at the left and right of the screen; the map is framed between them. */
   setInsets(leftPx: number, rightPx: number): void;
   setLang(lang: Lang): void;
+  /** The "reduce flashes" setting: the explosion's light, shown dimmed as it is, is dimmed further, and nothing flickers. */
+  setReducedFlash(on: boolean): void;
 }
 
 export function createLabView(renderer: THREE.WebGLRenderer): LabController {
@@ -1766,6 +1781,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
   let frontWasAU = 0;
   /** The rings that show how each body fares are hidden (the class mode asks for a prediction first). */
   let concealed = false;
+  let reducedFlash = false;
   let time = 0;
   let texturesLoaded = false;
   /** The maps loaded for this view: it disposes them with itself, and one that arrives after that is dropped at once. */
@@ -2242,7 +2258,8 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
 
       // Detonation flash.
       const flashT = playing ? elapsed : -1;
-      const flashPower = solar ? 0.3 : 1;
+      const dim = FLASH_DIM[reducedFlash ? 'reduced' : 'usual'];
+      const flashPower = (solar ? 0.3 : 1) * dim.glare;
       flashSprite.visible = flashT >= 0 && flashT < 6;
       if (flashSprite.visible) {
         flashSprite.scale.setScalar((6 + 46 * Math.exp(-flashT * 2.6)) * (solar ? 0.4 : burst ? 0.6 : 1));
@@ -2283,7 +2300,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       // The hot bubble at the explosion's own place.
       fireball.visible = !solar && playing && elapsed < 14;
       fireball.scale.setScalar((0.5 + 2.4 * (1 - Math.exp(-elapsed * 0.9))) * (burst ? 0.45 : 1));
-      fireball.material.uniforms.uAlpha.value = playing ? 1.6 * Math.exp(-elapsed * 0.32) : 0;
+      fireball.material.uniforms.uAlpha.value = playing ? 1.6 * dim.light * Math.exp(-elapsed * 0.32) : 0;
       fireball.material.uniforms.uSeed.value = 12.9 + elapsed * 0.25;
       fireball.rotation.y = elapsed * 0.3;
 
@@ -2306,7 +2323,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       pulsar.visible = setup.kind === 'sn2' && playing && elapsed > 2.2;
       if (pulsar.visible) {
         pulsar.rotation.y = time * 5;
-        pulsarGlow.material.opacity = 0.55 + 0.45 * Math.sin(time * 30);
+        pulsarGlow.material.opacity = reducedFlash ? 0.6 : 0.55 + 0.45 * Math.sin(time * 30);
       }
 
       // ── Earth's response ──
@@ -2314,7 +2331,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       const curve = (since: number): number => (since >= 0 ? ramp(since, 0.3) * (0.35 + 0.65 * Math.exp(-since * 0.1)) : 0);
       earthUniforms.uTime.value = time;
       earthUniforms.uBlastDir.value.copy(srcPos).sub(earthGroup.position).normalize();
-      earthUniforms.uFlash.value = o.flash * curve(sinceLight);
+      earthUniforms.uFlash.value = o.flash * dim.light * curve(sinceLight);
       earthUniforms.uScorch.value = o.scorch * ramp(sinceLight - 0.3, 1.5);
       ozoneUniforms.uLoss.value = o.ozone * ramp(sinceLight - 0.8, 2.6);
       const airLost = o.atmosphere * ramp(sinceShock - 0.2, 2.2);
@@ -2442,7 +2459,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
         p.globe.scale.setScalar(gone ? Math.max(0.01, 1 - sinceGone / 0.7) : 1);
         const u = p.globe.material.uniforms;
         u.uTime.value = time;
-        u.uFlash.value = out.flash * curve(sinceLit);
+        u.uFlash.value = out.flash * dim.light * curve(sinceLit);
         // A giant that loses its upper layers shows the hot gas under them.
         u.uScorch.value = Math.max(out.scorch * ramp(sinceLit - 0.3, 1.5), p.def.giant ? lost : 0);
         u.uMelt.value = out.melt * ramp(sinceHit - 2.0, 3.0);
@@ -2496,8 +2513,8 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       // Struck by the blast, it flares up for a moment; while the explosion's light is on it, the side facing
       // the explosion is overheated.
       const sunLit = playing && sunFate ? elapsed - sunFate.lightAtSec : -1;
-      sunMat.uniforms.uGain.value = 1 + (sunHit >= 0 ? 1.4 * Math.exp(-sunHit * 1.2) * (0.3 + sunOut.air) : 0);
-      sunMat.uniforms.uHeat.value = 0.85 * sunOut.scorch * ramp(sunLit - 0.3, 1.5);
+      sunMat.uniforms.uGain.value = 1 + (sunHit >= 0 ? 1.4 * dim.light * Math.exp(-sunHit * 1.2) * (0.3 + sunOut.air) : 0);
+      sunMat.uniforms.uHeat.value = 1.6 * dim.light * sunOut.scorch * ramp(sunLit - 0.3, 1.5);
       sunMat.uniforms.uHeatDir.value.copy(starPos).sub(sunPos).normalize();
       sunBody.wreck.group.visible = !solar && wreckShows(sunBody);
       sunBody.wreck.group.position.copy(sunPos);
@@ -2823,6 +2840,10 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
 
     setLang(lang: Lang): void {
       setLabels(lang);
+    },
+
+    setReducedFlash(on: boolean): void {
+      reducedFlash = on;
     },
 
     setMarkers(): void { /* this view has no markers */ },

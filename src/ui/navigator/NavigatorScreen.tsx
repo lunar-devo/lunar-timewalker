@@ -483,6 +483,8 @@ function NavigatorDialog({ dialogRef }: { dialogRef: RefObject<HTMLDivElement | 
         onKeyDown={(e) => {
           if (e.key !== 'Escape') return;
           e.stopPropagation();
+          // An open site list (drawn in the page) takes this Escape to close itself.
+          if (e.target instanceof Element && e.target.closest('select')?.matches(':open')) return;
           close();
         }}
       >
