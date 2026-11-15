@@ -48,12 +48,14 @@
  * Everything here is a model for comparison, not a forecast.
  */
 import type {
-  L10n, LabBody, LabBodyClass, LabCmeStrength, LabFate, LabImpact, LabImpactLevel, LabSatellite, LabSetup, Lang,
+  L10n, LabBody, LabBodyClass, LabClock, LabCmeStrength, LabFate, LabImpact, LabImpactLevel, LabSatellite, LabSetup, Lang,
 } from '../../core/types';
 import { fmt, lf, tpl } from '../../core/l10n';
+import {
+  LAB_MAX_AU, LAB_MIN_AU, labEarthPlace, labPlaceFromEarth, labProject, LY_AU, type MapPoint,
+} from './map';
 
 const AU_KM = 149_597_870.7;
-export const LY_AU = 63_241.077;
 const PC_AU = 206_264.806;
 const AU_M = 1.495978707e11;
 const EARTH_RADIUS_M = 6.371e6;
@@ -63,10 +65,6 @@ const YEAR_S = 365.25 * 86_400;
 const SUN_APPARENT_MAG = -26.74;
 /** Sunlight at Earth's distance, W/m². */
 const SOLAR_CONSTANT = 1361;
-
-/** Closest and farthest the explosion can be placed: the Moon's distance … 10,000 light years. */
-export const LAB_MIN_AU = 0.00257;
-export const LAB_MAX_AU = 10_000 * LY_AU;
 
 /** Energy it takes, in joules. */
 const E_ATMOSPHERE = 3.2e26; // lift the 5.15×10^18 kg of air out of Earth's gravity
@@ -140,7 +138,7 @@ const BURST_SECONDS = 10;
 /** From this far, 2 kpc, that burst takes away a third of the ozone layer. */
 const BURST_HAZARD_AU = 6500 * LY_AU;
 /** Half the width of each of the burst's two beams, radians: bodies farther from the axis are missed. */
-const BURST_HALF_WIDTH_RAD = 0.105;
+export const BURST_HALF_WIDTH_RAD = 0.105;
 
 /** The cloud of a solar eruption: its ram pressure at 1 AU, nPa, and its speed on the way, km/s. */
 const CME: Record<LabCmeStrength, { pressureNPa: number; speedKmS: number }> = {
@@ -167,57 +165,10 @@ const ORBITS: Array<{ id: LabSatellite['id']; name: L10n; orbitRe: number; edgeR
   { id: 'iss', name: { tr: 'Uluslararası Uzay İstasyonu', en: 'International Space Station' }, orbitRe: 1.07, edgeRe: 0 },
 ];
 
-/** Seconds after detonation, in the lab's time-lapse, at which the light and the blast reach Earth. */
-export const LAB_LIGHT_SEC = 1.6;
-export const LAB_SHOCK_SEC = 6.5;
-
-/**
- * The lab's map: Earth's radius on it, scene units; the radius of its innermost ring (the Moon's distance)
- * and the width that one decade of distance takes.
- */
-export const LAB_EARTH_R = 2;
-const INNER_RING = 3.4;
-const UNITS_PER_DECADE = 2.75;
-
-/** Map radius of a distance from Earth: one decade of distance per 2.75 units, the Moon's orbit innermost. */
-export function labSceneRadius(distanceAU: number): number {
-  const d = Math.min(LAB_MAX_AU, Math.max(LAB_MIN_AU, distanceAU));
-  return INNER_RING + UNITS_PER_DECADE * Math.log10(d / LAB_MIN_AU);
-}
-
-/** The distance from Earth, AU, that a radius on the map stands for. */
-export function labMapDistanceAU(radius: number): number {
-  return Math.min(LAB_MAX_AU, LAB_MIN_AU * 10 ** (Math.max(0, radius - INNER_RING) / UNITS_PER_DECADE));
-}
-
-/**
- * Scene units a second: the slowest the blast front crosses the map once it has passed Earth, so that a
- * blast set off close to Earth still reaches the outer planets while its shell can be seen.
- */
-const FRONT_MIN_SPEED = 1.6;
-
-/**
- * Map radius of the blast front (or plasma cloud, or tip of the beam) `elapsedSec` into the time-lapse, for
- * an explosion `reach` scene units from Earth. It touches Earth's token at LAB_SHOCK_SEC whatever the
- * distance; from there on it keeps its speed, or FRONT_MIN_SPEED if that is faster.
- */
-export function labFrontRadius(reach: number, elapsedSec: number): number {
-  const toEarth = reach - 0.9 * LAB_EARTH_R;
-  const speed = toEarth / LAB_SHOCK_SEC;
-  return elapsedSec <= LAB_SHOCK_SEC ? speed * elapsedSec : toEarth + Math.max(speed, FRONT_MIN_SPEED) * (elapsedSec - LAB_SHOCK_SEC);
-}
-
-/** Scene units a second at which that front is moving `elapsedSec` into the time-lapse. */
-export function labFrontSpeed(reach: number, elapsedSec: number): number {
-  const speed = (reach - 0.9 * LAB_EARTH_R) / LAB_SHOCK_SEC;
-  return elapsedSec <= LAB_SHOCK_SEC ? speed : Math.max(speed, FRONT_MIN_SPEED);
-}
-
-/** Seconds into the time-lapse at which that front has grown to `radius`: the inverse of `labFrontRadius`. */
-function frontArrivalSec(reach: number, radius: number): number {
-  const toEarth = reach - 0.9 * LAB_EARTH_R;
-  const speed = toEarth / LAB_SHOCK_SEC;
-  return radius <= toEarth ? radius / speed : LAB_SHOCK_SEC + (radius - toEarth) / Math.max(speed, FRONT_MIN_SPEED);
+/** The seconds of the lab's time-lapse at which the explosion's light, and what follows it, reach a body. */
+interface Arrivals {
+  lightAtSec: number;
+  frontAtSec: number;
 }
 
 const clamp01 = (x: number): number => Math.min(1, Math.max(0, x));
@@ -234,21 +185,6 @@ const flashOf = (flux: number): number => 1.2 * (flux / (1 + flux)) + 0.25 * Mat
 const scorchOf = (flux: number): number => clamp01(Math.log10(Math.max(flux, 1e-12)) / 2.5);
 /** The same for the ten seconds of a burst: nothing below 10 MJ/m², fully from about 3 GJ/m². */
 const burstScorchOf = (fluenceJm2: number): number => clamp01(Math.log10(Math.max(fluenceJm2, 1) / 1e7) / 2.5);
-
-/**
- * Half the angle a burst's beam is drawn with on the map. The map is logarithmic in distance from Earth, so
- * a beam 12° wide takes up far more of it: the edge of the cone passes Earth at the map radius of the beam's
- * real half width there.
- */
-export function labBeamMapHalfAngle(distanceAU: number): number {
-  const halfWidthAU = distanceAU * Math.tan(BURST_HALF_WIDTH_RAD);
-  const earthAU = EARTH_RADIUS_M / AU_M;
-  // Inside the Moon's orbit the map has no scale of its own: the width is set between Earth's token and that ring.
-  const radius = halfWidthAU >= LAB_MIN_AU
-    ? labSceneRadius(halfWidthAU)
-    : LAB_EARTH_R + (INNER_RING - LAB_EARTH_R) * clamp01(Math.log(halfWidthAU / earthAU) / Math.log(LAB_MIN_AU / earthAU));
-  return Math.atan2(radius, labSceneRadius(distanceAU));
-}
 
 /** A distance from Earth in the unit that suits it: thousands of km, AU or light years. */
 export function distanceText(distanceAU: number): L10n {
@@ -349,12 +285,40 @@ function earthDamage(energyJ: number): EarthDamage {
   };
 }
 
-/** The worst that the energy does to Earth, in words; null while it does nothing of the kind. */
-function earthRuin(damage: EarthDamage, stripped: boolean): L10n | null {
-  if (damage.breakup >= LAB_BREAKUP_AT) return EARTH_DESTROYED;
-  if (damage.crust >= 0.5) return EARTH_MOLTEN;
-  if (damage.oceans >= 0.5) return EARTH_BOILED;
-  return stripped ? EARTH_STRIPPED : null;
+/** What becomes of a body in a few words: a line of the list of all bodies. */
+const VERDICT = {
+  destroyed: { tr: 'parçalanır', en: 'destroyed' },
+  dispersed: { tr: 'dağılır', en: 'dispersed' },
+  molten: { tr: 'yüzeyi erir', en: 'surface melts' },
+  iceMolten: { tr: 'buz kabuğu erir', en: 'ice shell melts' },
+  boiled: { tr: 'okyanusları kaynar', en: 'oceans boil away' },
+  stripped: { tr: 'atmosferi sökülür', en: 'atmosphere stripped' },
+  layersTorn: { tr: 'üst katmanları sökülür', en: 'upper layers torn off' },
+  gasLost: { tr: 'dış katmanlarından gaz kopar', en: 'loses gas from its outer layers' },
+  airEscapes: { tr: 'atmosferinin bir bölümü kaçar', en: 'part of its atmosphere escapes' },
+  partlyMolten: { tr: 'yüzeyi yer yer erir', en: 'surface melts in places' },
+  scorched: { tr: 'kavrulur', en: 'scorched' },
+  overheated: { tr: 'bulut tepeleri aşırı ısınır', en: 'cloud tops overheat' },
+  warmed: { tr: 'ısınır', en: 'warms up' },
+  ionised: { tr: 'üst atmosferi iyonlaşır', en: 'upper atmosphere ionised' },
+  ozoneLost: { tr: 'ozon tabakasının çoğu yok olur', en: 'most of the ozone layer lost' },
+  ozoneThinned: { tr: 'ozon tabakası incelir', en: 'ozone layer thins' },
+  squeezed: { tr: 'manyetosferi sıkışır', en: 'magnetosphere squeezed' },
+  toSurface: { tr: 'bulut yüzeyine iner', en: 'cloud reaches its surface' },
+  gasEscapes: { tr: 'gaz kaybı hızlanır', en: 'loses gas faster' },
+  surfaceStruck: { tr: 'bulut yüzeyine çarpar', en: 'cloud strikes its surface' },
+  auroras: { tr: 'kutup ışıkları parlar', en: 'auroras brighten' },
+  storm: { tr: 'güçlü jeomanyetik fırtına', en: 'strong geomagnetic storm' },
+  gridsFail: { tr: 'uydular ve şebekeler devre dışı kalır', en: 'satellites and grids fail' },
+  outsideModel: { tr: 'model kapsamaz', en: 'outside the model' },
+} satisfies Record<string, L10n>;
+
+/** The worst that the energy does to Earth, in a sentence and in a few words; null while it does nothing of the kind. */
+function earthRuin(damage: EarthDamage, stripped: boolean): { summary: L10n; verdict: L10n } | null {
+  if (damage.breakup >= LAB_BREAKUP_AT) return { summary: EARTH_DESTROYED, verdict: VERDICT.destroyed };
+  if (damage.crust >= 0.5) return { summary: EARTH_MOLTEN, verdict: VERDICT.molten };
+  if (damage.oceans >= 0.5) return { summary: EARTH_BOILED, verdict: VERDICT.boiled };
+  return stripped ? { summary: EARTH_STRIPPED, verdict: VERDICT.stripped } : null;
 }
 
 /** The destruction of Earth step by step, from the moment `at` when what destroys it arrives. */
@@ -373,7 +337,7 @@ function ozoneStep(at: number, ozoneLoss: number): Steps[number] {
   return { id: 'ozone', atSec: at, text: lf(tpl`Ozon tabakası inceliyor: %${percent} kayıp`, tpl`The ozone layer thins: ${percent}% lost`) };
 }
 
-function supernovaImpact(kind: 'sn2' | 'sn1a', distanceAU: number): LabImpact {
+function supernovaImpact(kind: 'sn2' | 'sn1a', distanceAU: number, at: Arrivals): LabImpact {
   const model = SUPERNOVA[kind];
   const apparentMag = model.absMag + 5 * Math.log10(distanceAU / PC_AU) - 5;
   const fluxSolar = 10 ** (-0.4 * (apparentMag - SUN_APPARENT_MAG));
@@ -391,6 +355,7 @@ function supernovaImpact(kind: 'sn2' | 'sn1a', distanceAU: number): LabImpact {
   const scorch = scorchOf(fluxSolar);
 
   let level: LabImpactLevel = 'safe';
+  let verdict: L10n | null = null;
   let summary: L10n = {
     tr: 'Zararsız. Gökyüzünde çok parlak yeni bir yıldız belirir ve aylar içinde söner; Dünya’daki yaşam etkilenmez.',
     en: 'Harmless. A very bright new star appears in the sky and fades over months; life on Earth is not affected.',
@@ -398,21 +363,25 @@ function supernovaImpact(kind: 'sn2' | 'sn1a', distanceAU: number): LabImpact {
   const ruin = earthRuin(damage, damage.atmosphere >= 0.5 || scorch >= 0.4);
   if (ruin) {
     level = 'extreme';
-    summary = ruin;
+    summary = ruin.summary;
+    verdict = ruin.verdict;
   } else if (fluxSolar >= 0.05) {
     level = 'danger';
+    verdict = VERDICT.ozoneLost;
     summary = {
       tr: 'Gökyüzünde haftalarca ikinci bir Güneş gibi parlar. Gama ışınları ve kozmik ışınlar ozon tabakasını yok eder; yüzey ölümcül morötesi ışınıma ve radyasyona açık kalır.',
       en: 'It shines like a second Sun for weeks. Gamma rays and cosmic rays destroy the ozone layer, leaving the surface open to deadly ultraviolet light and radiation.',
     };
   } else if (ozoneLoss >= 0.3) {
     level = 'danger';
+    verdict = VERDICT.ozoneLost;
     summary = {
       tr: 'Tehlike sınırının içinde. Ozon tabakasının büyük bölümü yıllarca kaybolur; yere ulaşan zararlı morötesi ışınım yaklaşık iki katına çıkar. Kitlesel yok oluş riski.',
       en: 'Inside the hazard limit. Much of the ozone layer is lost for years and the harmful ultraviolet light reaching the ground roughly doubles. Risk of a mass extinction.',
     };
   } else if (ozoneLoss >= 0.02) {
     level = 'caution';
+    verdict = VERDICT.ozoneThinned;
     summary = {
       tr: 'Dolunaydan parlak görünür ve gündüz de seçilir. Ozon tabakası bir miktar incelir; kalıcı bir zarar beklenmez.',
       en: 'Brighter than the full Moon and visible by day. The ozone layer thins somewhat; no lasting harm is expected.',
@@ -423,15 +392,21 @@ function supernovaImpact(kind: 'sn2' | 'sn1a', distanceAU: number): LabImpact {
   const shockTimeText = blastSeconds === null ? NEVER : durationText(blastSeconds);
   const steps: Steps = [{
     id: 'light',
-    atSec: LAB_LIGHT_SEC,
+    atSec: at.lightAtSec,
     text: lf(tpl`Işık ulaştı: ${lightTimeText} sonra`, tpl`The light arrives: after ${lightTimeText}`),
   }];
-  if (scorch > 0.05) steps.push({ id: 'scorch', atSec: LAB_LIGHT_SEC + 0.8, text: SCORCH_STEP });
-  if (ozoneLoss >= 0.02) steps.push(ozoneStep(LAB_LIGHT_SEC + 1.6, ozoneLoss));
+  if (scorch > 0.05) steps.push({ id: 'scorch', atSec: at.lightAtSec + 0.8, text: SCORCH_STEP });
+  const ruinSteps = blastSeconds === null ? [] : earthRuinSteps(at.frontAtSec, damage, kickKmS);
+  // The ozone layer thins in the hours or years between the light and the blast: once the blast has blown
+  // the air itself off, its ozone is not a step of its own.
+  const airGoneSec = ruinSteps.find((s) => s.id === 'atmosphere')?.atSec ?? Infinity;
+  if (ozoneLoss >= 0.02 && at.lightAtSec + 1.6 < airGoneSec) steps.push(ozoneStep(at.lightAtSec + 1.6, ozoneLoss));
   if (blastSeconds !== null) {
-    steps.push({ id: 'shock', atSec: LAB_SHOCK_SEC, text: lf(tpl`Şok dalgası ulaştı: ${shockTimeText} sonra`, tpl`The blast wave arrives: after ${shockTimeText}`) });
-    steps.push(...earthRuinSteps(LAB_SHOCK_SEC, damage, kickKmS));
+    steps.push({ id: 'shock', atSec: at.frontAtSec, text: lf(tpl`Şok dalgası ulaştı: ${shockTimeText} sonra`, tpl`The blast wave arrives: after ${shockTimeText}`) });
+    steps.push(...ruinSteps);
   }
+  // Close to the explosion the blast is on Earth before the light has had time to char it.
+  steps.sort((a, b) => a.atSec - b.atSec);
 
   return {
     distanceLabel: distanceText(distanceAU),
@@ -452,6 +427,9 @@ function supernovaImpact(kind: 'sn2' | 'sn1a', distanceAU: number): LabImpact {
     satellitesLevel: 'safe',
     level,
     summary,
+    verdict,
+    lightAtSec: at.lightAtSec,
+    shockAtSec: blastSeconds === null ? null : at.frontAtSec,
     outcome: {
       flash: flashOf(fluxSolar),
       scorch,
@@ -465,7 +443,7 @@ function supernovaImpact(kind: 'sn2' | 'sn1a', distanceAU: number): LabImpact {
   };
 }
 
-function burstImpact(distanceAU: number): LabImpact {
+function burstImpact(distanceAU: number, at: Arrivals): LabImpact {
   const fluenceJm2 = burstFluence(distanceAU);
   const fluxSolar = fluenceJm2 / BURST_SECONDS / SOLAR_CONSTANT;
   const energyJ = BURST_ISOTROPIC_J * (EARTH_RADIUS_M / (2 * distanceAU * AU_M)) ** 2;
@@ -477,6 +455,7 @@ function burstImpact(distanceAU: number): LabImpact {
 
   // Within the map the beam always costs some ozone: even from 10,000 light years, about a seventh of it.
   let level: LabImpactLevel = 'caution';
+  let verdict: L10n = VERDICT.ozoneThinned;
   let summary: L10n = {
     tr: 'Tehlike sınırının dışında. Hüzme ozon tabakasını bir miktar inceltir; yere ulaşan morötesi ışınım birkaç yıl artar.',
     en: 'Outside the hazard limit. The beam thins the ozone layer somewhat; more ultraviolet light reaches the ground for a few years.',
@@ -484,9 +463,11 @@ function burstImpact(distanceAU: number): LabImpact {
   const ruin = earthRuin(damage, damage.atmosphere >= 0.5);
   if (ruin) {
     level = 'extreme';
-    summary = ruin;
+    summary = ruin.summary;
+    verdict = ruin.verdict;
   } else if (ozoneLoss >= 0.3) {
     level = 'danger';
+    verdict = VERDICT.ozoneLost;
     summary = {
       tr: 'Tehlike sınırının içinde. On saniyelik hüzme ozon tabakasının büyük bölümünü yok eder; kayıp yıllarca sürer ve yere ulaşan zararlı morötesi ışınım artar. Kitlesel yok oluş riski.',
       en: 'Inside the hazard limit. The ten-second beam destroys much of the ozone layer; the loss lasts for years and more harmful ultraviolet light reaches the ground. Risk of a mass extinction.',
@@ -494,12 +475,12 @@ function burstImpact(distanceAU: number): LabImpact {
   }
 
   const raysTimeText = lightTime(distanceAU);
-  const steps: Steps = [{ id: 'shock', atSec: LAB_SHOCK_SEC, text: lf(tpl`Gama ışınları ulaştı: ${raysTimeText} sonra`, tpl`The gamma rays arrive: after ${raysTimeText}`) }];
-  if (scorch > 0.05) steps.push({ id: 'scorch', atSec: LAB_SHOCK_SEC + 0.8, text: SCORCH_STEP });
-  const ruinSteps = earthRuinSteps(LAB_SHOCK_SEC, damage, kickKmS);
+  const steps: Steps = [{ id: 'shock', atSec: at.lightAtSec, text: lf(tpl`Gama ışınları ulaştı: ${raysTimeText} sonra`, tpl`The gamma rays arrive: after ${raysTimeText}`) }];
+  if (scorch > 0.05) steps.push({ id: 'scorch', atSec: at.lightAtSec + 0.8, text: SCORCH_STEP });
+  const ruinSteps = earthRuinSteps(at.lightAtSec, damage, kickKmS);
   // The rays thin the ozone layer and tear at the air in the same moment: where the air itself is blown
   // off, its ozone is not a step of its own.
-  if (!ruinSteps.some((s) => s.id === 'atmosphere')) steps.push(ozoneStep(LAB_SHOCK_SEC + 1.6, ozoneLoss));
+  if (!ruinSteps.some((s) => s.id === 'atmosphere')) steps.push(ozoneStep(at.lightAtSec + 1.6, ozoneLoss));
   steps.push(...ruinSteps);
   steps.sort((a, b) => a.atSec - b.atSec);
 
@@ -522,6 +503,9 @@ function burstImpact(distanceAU: number): LabImpact {
     satellitesLevel: 'safe',
     level,
     summary,
+    verdict,
+    lightAtSec: at.lightAtSec,
+    shockAtSec: at.lightAtSec,
     outcome: {
       flash: flashOf(fluxSolar),
       scorch,
@@ -576,7 +560,12 @@ function satellitesLevel(satellites: LabSatellite[]): LabImpactLevel {
   return near.some((s) => s.state === 'edge') ? 'caution' : 'safe';
 }
 
-function cmeImpact(distanceAU: number, strength: LabCmeStrength): LabImpact {
+/** How a geomagnetic storm reads in a few words, by its level. */
+const STORM_VERDICT: Record<LabImpactLevel, L10n> = {
+  safe: VERDICT.auroras, caution: VERDICT.storm, danger: VERDICT.gridsFail, extreme: VERDICT.gridsFail,
+};
+
+function cmeImpact(distanceAU: number, strength: LabCmeStrength, at: Arrivals): LabImpact {
   const model = CME[strength];
   const pressureNPa = model.pressureNPa / (distanceAU * distanceAU);
   // A cloud no denser than the ordinary solar wind does nothing the wind does not do every day.
@@ -594,7 +583,8 @@ function cmeImpact(distanceAU: number, strength: LabCmeStrength): LabImpact {
     tr: 'Sıradan bir jeomanyetik fırtına. Kutup ışıkları yüksek enlemlerde görülür; yeryüzünde tehlike yoktur.',
     en: 'An ordinary geomagnetic storm. Auroras are seen at high latitudes; there is no danger on the ground.',
   };
-  if (distanceAU * AU_M <= BODY_TRAITS.sun.radiusM) {
+  const insideSun = distanceAU * AU_M <= BODY_TRAITS.sun.radiusM;
+  if (insideSun) {
     // Nearer than the Sun is wide there is no cloud on its way to Earth: the numbers are what the formulas
     // give, and the text says that they mean nothing here.
     level = 'extreme';
@@ -631,20 +621,20 @@ function cmeImpact(distanceAU: number, strength: LabCmeStrength): LabImpact {
 
   const standoffText = (l: Lang): string => fmt(standoffRe, 1, l);
   const steps: Steps = [
-    { id: 'light', atSec: LAB_LIGHT_SEC, text: lf(tpl`Parlamanın ışığı ulaştı: ${lightTimeText} sonra`, tpl`The flare’s light arrives: after ${lightTimeText}`) },
-    { id: 'shock', atSec: LAB_SHOCK_SEC, text: lf(tpl`Plazma bulutu ulaştı: ${shockTimeText} sonra`, tpl`The plasma cloud arrives: after ${shockTimeText}`) },
+    { id: 'light', atSec: at.lightAtSec, text: lf(tpl`Parlamanın ışığı ulaştı: ${lightTimeText} sonra`, tpl`The flare’s light arrives: after ${lightTimeText}`) },
+    { id: 'shock', atSec: at.frontAtSec, text: lf(tpl`Plazma bulutu ulaştı: ${shockTimeText} sonra`, tpl`The plasma cloud arrives: after ${shockTimeText}`) },
   ];
   if (!calm) {
     steps.push(
-      { id: 'squeeze', atSec: LAB_SHOCK_SEC + 0.9, text: lf(tpl`Manyetosfer ${standoffText} Dünya yarıçapına sıkıştı`, tpl`The magnetosphere is squeezed to ${standoffText} Earth radii`) },
-      { id: 'aurora', atSec: LAB_SHOCK_SEC + 1.8, text: lf(tpl`Kutup ışıkları ${Math.round(auroraLatDeg)}° enleme iniyor`, tpl`Auroras reach down to latitude ${Math.round(auroraLatDeg)}°`) },
+      { id: 'squeeze', atSec: at.frontAtSec + 0.9, text: lf(tpl`Manyetosfer ${standoffText} Dünya yarıçapına sıkıştı`, tpl`The magnetosphere is squeezed to ${standoffText} Earth radii`) },
+      { id: 'aurora', atSec: at.frontAtSec + 1.8, text: lf(tpl`Kutup ışıkları ${Math.round(auroraLatDeg)}° enleme iniyor`, tpl`Auroras reach down to latitude ${Math.round(auroraLatDeg)}°`) },
     );
   }
   // The May 2024 storm (auroras to about 30°) did not bring grids down; failures begin with Carrington-class
   // storms (auroras below about 22°).
   const blackout = clamp01((28 - auroraLatDeg) / 22);
   if (blackout > 0.25) {
-    steps.push({ id: 'grid', atSec: LAB_SHOCK_SEC + 2.8, text: { tr: 'Uydular ve elektrik şebekeleri devre dışı kalıyor', en: 'Satellites and power grids fail' } });
+    steps.push({ id: 'grid', atSec: at.frontAtSec + 2.8, text: { tr: 'Uydular ve elektrik şebekeleri devre dışı kalıyor', en: 'Satellites and power grids fail' } });
   }
   const satellites = satellitesIn(distanceAU, standoffRe, model.speedKmS);
 
@@ -667,6 +657,9 @@ function cmeImpact(distanceAU: number, strength: LabCmeStrength): LabImpact {
     satellitesLevel: satellitesLevel(satellites),
     level,
     summary,
+    verdict: insideSun ? VERDICT.outsideModel : calm ? null : STORM_VERDICT[level],
+    lightAtSec: at.lightAtSec,
+    shockAtSec: at.frontAtSec,
     outcome: {
       flash: 0.12,
       scorch: 0,
@@ -683,23 +676,13 @@ function cmeImpact(distanceAU: number, strength: LabCmeStrength): LabImpact {
   };
 }
 
-/** What the explosion does to Earth. */
-export function computeLabImpact(setup: LabSetup): LabImpact {
-  const d = Math.min(LAB_MAX_AU, Math.max(LAB_MIN_AU, setup.distanceAU));
-  if (setup.kind === 'cme') return cmeImpact(d, setup.cmeStrength);
-  return setup.kind === 'grb' ? burstImpact(d) : supernovaImpact(setup.kind, d);
-}
-
-/** Where one of the other bodies stands with respect to the explosion. */
-interface BodyGeometry {
+/** Where one of the other bodies stands with respect to the explosion, and when the explosion reaches it in the time-lapse. */
+interface BodyGeometry extends Arrivals {
   /** From the explosion to the body, and from the Sun's real place to the body, AU. */
   distanceAU: number;
   sunAU: number;
   /** Angle at the explosion between Earth and the body, radians. */
   offAxisRad: number;
-  /** Seconds after detonation at which the light and the blast front reach the body's token on the map. */
-  lightAtSec: number;
-  frontAtSec: number;
 }
 
 /** What reaches a body from a supernova or along a burst's beam: light that can scorch it, energy that can strip, melt or break it. */
@@ -726,6 +709,8 @@ interface Strike {
   frontStep: L10n;
   /** What there is to say, and how it rates, when the body is neither burnt nor stripped, melted or broken. */
   mild: { level: LabImpactLevel; text: L10n };
+  /** The same in a few words, where it rates above harmless. */
+  mildVerdict: L10n;
 }
 
 const NOTHING_TO_SEE: L10n = { tr: 'Belirgin bir etki olmaz.', en: 'No noticeable effect.' };
@@ -762,6 +747,7 @@ function supernovaStrike(kind: 'sn2' | 'sn1a', traits: BodyTraits, geo: BodyGeom
     lightStep: lf(tpl`Işık ulaştı: ${lightTimeText} sonra`, tpl`The light arrives: after ${lightTimeText}`),
     frontStep: lf(tpl`Şok dalgası ulaştı: ${frontTimeText} sonra`, tpl`The blast wave arrives: after ${frontTimeText}`),
     mild,
+    mildVerdict: VERDICT.warmed,
   };
 }
 
@@ -791,6 +777,7 @@ function burstStrike(traits: BodyTraits, geo: BodyGeometry): Strike {
     lightStep: null,
     frontStep: lf(tpl`Gama ışınları ulaştı: ${raysTimeText} sonra`, tpl`The gamma rays arrive: after ${raysTimeText}`),
     mild,
+    mildVerdict: VERDICT.ionised,
   };
 }
 
@@ -851,6 +838,13 @@ function struckFate(id: string, traits: BodyTraits, geo: BodyGeometry, strike: S
     }
     if (summary.length === 0) summary.push(strike.mild.text);
   }
+  let verdict: L10n | null = strike.mild.level === 'safe' ? null : strike.mildVerdict;
+  if (breakup >= LAB_BREAKUP_AT) verdict = solid ? VERDICT.destroyed : VERDICT.dispersed;
+  else if (melt >= 0.5) verdict = icy ? VERDICT.iceMolten : VERDICT.molten;
+  else if (air >= 0.5) verdict = solid ? VERDICT.stripped : star ? VERDICT.gasLost : VERDICT.layersTorn;
+  else if (melt >= 0.25) verdict = VERDICT.partlyMolten;
+  else if (air >= 0.25) verdict = solid ? VERDICT.airEscapes : VERDICT.gasLost;
+  else if (scorch >= 0.4) verdict = solid ? VERDICT.scorched : VERDICT.overheated;
 
   const steps: Steps = [];
   if (strike.lightStep) steps.push({ id: 'light', atSec: strike.lightAtSec, text: strike.lightStep });
@@ -903,6 +897,7 @@ function struckFate(id: string, traits: BodyTraits, geo: BodyGeometry, strike: S
     standoffRadii: 0,
     level,
     summary,
+    verdict,
     outcome: { flash: flashOf(strike.fluxLocal), scorch, air, melt, breakup, kick: clamp01(Math.log10(1 + kickKmS) / 2), storm: 0 },
     meters,
     lightAtSec: strike.lightAtSec,
@@ -928,6 +923,7 @@ function missedByBeam(id: string, traits: BodyTraits, geo: BodyGeometry): LabFat
     standoffRadii: 0,
     level: 'safe',
     summary: [{ tr: 'Hüzme bu yöne gelmez; etkilenmez.', en: 'The beam does not come this way; no effect.' }],
+    verdict: null,
     outcome: { flash: 0, scorch: 0, air: 0, melt: 0, breakup: 0, kick: 0, storm: 0 },
     meters: [],
     lightAtSec: geo.frontAtSec,
@@ -999,6 +995,8 @@ function cmeFate(id: string, traits: BodyTraits, geo: BodyGeometry, strength: La
       summary.push({ tr: 'Havası ve manyetik alanı yoktur: bulut yüzeye doğrudan çarpar ve yüzeyden atom söker.', en: 'With no air and no magnetic field, the cloud strikes the surface directly and knocks atoms off it.' });
     }
   }
+  let verdict: L10n | null = null;
+  if (struck) verdict = magnetic ? (toSurface ? VERDICT.toSurface : VERDICT.squeezed) : hasAir ? VERDICT.gasEscapes : VERDICT.surfaceStruck;
 
   const steps: Steps = [{
     id: 'light',
@@ -1034,6 +1032,7 @@ function cmeFate(id: string, traits: BodyTraits, geo: BodyGeometry, strength: La
     standoffRadii,
     level,
     summary,
+    verdict,
     outcome: {
       flash: 0.12,
       scorch: 0,
@@ -1062,73 +1061,217 @@ function sharedOrbitAU(idA: string, idB: string): number {
   return 0;
 }
 
+/** A front of the explosion: its light (a burst's rays), or what follows the light: a supernova's blast wave, a solar eruption's cloud. */
+type Front = 'light' | 'blast';
+
 /**
- * What the explosion does to the Moon, the Sun and the other bodies: those of `bodies` that are not in
- * `removed`, in the order given. In a solar eruption the Sun is the explosion itself and has no fate of its
- * own. A moon of another planet is taken to stand where its planet does.
- *
- * An explosion that stands on a body's spot (`spotRad`, at the body's distance) is set at that body. The map
- * draws it clear of the body's token; the model takes it to be at the body's real place, whatever the date.
+ * How far the explosion's fronts have grown `realSec` after it, AU: its light, and what follows the light
+ * (null for a burst, which is its rays and nothing else). A supernova's blast stops where its remnant
+ * merges into the interstellar gas.
  */
-export function computeLabFates(setup: LabSetup, bodies: LabBody[], removed: string[]): LabFate[] {
-  const { kind, angleRad } = setup;
-  const d = Math.min(LAB_MAX_AU, Math.max(LAB_MIN_AU, setup.distanceAU));
-  const reach = labSceneRadius(d);
-  const sun = bodies.find((b) => b.id === 'sun');
-  // The same direction, whatever the number of turns in it, and the same distance.
-  const anchor = bodies.find((b) => (
-    Math.abs(Math.sin((b.spotRad - angleRad) / 2)) < 1e-9 && Math.abs(Math.min(LAB_MAX_AU, Math.max(LAB_MIN_AU, b.distanceAU)) - d) <= 1e-9 * d
-  ));
-  // The explosion's place in the plane of the map, AU from Earth.
-  const blastRad = anchor ? anchor.skyAngleRad : angleRad;
-  const blastAU = anchor ? anchor.distanceAU : d;
-  const fates: LabFate[] = [];
+export function labFrontsAU(setup: LabSetup, realSec: number): { lightAU: number; blastAU: number | null } {
+  const lightAU = (realSec * LIGHT_KM_S) / AU_KM;
+  if (setup.kind === 'grb') return { lightAU, blastAU: null };
+  if (setup.kind === 'cme') return { lightAU, blastAU: (realSec * CME[setup.cmeStrength].speedKmS) / AU_KM };
+  // The inverse of `blastTravelSeconds`: free expansion, then the Sedov–Taylor law.
+  const free = (realSec * EJECTA_FRONT_KM_S) / AU_KM;
+  const sedov = 0.31 * PC_AU * (realSec / YEAR_S) ** 0.4;
+  return { lightAU, blastAU: Math.min(free, sedov, REMNANT_REACH_AU) };
+}
+
+/** Seconds after the explosion at which one of its fronts has grown to `au`. */
+function frontTravelSeconds(setup: LabSetup, front: Front, au: number): number {
+  if (front === 'light' || setup.kind === 'grb') return (au * AU_KM) / LIGHT_KM_S;
+  if (setup.kind === 'cme') return (au * AU_KM) / CME[setup.cmeStrength].speedKmS;
+  return blastTravelSeconds(au) ?? Infinity;
+}
+
+/** The arrival of a front at a body: when, seconds after the explosion, and where the body really is. */
+interface Arrival {
+  realSec: number;
+  front: Front;
+  at: MapPoint;
+}
+
+/**
+ * The pace of the time-lapse. The front that is next to arrive anywhere closes in on the body it is about
+ * to reach at FRONT_PACE scene units a second on the map; no wait between two arrivals is longer than
+ * GAP_MAX_SEC, the first comes no sooner than LEAD_MIN_SEC after the explosion (the flash is to be seen),
+ * the first arrival of a blast or cloud no sooner than BLAST_LEAD_SEC after the arrival before it (what the
+ * light does is to be seen first), and the last no later than ARRIVALS_MAX_SEC. Each wait is cut into
+ * GAP_KNOTS knots of the clock.
+ */
+const FRONT_PACE = 5;
+const GAP_MAX_SEC = 3;
+const LEAD_MIN_SEC = 1.2;
+const BLAST_LEAD_SEC = 1.8;
+const ARRIVALS_MAX_SEC = 20;
+const GAP_KNOTS = 12;
+/** After the last arrival the fronts go on growing: the real time by this factor each second. */
+const AFTER_GROWTH = 1.7;
+
+/**
+ * The clock of a time-lapse: real time set against the seconds of the show so that every arrival comes in
+ * its real order, simultaneous arrivals together, and the fronts cross the map at a pace that can be
+ * watched. `src`, `earth`: the real places of the explosion and of Earth.
+ */
+function buildClock(setup: LabSetup, src: MapPoint, earth: MapPoint, arrivals: Arrival[]): LabClock {
+  const knots: LabClock['knots'] = [];
+  let sec = 0;
+  let realSec = 0;
+  let blastSeen = false;
+  for (const arrival of [...arrivals].sort((a, b) => a.realSec - b.realSec)) {
+    if (arrival.realSec <= realSec || !Number.isFinite(arrival.realSec)) continue;
+    const now = labFrontsAU(setup, realSec);
+    const then = labFrontsAU(setup, arrival.realSec);
+    const fromAU = arrival.front === 'light' ? now.lightAU : now.blastAU ?? 0;
+    const toAU = arrival.front === 'light' ? then.lightAU : then.blastAU ?? 0;
+    // The way of the front's leading point toward the body, on the map: sampled evenly, and ever more
+    // finely toward the body, where the map stretches small distances most.
+    const span = Math.hypot(arrival.at.x - src.x, arrival.at.z - src.z);
+    const ux = span > 0 ? (arrival.at.x - src.x) / span : 1;
+    const uz = span > 0 ? (arrival.at.z - src.z) / span : 0;
+    const radii: number[] = [];
+    for (let j = 0; j <= 16; j++) radii.push(fromAU + ((toAU - fromAU) * j) / 16);
+    for (let j = 1; j <= 36; j++) radii.push(toAU - (toAU - fromAU) * 10 ** (-j / 3));
+    radii.sort((a, b) => a - b);
+    const along: number[] = [0];
+    let last = labProject({ x: src.x + ux * radii[0], z: src.z + uz * radii[0] }, earth);
+    for (let j = 1; j < radii.length; j++) {
+      const spot = labProject({ x: src.x + ux * radii[j], z: src.z + uz * radii[j] }, earth);
+      along.push(along[j - 1] + Math.hypot(spot.x - last.x, spot.z - last.z));
+      last = spot;
+    }
+    const length = along[along.length - 1];
+    const least = knots.length === 0 ? LEAD_MIN_SEC : arrival.front === 'blast' && !blastSeen ? BLAST_LEAD_SEC : 0;
+    const gap = Math.max(least, Math.min(GAP_MAX_SEC, length / FRONT_PACE));
+    let j = 1;
+    for (let i = 1; i < GAP_KNOTS && length > 0; i++) {
+      const target = (length * i) / GAP_KNOTS;
+      while (along[j] < target) j++;
+      const radius = radii[j - 1] + ((radii[j] - radii[j - 1]) * (target - along[j - 1])) / Math.max(along[j] - along[j - 1], 1e-12);
+      const reached = Math.min(arrival.realSec, Math.max(knots[knots.length - 1]?.realSec ?? 0, frontTravelSeconds(setup, arrival.front, radius)));
+      knots.push({ sec: sec + (gap * i) / GAP_KNOTS, realSec: reached });
+    }
+    sec += gap;
+    realSec = arrival.realSec;
+    blastSeen ||= arrival.front === 'blast';
+    knots.push({ sec, realSec });
+  }
+  const shrink = Math.min(1, ARRIVALS_MAX_SEC / Math.max(sec, 1e-9));
+  return { knots: knots.map((knot) => ({ sec: knot.sec * shrink, realSec: knot.realSec })) };
+}
+
+/** The second of a time-lapse at which `realSec` after the explosion is shown; after its last arrival, the second of that arrival. */
+export function labClockSec(clock: LabClock, realSec: number): number {
+  let prev = { sec: 0, realSec: 0 };
+  for (const knot of clock.knots) {
+    if (realSec <= knot.realSec) {
+      return knot.realSec > prev.realSec ? prev.sec + ((knot.sec - prev.sec) * (realSec - prev.realSec)) / (knot.realSec - prev.realSec) : knot.sec;
+    }
+    prev = knot;
+  }
+  return prev.sec;
+}
+
+/** The real time after the explosion, seconds, that second `sec` of a time-lapse shows: the inverse of `labClockSec`, carried on past the last arrival. */
+export function labClockRealSec(clock: LabClock, sec: number): number {
+  let prev = { sec: 0, realSec: 0 };
+  for (const knot of clock.knots) {
+    if (sec <= knot.sec) {
+      return knot.sec > prev.sec ? prev.realSec + ((knot.realSec - prev.realSec) * (sec - prev.sec)) / (knot.sec - prev.sec) : knot.realSec;
+    }
+    prev = knot;
+  }
+  return prev.realSec * AFTER_GROWTH ** (sec - prev.sec);
+}
+
+/**
+ * The explosion's real place, AU from the Sun. Set at a body, it stands three of that body's radii beyond
+ * it as Earth sees it: right beside the body, with the body on the line from the explosion to Earth (the
+ * axis of a burst's beams). A solar eruption is where the state puts the erupting Sun.
+ */
+export function labBlastPlace(setup: LabSetup, bodies: LabBody[]): MapPoint {
+  const earth = labEarthPlace(bodies);
+  const anchor = setup.kind === 'cme' ? undefined : bodies.find((b) => b.id === setup.anchorId);
+  if (!anchor) return labPlaceFromEarth(earth, setup.angleRad, Math.min(LAB_MAX_AU, Math.max(LAB_MIN_AU, setup.distanceAU)));
+  return labPlaceFromEarth(earth, anchor.angleRad, anchor.distanceAU + (3 * (BODY_TRAITS[anchor.id]?.radiusM ?? 0)) / AU_M);
+}
+
+/** What the model says of an explosion: for Earth, for the other bodies on the map, and how its time-lapse runs. */
+export interface LabResults {
+  impact: LabImpact;
+  fates: LabFate[];
+  /** The second of the time-lapse by which everything that is going to happen has happened, with a few to spare. */
+  runSec: number;
+  clock: LabClock;
+}
+
+/**
+ * What the explosion does to Earth and to the Moon, the Sun and the other bodies: those of `bodies` that are
+ * not in `removed`, in the order given. In a solar eruption the Sun is the explosion itself and has no fate
+ * of its own. A moon of another planet is taken to stand where its planet does.
+ *
+ * Every body is reached in the order of its real distance from the explosion: the seconds of the time-lapse
+ * come from one clock for the whole map (`buildClock`), and the fronts drawn at the real size they have at
+ * each of its seconds (`labFrontsAU`) are at a body's place when that body's effects begin.
+ */
+export function computeLabResults(setup: LabSetup, bodies: LabBody[], removed: string[]): LabResults {
+  const { kind } = setup;
+  const earth = labEarthPlace(bodies);
+  const src = labBlastPlace(setup, bodies);
+  // Earth's distance from the explosion's own place: for one set at a body, a little more than the body's.
+  const d = Math.min(LAB_MAX_AU, Math.max(LAB_MIN_AU, Math.hypot(src.x - earth.x, src.z - earth.z)));
+  const anchor = kind === 'cme' ? undefined : bodies.find((b) => b.id === setup.anchorId);
+  const lightSeconds = (au: number): number => (au * AU_KM) / LIGHT_KM_S;
+  // Earth is on the axis of a burst's beams and of a solar eruption's cloud.
+  const earthFrontSec = kind === 'grb' ? lightSeconds(d) : frontTravelSeconds(setup, 'blast', d);
+  const arrivals: Arrival[] = [{ realSec: lightSeconds(d), front: 'light', at: earth }, { realSec: earthFrontSec, front: 'blast', at: earth }];
+  const struck: Array<{ id: string; traits: BodyTraits; geo: BodyGeometry; lightSec: number; frontSec: number }> = [];
   for (const body of bodies) {
     const traits = BODY_TRAITS[body.id];
     if (!traits || removed.includes(body.id) || (kind === 'cme' && body.id === 'sun')) continue;
-    // In that plane with the explosion at the origin: the body, Earth, and the Sun's real place.
-    const bx = Math.cos(body.skyAngleRad) * body.distanceAU - Math.cos(blastRad) * blastAU;
-    const by = Math.sin(body.skyAngleRad) * body.distanceAU - Math.sin(blastRad) * blastAU;
-    const ex = -Math.cos(blastRad) * blastAU;
-    const ey = -Math.sin(blastRad) * blastAU;
-    const sunAU = sun && sun !== body
-      ? Math.hypot(Math.cos(body.skyAngleRad) * body.distanceAU - Math.cos(sun.skyAngleRad) * sun.distanceAU, Math.sin(body.skyAngleRad) * body.distanceAU - Math.sin(sun.skyAngleRad) * sun.distanceAU)
-      : 1;
-    // On the map, scene units: the token and the explosion stand where the map has put them.
-    const onMap = Math.hypot(
-      Math.cos(body.angleRad) * labSceneRadius(body.distanceAU) - Math.cos(angleRad) * reach,
-      Math.sin(body.angleRad) * labSceneRadius(body.distanceAU) - Math.sin(angleRad) * reach,
-    );
-    const away = Math.hypot(bx, by);
+    // In the plane of the planets, AU: the Sun is at the origin.
+    const place = labPlaceFromEarth(earth, body.angleRad, body.distanceAU);
+    const bx = place.x - src.x;
+    const bz = place.z - src.z;
+    const ex = earth.x - src.x;
+    const ez = earth.z - src.z;
+    const away = Math.hypot(bx, bz);
     const geo: BodyGeometry = {
-      // Never nearer than three of the body's own radii; a planet and its moon, which share one place on the
-      // map, never nearer than the moon's orbit to an explosion set at the other.
+      // Never nearer than three of the body's own radii; a planet and its moon, which share one place in
+      // the model, never nearer than the moon's orbit to an explosion set at the other.
       distanceAU: Math.max(away, (3 * traits.radiusM) / AU_M, anchor ? sharedOrbitAU(body.id, anchor.id) : 0),
-      sunAU,
+      sunAU: body.id === 'sun' ? 1 : Math.hypot(place.x, place.z),
       // A body at the explosion's own place has no direction from it: it counts as on the axis, not beside it.
-      offAxisRad: away < 1e-9 ? 0 : Math.acos(Math.min(1, Math.max(-1, (bx * ex + by * ey) / (away * Math.hypot(ex, ey))))),
-      lightAtSec: (LAB_LIGHT_SEC * onMap) / reach,
-      frontAtSec: frontArrivalSec(reach, onMap),
+      offAxisRad: away < 1e-9 ? 0 : Math.acos(Math.min(1, Math.max(-1, (bx * ex + bz * ez) / (away * Math.hypot(ex, ez))))),
+      lightAtSec: 0,
+      frontAtSec: 0,
     };
-    if (kind === 'cme') {
-      fates.push(cmeFate(body.id, traits, geo, setup.cmeStrength));
-    } else if (kind === 'grb') {
-      // One beam points at Earth, the other the opposite way.
-      const inBeam = geo.offAxisRad <= BURST_HALF_WIDTH_RAD || geo.offAxisRad >= Math.PI - BURST_HALF_WIDTH_RAD;
-      fates.push(inBeam ? struckFate(body.id, traits, geo, burstStrike(traits, geo)) : missedByBeam(body.id, traits, geo));
-    } else {
-      fates.push(struckFate(body.id, traits, geo, supernovaStrike(kind, traits, geo)));
-    }
+    // One of a burst's beams points at Earth, the other the opposite way; a solar eruption's cloud goes toward Earth.
+    const inBeam = geo.offAxisRad <= BURST_HALF_WIDTH_RAD || geo.offAxisRad >= Math.PI - BURST_HALF_WIDTH_RAD;
+    const reached = kind === 'grb' ? inBeam : kind !== 'cme' || geo.offAxisRad <= CME_HALF_WIDTH_RAD;
+    const lightSec = lightSeconds(geo.distanceAU);
+    const frontSec = kind === 'grb' ? lightSec : frontTravelSeconds(setup, 'blast', geo.distanceAU);
+    if (kind !== 'grb' || inBeam) arrivals.push({ realSec: lightSec, front: 'light', at: place });
+    if (kind !== 'grb' && reached) arrivals.push({ realSec: frontSec, front: 'blast', at: place });
+    struck.push({ id: body.id, traits, geo, lightSec, frontSec });
   }
-  return fates;
-}
-
-/** The second of the time-lapse by which everything that is going to happen has happened, with a few to spare. */
-export function labRunSeconds(impact: LabImpact, fates: LabFate[]): number {
-  let last = LAB_SHOCK_SEC;
+  const clock = buildClock(setup, src, earth, arrivals);
+  const at: Arrivals = { lightAtSec: labClockSec(clock, lightSeconds(d)), frontAtSec: labClockSec(clock, earthFrontSec) };
+  const impact = kind === 'cme' ? cmeImpact(d, setup.cmeStrength, at) : kind === 'grb' ? burstImpact(d, at) : supernovaImpact(kind, d, at);
+  const fates = struck.map(({ id, traits, geo, lightSec, frontSec }): LabFate => {
+    geo.lightAtSec = labClockSec(clock, lightSec);
+    geo.frontAtSec = labClockSec(clock, frontSec);
+    if (kind === 'cme') return cmeFate(id, traits, geo, setup.cmeStrength);
+    if (kind !== 'grb') return struckFate(id, traits, geo, supernovaStrike(kind, traits, geo));
+    const inBeam = geo.offAxisRad <= BURST_HALF_WIDTH_RAD || geo.offAxisRad >= Math.PI - BURST_HALF_WIDTH_RAD;
+    return inBeam ? struckFate(id, traits, geo, burstStrike(traits, geo)) : missedByBeam(id, traits, geo);
+  });
+  let last = 0;
   for (const step of impact.steps) last = Math.max(last, step.atSec);
   for (const fate of fates) {
     for (const step of fate.steps) last = Math.max(last, step.atSec);
   }
-  return Math.ceil(last + 4);
+  return { impact, fates, runSec: Math.ceil(last + 4), clock };
 }

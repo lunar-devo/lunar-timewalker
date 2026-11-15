@@ -892,26 +892,25 @@ export interface LabSetup {
   distanceAU: number;
   /** Solar eruptions only. */
   cmeStrength: LabCmeStrength;
+  /**
+   * The body of the map the explosion is set at: the model takes it to be right beside that body, and it
+   * follows the body when the map's date changes (a solar eruption: 'sun' while the Sun is at its real
+   * place). Null for a place picked freely.
+   */
+  anchorId: string | null;
 }
 
-/** Something drawn on the lab's map at its real direction and distance from Earth on the map's date. */
+/** Something on the lab's map: where it really is, as seen from Earth, on the map's date. */
 export interface LabBody {
   id: string;
   name: L10n;
   kind: 'moon' | 'sun' | 'planet' | 'star' | 'nebula';
-  /** Direction on the map, radians, and distance from Earth, AU. */
+  /**
+   * Its direction from Earth in the plane of the planets, radians (minus its ecliptic longitude), and its
+   * distance from Earth, AU. The map is drawn round the Sun: it works out every place from these.
+   */
   angleRad: number;
   distanceAU: number;
-  /**
-   * Its real direction, radians. The map moves a token aside by a few degrees when it would hide another;
-   * what the explosion does to the body is worked out from where the body really is.
-   */
-  skyAngleRad: number;
-  /**
-   * Direction, radians, at which an explosion set at this body stands: beside a body of the solar system
-   * (clear of its token), on the spot for a star, which is itself what explodes.
-   */
-  spotRad: number;
 }
 
 /** What the lab's model takes a body for: rock or ice, with or without air; a giant of gas or ice; a star. */
@@ -967,12 +966,14 @@ export interface LabFate {
   level: LabImpactLevel;
   /** Sentences, read one after the other. */
   summary: L10n[];
+  /** What becomes of it in a few words, for a line of the list of all bodies; null when it is not affected. */
+  verdict: L10n | null;
   outcome: LabFateOutcome;
   /** Damage bars: what each stands for and how far it is reached, 0..1. */
   meters: Array<{ label: L10n; value: number }>;
   /**
    * Seconds after detonation, in the lab's time-lapse, at which the light and what follows it (null: it
-   * never does) reach the body's token on the map.
+   * never does) reach the body. The fronts drawn on the map are at the body's token at those moments.
    */
   lightAtSec: number;
   shockAtSec: number | null;
@@ -1044,12 +1045,29 @@ export interface LabImpact {
   satellitesLevel: LabImpactLevel;
   level: LabImpactLevel;
   summary: L10n;
+  /** What becomes of Earth in a few words, for a line of the list of all bodies; null when it is not affected. */
+  verdict: L10n | null;
   outcome: LabOutcome;
+  /**
+   * Seconds after detonation, in the lab's time-lapse, at which the light and what follows it (null: it
+   * never does) reach Earth.
+   */
+  lightAtSec: number;
+  shockAtSec: number | null;
   /**
    * Consequences in the order they happen; `atSec` is seconds after detonation in the lab's time-lapse. The
    * step with id 'shock' is the arrival of the blast wave, the plasma cloud or the beam.
    */
   steps: Array<{ id: string; atSec: number; text: L10n }>;
+}
+
+/**
+ * The pace of the lab's time-lapse: the real time since the explosion, seconds, that each second of it
+ * stands for. Bodies are reached in their real order; the speed is not real, and not even: between two
+ * knots the real time grows by a constant factor each second, before the first it grows evenly from 0.
+ */
+export interface LabClock {
+  knots: Array<{ sec: number; realSec: number }>;
 }
 
 /** The lab's class mode: predict how a body fares, set the explosion off, compare with the model. */
@@ -1067,17 +1085,13 @@ export interface LabQuiz {
 }
 
 export interface LabState extends LabSetup {
-  /**
-   * The body of the map the explosion was set at and follows when the map's date changes (a solar eruption:
-   * 'sun' while the Sun is at its real place); null for a place picked freely.
-   */
-  anchorId: string | null;
   playing: boolean;
   /** The time-lapse stands still (it can still be moved by hand). */
   paused: boolean;
   /** Seconds since detonation, and the second by which the last consequence has happened. */
   elapsedSec: number;
   runSec: number;
+  clock: LabClock;
   /** True when flying around Earth and the explosion as the weightless astronaut. */
   evaMode: boolean;
   impact: LabImpact;
