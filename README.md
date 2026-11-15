@@ -127,7 +127,7 @@ The “before” frames of the conjunction, alignment and Mars episodes are take
 | Martian terrain | **Measured**: MGS MOLA global elevation map (MEGDR, 16 pixels/degree ≈ 3.7 km/pixel), metres relative to the areoid. Craters and rocks below this resolution are a **statistical model**, as on the Moon; the ground colour is sampled from the Viking colour mosaic. |
 | Ingenuity’s flight | **Record**: take-off time, 3 m height, 30 s hover, 96° turn, 39.1 s duration (NASA 21-039). **Reconstruction**: the path between the recorded points, the climb and descent rates, Perseverance’s direction relative to the helicopter. |
 | Shackleton rim and Connecting Ridge | **Measured**: PGDA LOLA 5 m/pixel (`Site04`, `Site01`). |
-| Landing site coordinates | **Measured / published**: Apollo sites from NASA NSSDCA (from LRO images, Wagner et al. 2017); SLIM, Chang’e 5, Chang’e 6, Athena (IM-2), Luna 16 and Surveyor 1 from LROC; the IM-3 target at Reiner Gamma from Blewett et al. 2025. NASA has not published coordinates for the nine Artemis III candidate regions, so only Malapert Massif (one of them) is listed. |
+| Landing site coordinates | **Measured / published**: Apollo sites from NASA NSSDCA (from LRO images, Wagner et al. 2017); SLIM, Chang’e 5, Chang’e 6, Athena (IM-2), Luna 16, Surveyor 1, Chandrayaan-3 and Odysseus (IM-1) from LROC; Chang’e 4 from Liu et al. 2019; the IM-3 target at Reiner Gamma from Blewett et al. 2025. NASA has not published coordinates for the nine Artemis III candidate regions, so only Malapert Massif (one of them) is listed. |
 | Craters and rocks below DEM resolution | **Statistical model** (not real; the same function on CPU and GPU). |
 | Apollo 11 times | **Historical**: touchdown 20:17:40 UT, lift-off 17:54:00 UT, equipment set-up times. The landing/lift-off trajectory is a simple curve fitted to the crew’s calls. |
 | Supernova light curves | **Template model** (Type Ia / Type II), fitted to historical peak brightnesses. |
@@ -157,7 +157,8 @@ The “before” frames of the conjunction, alignment and Mars episodes are take
 | NASA SVS #4851 — Deep Star Maps 2020 | https://svs.gsfc.nasa.gov/4851 | 8K star map (`starmap_2020_8k.exr`) and constellation lines; visible-light cut-outs of the Magellanic Clouds from the 64K map (`starmap_2020_64k.exr`) |
 | NASA GSFC PGDA — LOLA 5 m/px South Pole DEMs | https://pgda.gsfc.nasa.gov/products/78 | Shackleton rim (`Site04`) and the Shackleton–de Gerlache Connecting Ridge (`Site01`) |
 | NASA NSSDCA — Apollo landing site coordinates (Wagner et al. 2017, Icarus 283, 92–103) | https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html | Coordinates of the Apollo landing sites |
-| NASA/GSFC/Arizona State University LROC | https://lroc.asu.edu/images/1358 | Landing coordinates of SLIM (JAXA), Chang’e 5, Chang’e 6 and IM-2 Athena; robotic spacecraft table (Luna 16, Surveyor 1): https://lroc.im-ldi.com/news/117 |
+| NASA/GSFC/Arizona State University LROC | https://lroc.asu.edu/images/1358 | Landing coordinates of SLIM (JAXA), Chang’e 5, Chang’e 6 and IM-2 Athena; robotic spacecraft table (Luna 16, Surveyor 1): https://lroc.im-ldi.com/news/117; Chandrayaan-3 (ISRO): https://lroc.asu.edu/images/1314; IM-1 Odysseus: https://lroc.asu.edu/images/1360 |
+| Liu et al. 2019, Nature Communications 10, 4229 | https://doi.org/10.1038/s41467-019-12278-3 | Landing coordinates of Chang’e 4 (CNSA) |
 | Blewett et al. 2025, LPSC 56, abstract 1233 | https://www.hou.usra.edu/meetings/lpsc2025/pdf/1233.pdf | The Lunar Vertex (IM-3) target at Reiner Gamma |
 | NASA JPL Horizons (DE441) | https://ssd.jpl.nasa.gov/horizons/ | Position verification tables |
 | NASA JPL SBDB | https://ssd-api.jpl.nasa.gov/doc/sbdb.html | Comet orbital elements |

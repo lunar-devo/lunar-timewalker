@@ -44,6 +44,18 @@ export const CREDIT_GROUPS: Array<{ title: L10n; items: CreditItem[] }> = [
         url: 'https://lroc.im-ldi.com/news/117',
       },
       {
+        text: 'NASA/GSFC/Arizona State University LROC — landing coordinates of Chandrayaan-3 (ISRO)',
+        url: 'https://lroc.asu.edu/images/1314',
+      },
+      {
+        text: 'NASA/GSFC/Arizona State University LROC — landing coordinates of IM-1 Odysseus',
+        url: 'https://lroc.asu.edu/images/1360',
+      },
+      {
+        text: 'Liu et al. 2019, Nature Communications 10, 4229 — landing coordinates of Chang’e 4 (CNSA)',
+        url: 'https://doi.org/10.1038/s41467-019-12278-3',
+      },
+      {
         text: 'Blewett et al. 2025, LPSC 56, abstract 1233 — the Lunar Vertex (IM-3) target at Reiner Gamma',
         url: 'https://www.hou.usra.edu/meetings/lpsc2025/pdf/1233.pdf',
       },
