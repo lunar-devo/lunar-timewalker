@@ -1,17 +1,20 @@
 /**
  * Explosion Lab: set off a supernova (core collapse or Type Ia), a gamma-ray burst or a solar eruption (CME)
- * at any distance from Earth, from the Moon's orbit out to 10,000 light years, and watch what reaches Earth
- * and what it does.
+ * at any distance from Earth, from the Moon's orbit out to 10,000 light years, and watch what it reaches,
+ * in which order, and what it does to each body.
  *
- *   - The map around Earth is logarithmic in distance and lies in the plane of the planets. The Sun, the
- *     Moon and the seven other planets stand at their real directions and distances from Earth for the
- *     map's date (astronomy-engine); Alpha Centauri, Sirius, Betelgeuse and the Crab Nebula mark the far
- *     rings at their real ecliptic longitudes; the star map behind is the real sky, turned the same way.
- *     Bodies are tokens: none is to scale, and they are drawn larger when the view is far out.
- *   - After detonation the light front arrives first, then the blast wave (or plasma cloud). A gamma-ray
- *     burst is a thin front of rays inside two opposite beams, and nothing else. The time-lapse always takes
- *     the same few seconds; the real travel times are shown in the panel. It can be halted and moved by hand:
- *     everything drawn follows from the time since detonation. It stops at its last second (`labRunSeconds`)
+ *   - The map lies in the plane of the planets with the Sun at its centre (./map.ts). The planets stand on
+ *     their orbits at their real places round the Sun for the map's date (astronomy-engine), the Moon on a
+ *     small ring round Earth, whose neighbourhood is magnified; Alpha Centauri, Sirius, Betelgeuse and the
+ *     Crab Nebula mark the far rings at their real ecliptic longitudes; the star map behind is the real
+ *     sky, turned the same way. Bodies are tokens: none is to scale, and they are drawn larger when the view
+ *     is far out.
+ *   - After detonation the fronts cross the map: the light first, then the blast wave (or plasma cloud); a
+ *     gamma-ray burst is a front of rays inside two opposite beams, and nothing else. They are the real
+ *     fronts carried through the map's projection, so each is at a body's token at the moment the model has
+ *     it reach that body, and the bodies are reached in their real order. The pace is a time-lapse of its
+ *     own (./physics.ts sets its clock); the real travel times are shown in the panel. It can be halted and
+ *     moved by hand: everything drawn follows from the time since detonation. It stops at its last second
  *     and holds that picture; until the explosion is reset, a click on the map moves nothing.
  *   - What happens to Earth follows ./physics.ts: the flash lights and scorches the facing side, the ozone
  *     layer thins, the blast strips the air, boils the oceans, melts the crust or takes the planet apart and
@@ -28,8 +31,8 @@
 import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import type {
-  ISpaceView, L10n, LabBody, LabExplosionKind, LabFate, LabFateOutcome, LabFraming, LabImpact, LabImpactLevel, LabSatellite, Lang,
-  QualityProfile, SpaceViewOptions,
+  ISpaceView, L10n, LabBody, LabClock, LabExplosionKind, LabFate, LabFateOutcome, LabFraming, LabImpact, LabImpactLevel, LabSatellite,
+  LabSetup, Lang, QualityProfile, SpaceViewOptions,
 } from '../../core/types';
 import { eclipticOfRaDec, geocentricPlaces, type GeocentricBody } from '../../astro';
 import { BODY_NAMES, BRIGHT_STARS, TRANSIENTS } from '../../content';
@@ -39,12 +42,15 @@ import { softDotTexture } from '../../core/sprites';
 import { createSuitRig, poseSuit, type SuitRig } from '../../player/suit';
 import { SATURN_RING_GLSL, SATURN_RING_INNER, SATURN_RING_OUTER } from '../rings';
 import {
-  CME_HALF_WIDTH_RAD, computeLabImpact, LAB_BREAKUP_AT, LAB_EARTH_R, LAB_LIGHT_SEC, LAB_MAX_AU, LAB_MIN_AU, LAB_SHOCK_SEC, labBeamMapHalfAngle,
-  labFrontRadius, labFrontSpeed, labMapDistanceAU, labRunSeconds, labSceneRadius, LY_AU,
+  LAB_LENS_RADIUS, LAB_MAX_AU, LAB_MIN_AU, labPlaceFromEarth, labProject, labSunRadius, labUnproject, LY_AU, type MapPoint,
+} from './map';
+import {
+  BURST_HALF_WIDTH_RAD, CME_HALF_WIDTH_RAD, computeLabResults, LAB_BREAKUP_AT, labBlastPlace, labClockRealSec, labFrontsAU, type LabResults,
 } from './physics';
 
+export { LAB_MAX_AU, LAB_MIN_AU, labEarthPlace, labPlaceFromEarth, labProject, labSunRadius, labUnproject, LY_AU, type MapPoint } from './map';
 export {
-  computeLabFates, computeLabImpact, distanceText, LAB_EXTRA_IDS, LAB_MAX_AU, LAB_MIN_AU, labRunSeconds, LY_AU,
+  computeLabResults, distanceText, LAB_BREAKUP_AT, LAB_EXTRA_IDS, labBlastPlace, labClockRealSec, labClockSec, labFrontsAU, type LabResults,
 } from './physics';
 export { LAB_FIRST_YEAR, LAB_LAST_YEAR, labLinkQuery, parseLabLink, type LabLink } from './link';
 export { LAB_QUESTIONS } from './quiz';
@@ -64,50 +70,70 @@ const BREAKUP_DELAY_SEC = 3.6;
  * the body to stay in its part of the map.
  */
 const KICK_RADII = 5.5;
-/** Where the weightless astronaut starts: beside Earth, between it and the camera as the lab opens. */
-const EVA_START = new THREE.Vector3(-4.5, 1.5, 7);
-/** Share of its own speed that a blast front gives the astronaut it passes: it shoves, and runs on ahead. */
-const EVA_SHOVE_SHARE = 0.6;
-/** Camera distance of the close view of Earth; of another body, in proportion to its radius. */
-const CLOSE_DIST = 21;
 /**
- * A burst's rays pass and are gone: its fronts fade out over this many of the last seconds of the time-lapse,
- * less than the seconds `labRunSeconds` leaves to spare after the last thing has happened.
+ * Earth's globe, air and wreckage are built with this radius, scene units, and drawn at this share of it:
+ * Earth is a token among the others, a little larger than its neighbours.
  */
-const BURST_FADE_SEC = 3;
+const LAB_EARTH_R = 2;
+const EARTH_SCALE = 0.3;
+const EARTH_TOKEN_R = LAB_EARTH_R * EARTH_SCALE;
+/** The exploding star, its fireball and its flash are drawn at this share of the size they are built with. */
+const BLAST_SCALE = 0.45;
+/** Where the weightless astronaut starts, from Earth's centre: beside Earth, toward the camera as the lab opens. */
+const EVA_OFFSET = new THREE.Vector3(-1.4, 0.5, 2.1);
+/** Scene units a second that a passing blast front adds to the astronaut's speed, away from the explosion. */
+const EVA_SHOVE = 3;
+/** Camera distance of the close view of a body with a radius of 2 scene units; of another, in proportion to its radius. */
+const CLOSE_DIST = 21;
 /** Share of their glow that a burst's fronts lose in the close view, so that the bodies show through them. */
 const BURST_CLOSE_THIN = 0.7;
+/** Seconds after the last arrival over which the fronts fade out. */
+const FRONT_FADE_SEC = 5;
+/**
+ * A front drawn on the map: the most corners along it, its height above the plane of the map (scene units),
+ * the width of its line as a share of the camera's distance, and the most that the veil behind the line of
+ * a blast or a burst reaches back on the map (scene units), so that it never lies over the whole system.
+ */
+const FRONT_POINTS = 900;
+const FRONT_LIFT = 0.06;
+const FRONT_LINE_WIDTH = 0.006;
+const FRONT_VEIL_REACH = 2.5;
 
 /** Map radius that takes in the outermost ring and its label. */
-const MAP_RADIUS = labSceneRadius(LAB_MAX_AU) + 2.5;
-/** Map radius that takes in every planet (Neptune is never farther than 31.3 AU from Earth). */
-const PLANETS_RADIUS = labSceneRadius(31.5) + 1.8;
+const MAP_RADIUS = labSunRadius(LAB_MAX_AU) + 2.5;
+/** Map radius that takes in every planet out to Neptune, which is never farther than 30.4 AU from the Sun. */
+const PLANETS_RADIUS = labSunRadius(30.4) + 2;
 /** Radius of the Sun's token, scene units. */
 const SUN_TOKEN_R = 0.85;
-/**
- * An explosion set at a body of the solar system stands this far clear of the body's token, scene units: the
- * exploding star with its glow, seen at the slant of the map.
- */
-const SPOT_GAP = 3;
 /** Height of a name tag, as a share of the view's focal length. */
 const TAG_HEIGHT = 0.026;
 /** A name tag reaches this many pixels into its body's token: its text sits in the middle of the tag. */
 const TAG_TUCK = 3;
 /** Pixels between a body's token and a name that stands to its right or left. */
 const TAG_SIDE_GAP = 4;
-/** Where a name can stand by its body, in the order tried. */
-type TagSide = 'above' | 'below' | 'right' | 'left';
-const TAG_SIDES: TagSide[] = ['above', 'below', 'right', 'left'];
+/**
+ * Where a name can stand by its body, in the order tried, and which way each lies from the body across and
+ * down the screen (−1, 0 or 1).
+ */
+type TagSide = 'above' | 'below' | 'right' | 'left' | 'aboveRight' | 'aboveLeft' | 'belowRight' | 'belowLeft';
+const TAG_SIDES: TagSide[] = ['above', 'below', 'right', 'left', 'aboveRight', 'aboveLeft', 'belowRight', 'belowLeft'];
+const TAG_OFFSETS: Record<TagSide, { across: number; down: number }> = {
+  above: { across: 0, down: -1 },
+  below: { across: 0, down: 1 },
+  right: { across: 1, down: 0 },
+  left: { across: -1, down: 0 },
+  aboveRight: { across: 1, down: -1 },
+  aboveLeft: { across: -1, down: -1 },
+  belowRight: { across: 1, down: 1 },
+  belowLeft: { across: -1, down: 1 },
+};
 /** Places a ring label tries, radians along its ring from the side facing the camera: the middle first. */
 const RING_LABEL_TURNS = [0, 0.2, -0.2, 0.4, -0.4, 0.6, -0.6];
 
 const RING_GREY = 0x7b8aa0;
 const RING_HAZARD = 0xf87171;
-/** The rings of the map. `hazard`: the kinds of explosion whose hazard limit the ring is, and its label then. */
+/** The far rings of the map, round the Sun. `hazard`: the kinds of explosion whose hazard limit the ring is, and its label then. */
 const RINGS: Array<{ au: number; label: L10n; color: number; hazard?: { kinds: LabExplosionKind[]; label: L10n } }> = [
-  { au: LAB_MIN_AU, label: { tr: 'Ay yörüngesi', en: 'Moon’s orbit' }, color: RING_GREY },
-  { au: 1, label: { tr: '1 AU', en: '1 AU' }, color: 0xfbbf24 },
-  { au: 30, label: { tr: '30 AU', en: '30 AU' }, color: RING_GREY },
   { au: LY_AU, label: { tr: '1 ışık yılı', en: '1 light year' }, color: RING_GREY },
   {
     au: 26 * LY_AU, label: { tr: '26 ışık yılı', en: '26 light years' }, color: RING_GREY,
@@ -151,7 +177,7 @@ interface TokenDef {
 }
 
 const TOKENS: TokenDef[] = [
-  { id: 'moon', name: { tr: 'Ay', en: 'Moon' }, radius: 0.3, reach: 1, color: 0x9ca3af, minPx: 3.2, tiltDeg: 0, giant: false, icy: false, gas: null, cloudDeck: false, place: 'moon', host: null },
+  { id: 'moon', name: { tr: 'Ay', en: 'Moon' }, radius: 0.2, reach: 1, color: 0x9ca3af, minPx: 3.2, tiltDeg: 0, giant: false, icy: false, gas: null, cloudDeck: false, place: 'moon', host: null },
   { id: 'mercury', name: BODY_NAMES.mercury, radius: 0.36, reach: 1, color: 0x8f8a84, minPx: 5, tiltDeg: 0, giant: false, icy: false, gas: null, cloudDeck: false, place: 'mercury', host: null },
   { id: 'venus', name: BODY_NAMES.venus, radius: 0.56, reach: 1, color: 0xe3cf9e, minPx: 6, tiltDeg: 3, giant: false, icy: false, gas: 0xf2dfa8, cloudDeck: true, place: 'venus', host: null },
   { id: 'mars', name: BODY_NAMES.mars, radius: 0.46, reach: 1, color: 0xb9603a, minPx: 5.5, tiltDeg: 25.2, giant: false, icy: false, gas: 0xe8a27a, cloudDeck: false, place: 'mars', host: null },
@@ -366,7 +392,7 @@ const LOOK: Record<LabExplosionKind, KindLook> = {
   },
   cme: {
     hot: new THREE.Color(1.0, 0.86, 0.45), cool: new THREE.Color(1.0, 0.42, 0.12), light: new THREE.Color(1.0, 0.8, 0.5),
-    starA: new THREE.Color(2.0, 1.25, 0.45), starB: new THREE.Color(2.6, 2.1, 1.1), starRadius: 1.2,
+    starA: new THREE.Color(2.0, 1.25, 0.45), starB: new THREE.Color(2.6, 2.1, 1.1), starRadius: SUN_TOKEN_R / BLAST_SCALE,
   },
 };
 
@@ -487,20 +513,21 @@ function rockGeometry(): THREE.BufferGeometry {
 
 export interface LabController extends ISpaceView {
   /**
-   * Sets the map to one moment: the Sun, the Moon, the planets and the bodies that can be added go to their
-   * directions and distances from Earth at `jdTT`. Returns everything the map can show, nearest first.
+   * Sets the map to one moment: the planets go to their places round the Sun at `jdTT`, the Moon to its
+   * place round Earth. Returns everything the map can show with its direction and distance from Earth,
+   * nearest first.
    */
   layoutFor(jdTT: number): LabBody[];
   /**
-   * Kind of explosion and where it is: direction from Earth on the map (radians) and distance (AU).
-   * `keepView` leaves the camera where it is (a place picked on the map is already in view).
+   * What explodes and where. `keepView` leaves the camera where it is (a place picked on the map is already
+   * in view).
    */
-  configure(kind: LabExplosionKind, angleRad: number, distanceAU: number, keepView: boolean): void;
+  configure(setup: LabSetup, keepView: boolean): void;
   /**
-   * What the explosion now set does: to Earth, and to the Moon, the Sun and the other bodies on the map.
-   * Call it after every `configure`.
+   * What the explosion now set does: to Earth, to the Moon, the Sun and the other bodies on the map, and
+   * the clock of its time-lapse. Call it after every `configure`.
    */
-  setResults(impact: LabImpact, fates: LabFate[]): void;
+  setResults(results: LabResults): void;
   detonate(): void;
   resetExplosion(): void;
   /** Halts the time-lapse where it is, or lets it run on. */
@@ -623,7 +650,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
   /** Per ring of RINGS: its line and its label, which change when the ring is a hazard limit. */
   const ringLooks: Array<{ line: THREE.LineBasicMaterial; item: LabelItem }> = [];
   for (const ring of RINGS) {
-    const r = labSceneRadius(ring.au);
+    const r = labSunRadius(ring.au);
     const pts: THREE.Vector3[] = [];
     for (let i = 0; i < 160; i++) {
       const a = (i / 160) * Math.PI * 2;
@@ -664,7 +691,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
   function styleRings(): void {
     RINGS.forEach((ring, i) => {
       const { line, item } = ringLooks[i];
-      const limit = !concealed && ring.hazard?.kinds.includes(kind) ? ring.hazard : undefined;
+      const limit = !concealed && ring.hazard?.kinds.includes(setup.kind) ? ring.hazard : undefined;
       const color = limit ? RING_HAZARD : ring.color;
       line.color.setHex(color);
       line.opacity = color === RING_GREY ? 0.3 : 0.5;
@@ -701,15 +728,16 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
   };
 
   /**
-   * Puts a name's box on one side of its body: above or below it, tucked a little into the token, or beside
-   * it. The text sits in the middle of a tag `tagH` pixels high.
+   * Puts a name's box on one side of its body: above or below it, tucked a little into the token; beside it;
+   * or at one of its corners, where the token's edge is 0.7 of its radius away along each axis. The text
+   * sits in the middle of a tag `tagH` pixels high.
    */
   function setNameBox(tag: NameTag, side: TagSide, tagH: number): void {
     const halfW = tag.widthShare * tagH * 5;
-    const upright = side === 'above' || side === 'below';
-    const sign = side === 'above' || side === 'left' ? -1 : 1;
-    const midX = upright ? tag.x : tag.x + sign * (tag.radiusPx + TAG_SIDE_GAP + halfW);
-    const midY = upright ? tag.y + sign * (tag.radiusPx - TAG_TUCK + tagH * 0.5) : tag.y;
+    const { across, down } = TAG_OFFSETS[side];
+    const reach = tag.radiusPx * (across !== 0 && down !== 0 ? 0.7 : 1);
+    const midX = tag.x + across * (reach + TAG_SIDE_GAP + halfW);
+    const midY = tag.y + down * (reach + tagH * 0.5 - (across === 0 ? TAG_TUCK : 0));
     tag.left = midX - halfW;
     tag.right = midX + halfW;
     tag.top = midY - tagH * 0.3;
@@ -978,6 +1006,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
   scene.add(new THREE.HemisphereLight(0xa5d8ff, 0x334155, 0.5));
 
   const earthGroup = new THREE.Group();
+  earthGroup.scale.setScalar(EARTH_SCALE);
   scene.add(earthGroup);
   const earthUniforms = {
     uDay: { value: new THREE.Texture() },
@@ -1172,7 +1201,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     return mark;
   };
   const earthMark = makeMark();
-  earthMark.scale.setScalar(LAB_EARTH_R);
+  earthMark.scale.setScalar(EARTH_TOKEN_R);
   // Lines from where the Moon, the planets and the Sun stood to where the blast has carried them.
   const carriedGeo = new THREE.BufferGeometry();
   carriedGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((TOKENS.length + 1) * 6), 3));
@@ -1334,16 +1363,41 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
   });
 
   const landmarks = LANDMARKS.map((def) => {
+    // So far off, its direction from the Sun is its direction from Earth.
     const angle = -THREE.MathUtils.degToRad(def.lonDeg);
-    const position = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle)).multiplyScalar(labSceneRadius(def.lightYears * LY_AU));
+    const position = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle)).multiplyScalar(labSunRadius(def.lightYears * LY_AU));
     const glow = new THREE.Sprite(glowMaterial(new THREE.Color(def.color), def.kind === 'nebula' ? 0.55 : 0.8));
     const core = new THREE.Sprite(glowMaterial(def.kind === 'nebula' ? new THREE.Color(0.55, 0.8, 1) : new THREE.Color(1, 1, 1), 0.9));
     glow.position.copy(position);
     core.position.copy(position);
     scene.add(glow, core);
     // A star of the map is itself what explodes there.
-    const body: LabBody = { id: def.id, name: def.name, kind: def.kind, angleRad: angle, skyAngleRad: angle, spotRad: angle, distanceAU: def.lightYears * LY_AU };
+    const body: LabBody = { id: def.id, name: def.name, kind: def.kind, angleRad: angle, distanceAU: def.lightYears * LY_AU };
     return { body, position, glow, core, tag: makeTag(def.color, def.name) };
+  });
+
+  // The orbits: a circle round the Sun through Earth's place and through each planet's, the Moon's way round
+  // Earth as the magnified neighbourhood shows it, and the edge of that neighbourhood.
+  const circlePts: THREE.Vector3[] = [];
+  for (let i = 0; i < 160; i++) circlePts.push(new THREE.Vector3(Math.cos((i / 160) * Math.PI * 2), 0, Math.sin((i / 160) * Math.PI * 2)));
+  const circleGeo = new THREE.BufferGeometry().setFromPoints(circlePts);
+  const orbitMat = new THREE.LineBasicMaterial({ color: RING_GREY, transparent: true, opacity: 0.38 });
+  const earthOrbitMat = new THREE.LineBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.5 });
+  const lensMat = new THREE.LineBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.16 });
+  const earthOrbit = new THREE.LineLoop(circleGeo, earthOrbitMat);
+  const lensEdge = new THREE.LineLoop(circleGeo, lensMat);
+  lensEdge.scale.setScalar(LAB_LENS_RADIUS);
+  const moonOrbitGeo = new THREE.BufferGeometry();
+  moonOrbitGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(97 * 3), 3));
+  const moonOrbit = new THREE.Line(moonOrbitGeo, orbitMat);
+  moonOrbit.frustumCulled = false;
+  scene.add(earthOrbit, lensEdge, moonOrbit);
+  /** Per token, in the order of `tokens`: its orbit round the Sun; null for a moon. */
+  const orbits = tokens.map((p) => {
+    if (p.def.id === 'moon' || p.def.host !== null) return null;
+    const orbit = new THREE.LineLoop(circleGeo, orbitMat);
+    scene.add(orbit);
+    return orbit;
   });
 
   /** Sets out every body's wreckage again for the explosion as it now stands. */
@@ -1362,6 +1416,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
   const driftGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(1, 0, 0)]);
   const originMat = new THREE.LineBasicMaterial({ color: 0x67e8f9, transparent: true, opacity: 0.6 });
   const originRing = new THREE.LineLoop(originGeo, originMat);
+  originRing.scale.setScalar(EARTH_SCALE);
   const driftLine = new THREE.Line(driftGeo, originMat);
   driftLine.frustumCulled = false;
   const originLabel = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -1369,7 +1424,6 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
   }));
   originLabel.center.set(0, 0.5);
   originLabel.scale.set(0.26, 0.026, 1);
-  originLabel.position.set(0.25, 0.05, -(LAB_EARTH_R + 0.5));
   originLabel.renderOrder = 20;
   for (const marker of [originRing, driftLine, originLabel]) {
     marker.visible = false;
@@ -1480,6 +1534,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
 
   // ───────────── the explosion ─────────────
   const blastGroup = new THREE.Group();
+  blastGroup.scale.setScalar(BLAST_SCALE);
   scene.add(blastGroup);
   const linkGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(1, 0, 0)]);
   const linkLine = new THREE.Line(linkGeo, new THREE.LineBasicMaterial({ color: 0xffb454, transparent: true, opacity: 0.35 }));
@@ -1558,68 +1613,77 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     blastGroup.add(mesh);
     return mesh;
   };
-  /** Forward shock (smooth rim), clumpy ejecta behind it, the hot bubble inside, and the light front far ahead. */
-  const shockShell = makeShell(2.0, 0.15, 1.7);
-  const ejectaShell = makeShell(4.2, 1.0, 7.3);
+  /** The hot bubble at the explosion's own place. */
   const fireball = makeShell(3.0, 1.6, 12.9, 1);
-  const lightFront = makeShell(1.0, 0.0, 0.0);
-  // A CME is a cloud thrown one way: spherical caps around +Y as wide as the model's cloud, turned toward Earth.
-  const capGeo = new THREE.SphereGeometry(1, 56, 24, 0, Math.PI * 2, 0, CME_HALF_WIDTH_RAD + 0.02);
-  const cmeFront = makeShell(5.0, 1.0, 3.3, 0.3);
-  const cmeCore = makeShell(7.0, 1.3, 9.1, 0.45);
-  cmeFront.geometry = capGeo;
-  cmeCore.geometry = capGeo;
 
-  // A gamma-ray burst: a thin front of rays inside two opposite beams (caps like the CME's, as wide as the
-  // beam is on this map: see `labBeamMapHalfAngle`), and the cones the fronts have swept, glowing faintly.
-  const burstFronts = [makeShell(11.0, 0.5, 5.7, 0.3), makeShell(11.0, 0.5, 8.1, 0.3)];
-  let burstCapGeo = new THREE.SphereGeometry(1, 48, 16, 0, Math.PI * 2, 0, 0.6);
-  for (const front of burstFronts) front.geometry = burstCapGeo;
-  // A cone along +Y with its tip at the origin and its mouth, of radius 1, at y = 1.
-  const beamConeGeo = new THREE.ConeGeometry(1, 1, 48, 1, true);
-  beamConeGeo.rotateX(Math.PI);
-  beamConeGeo.translate(0, 0.5, 0);
-  const beamUniforms = { uCol: { value: new THREE.Color() }, uAlpha: { value: 0 } };
-  const beamConeMat = new THREE.ShaderMaterial({
-    uniforms: beamUniforms,
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-    vertexShader: /* glsl */ `
-      varying float vAlong;
-      varying vec3 vWorldN;
-      varying vec3 vWorldPos;
-      void main() {
-        vAlong = position.y;
-        vec4 wp = modelMatrix * vec4(position, 1.0);
-        vWorldPos = wp.xyz;
-        vWorldN = normalize(mat3(modelMatrix) * normal);
-        gl_Position = projectionMatrix * viewMatrix * wp;
-      }
-    `,
-    fragmentShader: /* glsl */ `
-      uniform vec3 uCol;
-      uniform float uAlpha;
-      varying float vAlong;
-      varying vec3 vWorldN;
-      varying vec3 vWorldPos;
-      void main() {
-        vec3 V = normalize(cameraPosition - vWorldPos);
-        float rim = pow(1.0 - abs(dot(normalize(vWorldN), V)), 1.5);
-        // What the front has just passed glows most.
-        gl_FragColor = vec4(uCol * (0.04 + 0.5 * rim) * vAlong * vAlong * uAlpha, 1.0);
-      }
-    `,
-  });
-  const beamCones = [new THREE.Mesh(beamConeGeo, beamConeMat), new THREE.Mesh(beamConeGeo, beamConeMat)];
-  for (const cone of beamCones) {
-    cone.visible = false;
-    cone.frustumCulled = false;
-    blastGroup.add(cone);
-  }
+  // The fronts on the map. Each is the line where the real front (a circle round the explosion, or the part
+  // of it inside a cloud or a beam) lies once carried through the map's projection: it is at a body's token
+  // at the moment the model has the front reach that body. The line is a ribbon of constant width; the veil
+  // behind it is a second ribbon. Along a ribbon a corner on the leading edge alternates with one on the
+  // trailing edge, where the glow ends.
+  const frontIndex: number[] = [];
+  for (let i = 0; i < FRONT_POINTS - 1; i++) frontIndex.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
+  const frontEdge = new Float32Array(FRONT_POINTS * 2);
+  for (let i = 0; i < FRONT_POINTS; i++) frontEdge[i * 2] = 1;
+  /** `power`: how fast the glow falls off behind the leading edge. */
+  const makeFront = (power: number): THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial> => {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(FRONT_POINTS * 6), 3));
+    geometry.setAttribute('aEdge', new THREE.BufferAttribute(frontEdge, 1));
+    geometry.setIndex(frontIndex);
+    const material = new THREE.ShaderMaterial({
+      uniforms: { uCol: { value: new THREE.Color() }, uAlpha: { value: 0 }, uPower: { value: power } },
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      vertexShader: /* glsl */ `
+        attribute float aEdge;
+        varying float vEdge;
+        void main() {
+          vEdge = aEdge;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: /* glsl */ `
+        uniform vec3 uCol;
+        uniform float uAlpha;
+        uniform float uPower;
+        varying float vEdge;
+        void main() {
+          gl_FragColor = vec4(uCol * uAlpha * pow(vEdge, uPower), 1.0);
+        }
+      `,
+    });
+    const mesh = new THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>(geometry, material);
+    mesh.visible = false;
+    mesh.frustumCulled = false;
+    scene.add(mesh);
+    return mesh;
+  };
+  /**
+   * The line of the light front; then the line of what follows it and the veil behind that line, each
+   * twice: a supernova's blast and a solar eruption's cloud use the first of each, a burst both (its beam
+   * toward Earth and the one the opposite way).
+   */
+  const lightBand = makeFront(2);
+  const edgeBands = [makeFront(2), makeFront(2)];
+  const glowBands = [makeFront(1.4), makeFront(1.4)];
+  /**
+   * The corners of the front last traced, in order along it: the direction of each from the explosion,
+   * radians, and its place on the map. Two sets, swapped as the corners are refined.
+   */
+  let traceRad = new Float64Array(FRONT_POINTS);
+  let traceX = new Float64Array(FRONT_POINTS);
+  let traceZ = new Float64Array(FRONT_POINTS);
+  let nextRad = new Float64Array(FRONT_POINTS);
+  let nextX = new Float64Array(FRONT_POINTS);
+  let nextZ = new Float64Array(FRONT_POINTS);
 
-  const ejectaDir = new Float32Array(EJECTA_PARTICLES * 3);
+  /** Per grain of ejecta: its direction round the explosion's axis toward Earth and out of the plane, radians, and its share of the front's speed. */
+  const ejectaTurn = new Float32Array(EJECTA_PARTICLES);
+  const ejectaLift = new Float32Array(EJECTA_PARTICLES);
+
   const ejectaSpeed = new Float32Array(EJECTA_PARTICLES);
   const ejectaPos = new Float32Array(EJECTA_PARTICLES * 3);
   const ejectaCol = new Float32Array(EJECTA_PARTICLES * 3);
@@ -1630,7 +1694,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
   const ejectaPoints = new THREE.Points(ejectaGeo, ejectaMat);
   ejectaPoints.frustumCulled = false;
   ejectaPoints.visible = false;
-  blastGroup.add(ejectaPoints);
+  scene.add(ejectaPoints);
 
   // Left behind by a core collapse: a pulsar sweeping two beams.
   const pulsar = new THREE.Group();
@@ -1678,22 +1742,24 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
   pulsar.rotation.z = 0.5;
 
   // ───────────── state ─────────────
-  let kind: LabExplosionKind = 'sn2';
-  let angle = 0.4;
-  let distanceAU = 0.3;
-  /** What the explosion does to Earth; the engine sets it with every change (see `setResults`). */
-  let impact: LabImpact = computeLabImpact({ kind, angleRad: angle, distanceAU, cmeStrength: 'may2024' });
+  let setup: LabSetup = { kind: 'sn2', angleRad: 0.4, distanceAU: 0.3, cmeStrength: 'may2024', anchorId: null };
+  /** Everything the map shows, as `layoutFor` last laid it out, and Earth's and the explosion's real places, AU from the Sun. */
+  let laidOut: LabBody[] = [];
+  let earthReal: MapPoint = { x: 1, z: 0 };
+  let srcReal: MapPoint = labBlastPlace(setup, laidOut);
+  /**
+   * What the explosion does to Earth, the second at which the time-lapse stops and holds its last picture,
+   * and the clock of the time-lapse; the engine sets them with every change (see `setResults`).
+   */
+  let { impact, runSec, clock }: { impact: LabImpact; runSec: number; clock: LabClock } = computeLabResults(setup, laidOut, []);
   let playing = false;
   /** The time-lapse stands still: `elapsed` then moves only when it is set by hand. */
   let paused = false;
   let elapsed = 0;
-  /** The second at which the time-lapse stops and holds its last picture (see `labRunSeconds`). */
-  let runSec = labRunSeconds(impact, []);
+  /** How far the blast front (a burst's rays) had grown at the last frame, AU: the astronaut is shoved as it passes. */
+  let frontWasAU = 0;
   /** The rings that show how each body fares are hidden (the class mode asks for a prediction first). */
   let concealed = false;
-  /** Half the angle a burst's beams are drawn with, radians, and the turn that points the far beam away from Earth. */
-  let beamHalf = 0.6;
-  const farTurn = new THREE.Quaternion();
   let time = 0;
   let texturesLoaded = false;
   /** The maps loaded for this view: it disposes them with itself, and one that arrives after that is dropped at once. */
@@ -1711,18 +1777,20 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     }).catch(() => undefined);
   }
   const srcPos = new THREE.Vector3();
+  /** Where the exploding star is drawn: at the explosion's place, or beside the token of the body it is set at. */
+  const starPos = new THREE.Vector3();
   const away = new THREE.Vector3(-1, 0, 0);
   const sunPos = new THREE.Vector3();
-  /** Earth, for the close view: it starts at the middle of the map. */
-  const earthBody: FocusBody = { at: earthGroup.position, home: new THREE.Vector3(), away, radius: LAB_EARTH_R, push: 0, since: -1, jolt: 0 };
-  /** The Sun: `home` is where it really stands on the map (for a solar eruption it is moved to the chosen spot). */
+  /** Where Earth stands on the map before any blast carries it off. */
+  const earthHome = new THREE.Vector3(labSunRadius(1), 0, 0);
+  const earthBody: FocusBody = { at: earthGroup.position, home: earthHome, away, radius: EARTH_TOKEN_R, push: 0, since: -1, jolt: 0 };
+  /** The Sun: `home` is the middle of the map (for a solar eruption it is drawn at the chosen spot). */
   const sunBody: Affected = {
-    id: 'sun', at: sunPos, home: new THREE.Vector3(-labSceneRadius(1), 0, 0), away: new THREE.Vector3(-1, 0, 0), radius: SUN_TOKEN_R, push: 0, since: -1, jolt: 0,
+    id: 'sun', at: sunPos, home: new THREE.Vector3(), away: new THREE.Vector3(-1, 0, 0), radius: SUN_TOKEN_R, push: 0, since: -1, jolt: 0,
     fate: null, wreck: sunWreck, mark: makeMark(),
   };
   /** The body the result panel is about and the close view goes to: 'earth', 'sun' or a token's id. */
   let focusId = 'earth';
-  const capTurn = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
   const camFwd = new THREE.Vector3();
   const scratchA = new THREE.Vector3();
@@ -1730,11 +1798,11 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
 
   // Optional weightless astronaut flying through the scene.
   let suit: SuitRig | null = null;
-  const evaPos = EVA_START.clone();
+  const evaPos = new THREE.Vector3();
   const evaVel = new THREE.Vector3();
   /** Puts the astronaut back beside Earth, at rest. */
   function homeAstronaut(): void {
-    evaPos.copy(EVA_START);
+    evaPos.copy(earthHome).add(EVA_OFFSET);
     evaVel.set(0, 0, 0);
   }
   const evaInput = { mx: 0, mz: 0, my: 0, boost: false };
@@ -1748,7 +1816,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
   let tLon = 0.9;
   let tLat = 0.6;
   let tDist = 26;
-  /** 0 = overview centred on where Earth started; 1 = close on Earth, following it as it is carried off. */
+  /** 0 = overview centred on the Sun; 1 = close on the body in focus, following it as it is carried off. */
   let close = 0;
   let tClose = 0;
   /** The framing the camera last took, by itself or because it was asked to. */
@@ -1764,8 +1832,6 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
   let chosen: LabFraming | null = null;
   /** Set when the user turns or zooms the view by hand; the camera then leaves it alone until the next framing. */
   let manual = false;
-  /** Whether this run's move in on Earth has been considered. */
-  let closedIn = false;
   let el: HTMLElement | null = null;
   let drag = false;
   let moved = 0;
@@ -1789,25 +1855,13 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     return focusAffected() ?? earthBody;
   }
 
-  /** What is to become of the body in focus; null for Earth, whose own result is `impact`. */
-  function focusFate(): LabFate | null {
-    return focusAffected()?.fate ?? null;
-  }
-
   function seedEjecta(): void {
-    const look = LOOK[kind];
-    const cone = kind === 'cme';
+    const look = LOOK[setup.kind];
+    const cone = setup.kind === 'cme';
     for (let i = 0; i < EJECTA_PARTICLES; i++) {
-      if (cone) {
-        // Within the cloud's half width of +Y (the caps' axis).
-        const cosT = 1 - rand() * (1 - Math.cos(CME_HALF_WIDTH_RAD));
-        const sinT = Math.sqrt(1 - cosT * cosT);
-        const a = rand() * Math.PI * 2;
-        ejectaDir.set([sinT * Math.cos(a), cosT, sinT * Math.sin(a)], i * 3);
-      } else {
-        randomDir(tmp);
-        ejectaDir.set([tmp.x, tmp.y, tmp.z], i * 3);
-      }
+      // A cloud's grains stay within its half width of the axis; a blast's go all round.
+      ejectaTurn[i] = (rand() * 2 - 1) * (cone ? CME_HALF_WIDTH_RAD : Math.PI);
+      ejectaLift[i] = cone ? (rand() * 2 - 1) * CME_HALF_WIDTH_RAD : Math.asin(rand() * 2 - 1);
       // Most of the mass lags the front: slow, cool, red; the fastest material is hot.
       const s = 0.45 + 0.57 * rand() ** 0.6;
       ejectaSpeed[i] = s;
@@ -1817,46 +1871,123 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     (ejectaGeo.getAttribute('color') as THREE.BufferAttribute).needsUpdate = true;
   }
 
+  /**
+   * Traces the real front of radius `au` round the explosion, within `halfRad` of the direction `axisRad`
+   * from it (π: all round), on the map: fills `traceRad`, `traceX`, `traceZ` and returns the number of
+   * corners. The map bends the front most near the Sun and near Earth, where a front set off far away
+   * crosses all the planets within a millionth of a turn: the trace starts from evenly spaced directions
+   * and those toward the Sun and Earth, and halves every stretch that is long on the map (longer than a
+   * share of its distance from the Sun, where the tokens stand close together) until the line is smooth.
+   */
+  function traceFront(au: number, axisRad: number, halfRad: number): number {
+    const from = axisRad - halfRad;
+    const seeds: number[] = [];
+    for (let i = 0; i <= 96; i++) seeds.push(from + (2 * halfRad * i) / 96);
+    for (const target of [{ x: 0, z: 0 }, earthReal]) {
+      const toward = Math.atan2(target.z - srcReal.z, target.x - srcReal.x);
+      // The same direction, brought to within a turn above the start of the arc.
+      const along = from + ((((toward - from) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI));
+      if (along <= axisRad + halfRad) seeds.push(along);
+    }
+    seeds.sort((a, b) => a - b);
+    let count = seeds.length;
+    for (let i = 0; i < count; i++) {
+      const spot = labProject({ x: srcReal.x + Math.cos(seeds[i]) * au, z: srcReal.z + Math.sin(seeds[i]) * au }, earthReal);
+      traceRad[i] = seeds[i];
+      traceX[i] = spot.x;
+      traceZ[i] = spot.z;
+    }
+    for (let pass = 0; pass < 40; pass++) {
+      let filled = 0;
+      let halved = false;
+      for (let i = 0; i < count; i++) {
+        nextRad[filled] = traceRad[i];
+        nextX[filled] = traceX[i];
+        nextZ[filled] = traceZ[i];
+        filled++;
+        if (i === count - 1) break;
+        const stretch = Math.hypot(traceX[i + 1] - traceX[i], traceZ[i + 1] - traceZ[i]);
+        const fromSun = Math.min(Math.hypot(traceX[i], traceZ[i]), Math.hypot(traceX[i + 1], traceZ[i + 1]));
+        // Room is kept for the corners still to be copied.
+        if (stretch > Math.max(0.25, 0.05 * fromSun) && filled + (count - i) < FRONT_POINTS) {
+          const mid = (traceRad[i] + traceRad[i + 1]) / 2;
+          const spot = labProject({ x: srcReal.x + Math.cos(mid) * au, z: srcReal.z + Math.sin(mid) * au }, earthReal);
+          nextRad[filled] = mid;
+          nextX[filled] = spot.x;
+          nextZ[filled] = spot.z;
+          filled++;
+          halved = true;
+        }
+      }
+      [traceRad, nextRad] = [nextRad, traceRad];
+      [traceX, nextX] = [nextX, traceX];
+      [traceZ, nextZ] = [nextZ, traceZ];
+      count = filled;
+      if (!halved) break;
+    }
+    return count;
+  }
+
+  /**
+   * Lays a ribbon along the front last traced (`count` corners). `innerAU` null: the line of the front, a
+   * ribbon `reach` scene units wide on the side of the explosion. Otherwise the veil behind the line: it
+   * reaches back toward the real radius `innerAU` round the explosion, `reach` scene units at most.
+   */
+  function layRibbon(band: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>, count: number, innerAU: number | null, reach: number): void {
+    const position = band.geometry.getAttribute('position') as THREE.BufferAttribute;
+    // A front all round ends where it starts: there its neighbours are those across the join.
+    const closed = Math.hypot(traceX[count - 1] - traceX[0], traceZ[count - 1] - traceZ[0]) < 1e-9;
+    for (let i = 0; i < count; i++) {
+      const before = i > 0 ? i - 1 : closed ? count - 2 : 0;
+      const after = i < count - 1 ? i + 1 : closed ? 1 : count - 1;
+      let backX = -(traceZ[after] - traceZ[before]);
+      let backZ = traceX[after] - traceX[before];
+      let most = reach;
+      if (innerAU !== null) {
+        const inner = labProject({ x: srcReal.x + Math.cos(traceRad[i]) * innerAU, z: srcReal.z + Math.sin(traceRad[i]) * innerAU }, earthReal);
+        backX = inner.x - traceX[i];
+        backZ = inner.z - traceZ[i];
+        most = Math.min(reach, Math.hypot(backX, backZ));
+      }
+      // The map keeps the sense of a turn: seen along the front, the explosion is on the same side as on the real front.
+      const scale = most / Math.max(Math.hypot(backX, backZ), 1e-12);
+      position.setXYZ(i * 2, traceX[i], FRONT_LIFT, traceZ[i]);
+      position.setXYZ(i * 2 + 1, traceX[i] + backX * scale, FRONT_LIFT, traceZ[i] + backZ * scale);
+    }
+    position.needsUpdate = true;
+    band.geometry.setDrawRange(0, (count - 1) * 6);
+  }
+
   function applyConfig(): void {
-    const look = LOOK[kind];
-    srcPos.set(Math.cos(angle), 0, Math.sin(angle)).multiplyScalar(labSceneRadius(distanceAU));
-    away.copy(srcPos).normalize().negate();
-    // The blast passes every other body straight away from the explosion.
-    for (const body of [sunBody, ...tokens]) {
+    const look = LOOK[setup.kind];
+    srcReal = labBlastPlace(setup, laidOut);
+    const spot = labProject(srcReal, earthReal);
+    srcPos.set(spot.x, 0, spot.z);
+    // The blast passes every body straight away from the explosion. One set at a body stands beyond that
+    // body as Earth sees it: it pushes the body toward Earth.
+    for (const body of [earthBody, sunBody, ...tokens]) {
       body.away.copy(body.home).sub(srcPos);
-      if (body.away.lengthSq() < 1e-6) body.away.copy(away);
+      if (body.away.lengthSq() < 1e-6) body.away.copy(earthHome).sub(body.home);
+      if (body.away.lengthSq() < 1e-6) body.away.set(1, 0, 0);
       body.away.normalize();
     }
-    blastGroup.position.copy(srcPos);
-    capTurn.setFromUnitVectors(up, away);
-    cmeFront.quaternion.copy(capTurn);
-    cmeCore.quaternion.copy(capTurn);
-    if (kind === 'cme') ejectaPoints.quaternion.copy(capTurn);
-    else ejectaPoints.quaternion.identity();
-    // A burst's two beams: one at Earth, one the opposite way, as wide as they come out on this map.
-    farTurn.setFromUnitVectors(up, scratchA.copy(away).negate());
-    const half = labBeamMapHalfAngle(distanceAU);
-    if (Math.abs(half - beamHalf) > 0.002) {
-      beamHalf = half;
-      burstCapGeo.dispose();
-      burstCapGeo = new THREE.SphereGeometry(1, 48, 16, 0, Math.PI * 2, 0, beamHalf);
-      for (const front of burstFronts) front.geometry = burstCapGeo;
-    }
-    [capTurn, farTurn].forEach((turn, i) => {
-      burstFronts[i].quaternion.copy(turn);
-      beamCones[i].quaternion.copy(turn);
-    });
-    beamUniforms.uCol.value.copy(look.cool);
+    // The star is drawn at the explosion's place. Set at a body it is three of that body's radii away, far
+    // less than a token is wide: it is drawn beside the token, on the side away from Earth, where it is.
+    const anchorToken = tokens.find((p) => p.id === setup.anchorId);
+    const anchorRadius = setup.kind === 'cme' ? 0 : anchorToken ? anchorToken.def.radius * anchorToken.def.reach : setup.anchorId === 'sun' ? SUN_TOKEN_R : 0;
+    starPos.copy(srcPos);
+    if (anchorRadius > 0) starPos.addScaledVector(scratchA.copy(srcPos).sub(earthHome).normalize(), anchorRadius + look.starRadius * BLAST_SCALE + 0.15);
+    blastGroup.position.copy(starPos);
     styleRings();
 
     // A solar eruption comes from the Sun: for it the Sun itself sits at the chosen spot.
-    sunPos.copy(kind === 'cme' ? srcPos : sunBody.home);
+    sunPos.copy(setup.kind === 'cme' ? srcPos : sunBody.home);
     sunMesh.position.copy(sunPos);
-    sunMesh.visible = kind !== 'cme';
+    sunMesh.visible = setup.kind !== 'cme';
     sunLight.position.copy(sunPos);
     sunPosUniform.value.copy(sunPos);
-    blastPosUniform.value.copy(srcPos);
-    earthUniforms.uSunDir.value.copy(sunPos).normalize();
+    blastPosUniform.value.copy(starPos);
+    earthUniforms.uSunDir.value.copy(sunPos).sub(earthHome).normalize();
     earthUniforms.uBlastCol.value.copy(look.light);
 
     progenitor.material.uniforms.uColA.value.copy(look.starA);
@@ -1865,19 +1996,18 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     progenitorGlow.material.color.copy(look.starA).multiplyScalar(0.5);
     progenitorGlow.scale.setScalar(look.starRadius * 5);
     companion.position.set(1.25, 0, 0.2);
-    for (const shell of [shockShell, ejectaShell, fireball, cmeFront, cmeCore, ...burstFronts]) {
-      shell.material.uniforms.uColA.value.copy(look.cool);
-      shell.material.uniforms.uColB.value.copy(look.hot);
-    }
-    shockShell.material.uniforms.uColA.value.copy(look.hot);
-    lightFront.material.uniforms.uColA.value.set(1, 1, 1);
-    lightFront.material.uniforms.uColB.value.set(1, 1, 1);
-    magGroup.visible = kind === 'cme';
-    magGroup.rotation.y = -angle;
-    ozoneUniforms.uShow.value = kind === 'cme' ? 0 : 0.8;
-    linkGeo.setFromPoints([new THREE.Vector3(), srcPos]);
-    if (blastTag.label !== KIND_TAG[kind]) {
-      blastTag.label = KIND_TAG[kind];
+    fireball.material.uniforms.uColA.value.copy(look.cool);
+    fireball.material.uniforms.uColB.value.copy(look.hot);
+    lightBand.material.uniforms.uCol.value.set(1, 1, 1);
+    for (const band of edgeBands) band.material.uniforms.uCol.value.copy(look.hot);
+    for (const band of glowBands) band.material.uniforms.uCol.value.copy(look.cool);
+    magGroup.visible = setup.kind === 'cme';
+    // The picture of the magnetosphere faces the incoming cloud.
+    magGroup.rotation.y = -Math.atan2(srcPos.z - earthHome.z, srcPos.x - earthHome.x);
+    ozoneUniforms.uShow.value = setup.kind === 'cme' ? 0 : 0.8;
+    linkGeo.setFromPoints([earthHome, srcPos]);
+    if (blastTag.label !== KIND_TAG[setup.kind]) {
+      blastTag.label = KIND_TAG[setup.kind];
       drawLabel(blastTag);
     }
   }
@@ -1886,7 +2016,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     if (suit || suitPromise) return;
     suitPromise = createSuitRig(false).then((rig) => {
       suit = rig;
-      rig.root.scale.setScalar(0.55);
+      rig.root.scale.setScalar(0.55 * EARTH_SCALE);
       rig.root.visible = evaMode;
       scene.add(rig.root);
     }).catch(() => undefined);
@@ -1931,27 +2061,29 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     // A click on a body or on its name sets the explosion at that body, as its chip does. (The erupting Sun
     // is the explosion itself.)
     for (const { tag, body } of clickable) {
-      if (tag.radiusPx <= 0 || (kind === 'cme' && body.kind === 'sun')) continue;
+      if (tag.radiusPx <= 0 || (setup.kind === 'cme' && body.kind === 'sun')) continue;
       const onBody = Math.hypot(tag.x - cx, tag.y - cy) <= Math.max(12, tag.radiusPx);
       const onName = tag.written && cx >= tag.left && cx <= tag.right && cy >= tag.top && cy <= tag.bottom;
       if (onBody || onName) {
-        placeCb(body.spotRad, body.distanceAU, body.id);
+        placeCb(body.angleRad, body.distanceAU, body.id);
         return;
       }
     }
-    // Earth is the middle of the map: nothing can be set at it, on its globe or on its name.
+    // Nothing can be set at Earth itself: a click on its globe or on its name is no place.
+    if (Math.hypot(earthTag.x - cx, earthTag.y - cy) <= earthTag.radiusPx) return;
     if (earthTag.written && cx >= earthTag.left && cx <= earthTag.right && cy >= earthTag.top && cy <= earthTag.bottom) return;
     ndc.set((cx / rect.width) * 2 - 1, -(cy / rect.height) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
-    if (!raycaster.ray.intersectPlane(mapPlane, hitPt)) return;
-    const r = Math.hypot(hitPt.x, hitPt.z);
-    if (r < LAB_EARTH_R * 1.25 || r > labSceneRadius(LAB_MAX_AU) + 1.5) return;
-    placeCb(Math.atan2(hitPt.z, hitPt.x), labMapDistanceAU(r), null);
+    if (!raycaster.ray.intersectPlane(mapPlane, hitPt) || Math.hypot(hitPt.x, hitPt.z) > MAP_RADIUS) return;
+    // The real place under the pointer, as Earth sees it.
+    const place = labUnproject({ x: hitPt.x, z: hitPt.z }, earthReal);
+    const distance = Math.hypot(place.x - earthReal.x, place.z - earthReal.z);
+    placeCb(Math.atan2(place.z - earthReal.z, place.x - earthReal.x), Math.min(LAB_MAX_AU, Math.max(LAB_MIN_AU, distance)), null);
   };
   const onWheel = (e: WheelEvent): void => {
     e.preventDefault();
-    // Never nearer than three radii of what the view is centred on: Earth, or the body in focus when close.
-    const nearest = 3 * (LAB_EARTH_R + (focusBody().radius - LAB_EARTH_R) * tClose);
+    // Never nearer than three radii of what the view is centred on: the Sun, or the body in focus when close.
+    const nearest = 3 * (SUN_TOKEN_R + (focusBody().radius - SUN_TOKEN_R) * tClose);
     tDist = Math.max(nearest, Math.min(fitDistance(MAP_RADIUS, 1.05) * 1.25, tDist * Math.exp(e.deltaY * 0.001)));
     manual = true;
     ease = 7;
@@ -1960,7 +2092,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
   const ramp = (t: number, duration: number): number => Math.min(1, Math.max(0, t / duration));
 
   /**
-   * Camera distance from which a circle of radius `r` on the map, centred on Earth and seen from elevation
+   * Camera distance from which a circle of radius `r` on the map, centred on the Sun and seen from elevation
    * `elev`, fits in the part of the screen that the panels and bars leave free.
    */
   function fitDistance(r: number, elev: number): number {
@@ -1973,15 +2105,16 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
   }
 
   /**
-   * Aims the camera for one of the three framings. Close, the explosion ends up to the right of the body in
-   * focus; in the two overviews, to the right of Earth.
+   * Aims the camera for one of the three framings. The two overviews look at the map from the north with
+   * ecliptic longitude 0 to the right, so that the planets go round anticlockwise; close, the explosion
+   * ends up to the right of the body in focus.
    */
   function applyFraming(next: LabFraming): void {
     framing = next;
     manual = false;
     const body = focusBody();
-    const toBlast = next === 'close' ? Math.atan2(srcPos.z - body.home.z, srcPos.x - body.home.x) : angle;
-    const turn = toBlast + Math.PI / 2 - (next === 'close' ? 0.25 : 0) - lon;
+    const aimLon = next === 'close' ? Math.atan2(srcPos.z - body.home.z, srcPos.x - body.home.x) + Math.PI / 2 - 0.25 : Math.PI / 2;
+    const turn = aimLon - lon;
     tLon = lon + Math.atan2(Math.sin(turn), Math.cos(turn));
     if (next === 'close') {
       tLat = 0.6;
@@ -1990,12 +2123,12 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       return;
     }
     tLat = next === 'map' ? 1.05 : 0.95;
-    // The whole orbit the explosion sits on, and never less than all the planets.
-    tDist = fitDistance(next === 'map' ? MAP_RADIUS : Math.max(labSceneRadius(distanceAU) + 3.5, PLANETS_RADIUS), tLat);
+    // All the planets, and the explosion's place when it lies beyond them.
+    tDist = fitDistance(next === 'map' ? MAP_RADIUS : Math.max(srcPos.length() + 3.5, PLANETS_RADIUS), tLat);
     tClose = 0;
   }
 
-  /** The framing the user picked, or the camera's own: the whole orbit the explosion sits on, Earth at its centre. */
+  /** The framing the user picked, or the camera's own: all the planets, the Sun at the centre. */
   function frameView(): void {
     applyFraming(chosen ?? 'orbit');
     ease = 2.4;
@@ -2076,15 +2209,13 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       if (playing) elapsed = Math.min(runSec, elapsed + flow);
       const running = playing && elapsed < runSec;
       const o = impact.outcome;
-      const look = LOOK[kind];
-      // A solar eruption sends a cloud one way, a burst two thin fronts of rays, a supernova shells all round.
-      const solar = kind === 'cme';
-      const burst = kind === 'grb';
+      const look = LOOK[setup.kind];
+      // A solar eruption sends a cloud one way, a burst two thin fronts of rays, a supernova a blast all round.
+      const solar = setup.kind === 'cme';
+      const burst = setup.kind === 'grb';
       // A burst's rays are its light: nothing runs ahead of its front.
-      const sinceLight = playing ? elapsed - (burst ? LAB_SHOCK_SEC : LAB_LIGHT_SEC) : -1;
-      const hasBlast = impact.steps.some((s) => s.id === 'shock');
-      const sinceShock = playing && hasBlast ? elapsed - LAB_SHOCK_SEC : -1;
-      const reach = srcPos.length();
+      const sinceLight = playing ? elapsed - impact.lightAtSec : -1;
+      const sinceShock = playing && impact.shockAtSec !== null ? elapsed - impact.shockAtSec : -1;
       const doomed = o.breakup >= LAB_BREAKUP_AT;
       const sinceBreakup = doomed ? sinceShock - BREAKUP_DELAY_SEC : -1;
 
@@ -2095,13 +2226,13 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       progenitorGlow.visible = intact;
       markerRing.visible = !playing;
       linkLine.visible = !playing;
-      const binary = kind === 'sn1a';
+      const binary = setup.kind === 'sn1a';
       disc.visible = binary && !playing;
       companion.visible = binary;
       disc.rotation.z = time * 0.6;
       // The companion of a Type Ia survives and flies off at its orbital speed.
       if (binary && playing) companion.position.set(1.25 + elapsed * 0.25, 0, 0.2 + elapsed * 0.9);
-      progenitor.material.uniforms.uGain.value = kind === 'sn2' ? 0.9 + 0.1 * Math.sin(time * 1.3) : 1;
+      progenitor.material.uniforms.uGain.value = setup.kind === 'sn2' ? 0.9 + 0.1 * Math.sin(time * 1.3) : 1;
 
       // Detonation flash.
       const flashT = playing ? elapsed : -1;
@@ -2113,70 +2244,60 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
         flashSprite.material.color.copy(look.light);
       }
 
-      // Light front, blast wave, ejecta.
-      const shells = !solar && !burst;
-      const frontR = playing ? Math.max(0.01, labFrontRadius(reach, elapsed)) : 0;
-      // A blast that never arrives stalls part of the way and fades.
-      const blastR = hasBlast ? frontR : Math.min(frontR, reach * 0.55);
-      const dilute = Math.min(1, (6 / Math.max(blastR, 0.01)) ** 0.9);
-      const age = hasBlast ? Math.max(0, 1 - Math.max(0, sinceShock - 7) / 9) : Math.max(0, 1 - elapsed / (LAB_SHOCK_SEC * 1.1));
-      // A burst's rays pass and are gone: by the time the time-lapse stops their fronts have faded out, and the
-      // picture it holds is of what they did.
-      const passing = burst ? THREE.MathUtils.clamp((runSec - elapsed) / BURST_FADE_SEC, 0, 1) : 1;
-      const blastAlpha = playing ? dilute * age * passing : 0;
-      const lightR = playing ? reach * (elapsed / LAB_LIGHT_SEC) : 0;
-      lightFront.visible = playing && !burst && lightR < 150;
-      lightFront.scale.setScalar(Math.max(0.01, lightR));
-      lightFront.material.uniforms.uAlpha.value = 0.5 * Math.min(1, (4 / Math.max(lightR, 0.01)) ** 0.8);
+      // The fronts, at the real size they have at this second of the time-lapse: the light all round, and
+      // what follows it: a blast all round, a cloud toward Earth, or (a burst) the rays in the beam toward
+      // Earth and in the one the opposite way. Once the last body has been reached they run on and fade.
+      const fronts = labFrontsAU(setup, playing ? labClockRealSec(clock, elapsed) : 0);
+      const lastArrivalSec = clock.knots[clock.knots.length - 1]?.sec ?? 0;
+      const fade = playing ? THREE.MathUtils.clamp(1 - (elapsed - lastArrivalSec - 1) / FRONT_FADE_SEC, 0, 1) : 0;
+      const toEarth = Math.atan2(earthReal.z - srcReal.z, earthReal.x - srcReal.x);
+      const frontAU = burst ? fronts.lightAU : fronts.blastAU ?? 0;
+      const halfRad = burst ? BURST_HALF_WIDTH_RAD : solar ? CME_HALF_WIDTH_RAD : Math.PI;
+      const thin = burst ? 1 - BURST_CLOSE_THIN * close : 1;
+      const lineWidth = FRONT_LINE_WIDTH * dist;
+      lightBand.visible = !burst && fade > 0.004;
+      if (lightBand.visible) {
+        layRibbon(lightBand, traceFront(fronts.lightAU, toEarth, Math.PI), null, lineWidth);
+        lightBand.material.uniforms.uAlpha.value = (solar ? 0.3 : 0.6) * fade;
+      }
+      edgeBands.forEach((edge, i) => {
+        const glow = glowBands[i];
+        edge.visible = fade > 0.004 && frontAU > 0 && (i === 0 || burst);
+        glow.visible = edge.visible;
+        if (!edge.visible) return;
+        const count = traceFront(frontAU, toEarth + i * Math.PI, halfRad);
+        layRibbon(edge, count, null, lineWidth * 1.4);
+        // A cloud's veil fills the cloud back to the Sun. A burst's lies in the cone its rays have swept and
+        // a blast's in the shell of ejecta behind the shock, neither farther back than a short way on the map.
+        layRibbon(glow, count, burst || solar ? 0 : frontAU * 0.8, solar ? Infinity : FRONT_VEIL_REACH);
+        edge.material.uniforms.uAlpha.value = fade * thin;
+        glow.material.uniforms.uAlpha.value = (solar ? 0.3 : 0.2) * fade * thin;
+      });
 
-      shockShell.visible = shells && blastAlpha > 0.004;
-      ejectaShell.visible = shockShell.visible;
+      // The hot bubble at the explosion's own place.
       fireball.visible = !solar && playing && elapsed < 14;
-      shockShell.scale.setScalar(Math.max(0.01, blastR));
-      ejectaShell.scale.setScalar(Math.max(0.01, blastR * 0.84));
-      shockShell.material.uniforms.uAlpha.value = blastAlpha * 0.9;
-      ejectaShell.material.uniforms.uAlpha.value = blastAlpha * 0.75;
-      // The hot bubble never runs ahead of the blast front (which is slow on the map when the explosion is close).
-      fireball.scale.setScalar(Math.min(0.5 + 2.4 * (1 - Math.exp(-elapsed * 0.9)), Math.max(0.5, blastR * 0.7)) * (burst ? 0.45 : 1));
+      fireball.scale.setScalar((0.5 + 2.4 * (1 - Math.exp(-elapsed * 0.9))) * (burst ? 0.45 : 1));
       fireball.material.uniforms.uAlpha.value = playing ? 1.6 * Math.exp(-elapsed * 0.32) : 0;
       fireball.material.uniforms.uSeed.value = 12.9 + elapsed * 0.25;
       fireball.rotation.y = elapsed * 0.3;
 
-      cmeFront.visible = solar && blastAlpha > 0.004;
-      cmeCore.visible = cmeFront.visible;
-      cmeFront.scale.setScalar(Math.max(0.01, blastR));
-      cmeCore.scale.setScalar(Math.max(0.01, blastR * 0.8));
-      cmeFront.material.uniforms.uAlpha.value = blastAlpha * 1.1;
-      cmeCore.material.uniforms.uAlpha.value = blastAlpha * 0.8;
-
-      // A burst: the two fronts of rays, and behind each the cone it has swept.
-      const beamAlpha = burst ? blastAlpha : 0;
-      const beamGlow = beamAlpha * (1 - BURST_CLOSE_THIN * close);
-      const mouth = blastR * Math.tan(beamHalf);
-      burstFronts.forEach((front, i) => {
-        front.visible = beamAlpha > 0.004;
-        front.scale.setScalar(Math.max(0.01, blastR));
-        front.material.uniforms.uAlpha.value = beamGlow * 1.3;
-        beamCones[i].visible = front.visible;
-        // The cone's mouth sits on the rim of the front.
-        beamCones[i].scale.set(Math.max(0.01, mouth * Math.cos(beamHalf)), Math.max(0.01, blastR * Math.cos(beamHalf)), Math.max(0.01, mouth * Math.cos(beamHalf)));
-      });
-      beamUniforms.uAlpha.value = beamGlow * 0.9;
-
-      ejectaPoints.visible = !burst && blastAlpha > 0.004;
+      ejectaPoints.visible = !burst && fade > 0.004 && frontAU > 0;
       if (ejectaPoints.visible) {
         for (let i = 0; i < EJECTA_PARTICLES; i++) {
-          const r = blastR * ejectaSpeed[i];
-          ejectaPos[i * 3] = ejectaDir[i * 3] * r;
-          ejectaPos[i * 3 + 1] = ejectaDir[i * 3 + 1] * r;
-          ejectaPos[i * 3 + 2] = ejectaDir[i * 3 + 2] * r;
+          const a = toEarth + ejectaTurn[i];
+          const r = frontAU * ejectaSpeed[i] * Math.cos(ejectaLift[i]);
+          const spot = labProject({ x: srcReal.x + Math.cos(a) * r, z: srcReal.z + Math.sin(a) * r }, earthReal);
+          ejectaPos[i * 3] = spot.x;
+          // Out of the plane a grain rises by a share of the way it has come on the map.
+          ejectaPos[i * 3 + 1] = Math.sin(ejectaLift[i]) * 0.35 * Math.hypot(spot.x - srcPos.x, spot.z - srcPos.z);
+          ejectaPos[i * 3 + 2] = spot.z;
         }
         (ejectaGeo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
-        ejectaMat.uniforms.uOpacity.value = Math.min(0.55, blastAlpha);
-        ejectaMat.uniforms.uSize.value = 0.2 + Math.min(0.3, blastR * 0.01);
+        ejectaMat.uniforms.uOpacity.value = Math.min(0.55, fade);
+        ejectaMat.uniforms.uSize.value = 0.25;
       }
 
-      pulsar.visible = kind === 'sn2' && playing && elapsed > 2.2;
+      pulsar.visible = setup.kind === 'sn2' && playing && elapsed > 2.2;
       if (pulsar.visible) {
         pulsar.rotation.y = time * 5;
         pulsarGlow.material.opacity = 0.55 + 0.45 * Math.sin(time * 30);
@@ -2236,26 +2357,33 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       const wreckShows = (of: FocusBody): boolean => close < 0.5 || of.radius <= body.radius;
       const broken = sinceBreakup >= 0;
       earthWreck.group.visible = wreckShows(earthBody);
-      earthWreck.update(airLost, sinceShock, sinceBreakup, LAB_EARTH_R);
+      earthWreck.update(airLost, sinceShock, sinceBreakup, EARTH_TOKEN_R);
       earthMesh.visible = !broken || sinceBreakup < 0.7;
       atmoMesh.visible = !broken;
       earthMesh.scale.setScalar(broken ? Math.max(0.01, 1 - sinceBreakup / 0.7) : 1);
 
       // The blast pushes Earth (or its remains) away from the explosion.
-      const push = sinceShock >= 0 ? o.kick * KICK_RADII * LAB_EARTH_R * (1 - Math.exp(-sinceShock * 0.22)) : 0;
-      earthGroup.position.copy(away).multiplyScalar(push);
+      const push = sinceShock >= 0 ? o.kick * KICK_RADII * EARTH_TOKEN_R * (1 - Math.exp(-sinceShock * 0.22)) : 0;
+      earthGroup.position.copy(earthHome).addScaledVector(away, push);
       earthBody.push = push;
       earthBody.since = sinceShock;
       earthBody.jolt = 0.15 + o.atmosphere + o.breakup;
-      const carried = push > 0.5;
+      const carried = push > 0.5 * EARTH_SCALE;
       originRing.visible = carried;
       driftLine.visible = carried;
       originLabel.visible = carried;
       if (carried) {
         const ends = driftGeo.getAttribute('position') as THREE.BufferAttribute;
+        ends.setXYZ(0, earthHome.x, 0, earthHome.z);
         ends.setXYZ(1, earthGroup.position.x, 0, earthGroup.position.z);
         ends.needsUpdate = true;
       }
+      earthOrbit.visible = !carried;
+      tokens.forEach((p, n) => {
+        const orbit = orbits[n];
+        if (orbit) orbit.visible = p.onMap;
+        if (p.def.id === 'moon') moonOrbit.visible = p.onMap && !carried;
+      });
       earthMesh.rotation.y += flow * 0.08;
 
       // Every named body says where it is on the screen and how big; the names are set out after that.
@@ -2355,7 +2483,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       sunMesh.position.copy(sunPos);
       sunLight.position.copy(sunPos);
       sunPosUniform.value.copy(sunPos);
-      earthUniforms.uSunDir.value.copy(sunPos).normalize();
+      earthUniforms.uSunDir.value.copy(sunPos).sub(earthGroup.position).normalize();
       const sunPx = pxAt(sunPos);
       const sunSize = Math.max(SUN_TOKEN_R, 7 / sunPx);
       sunMesh.visible = !solar && sunGone < 0.7;
@@ -2374,15 +2502,15 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       carriedEnds.setXYZ(tokens.length * 2, sunBody.home.x, 0, sunBody.home.z);
       carriedEnds.setXYZ(tokens.length * 2 + 1, sunMoved.x, 0, sunMoved.z);
       carriedEnds.needsUpdate = true;
-      name(sunTag, sunPos, (solar ? look.starRadius : sunSize) * 1.3 * sunPx, sunGone >= 0 ? 0 : 0.92);
+      name(sunTag, sunPos, (solar ? look.starRadius * BLAST_SCALE : sunSize) * 1.3 * sunPx, sunGone >= 0 ? 0 : 0.92);
 
-      const earthPx = LAB_EARTH_R * pxAt(earthGroup.position);
+      const earthPx = EARTH_TOKEN_R * pxAt(earthGroup.position);
       earthMark.visible = !concealed && impact.level !== 'safe' && !broken;
       earthMark.position.copy(earthGroup.position);
       earthMark.material.opacity = markOpacity(earthPx);
 
       // The spacecraft are named in views close enough to tell them apart.
-      const satShow = magGroup.visible ? 0.9 * (1 - THREE.MathUtils.smoothstep(dist, 26, 40)) : 0;
+      const satShow = magGroup.visible ? 0.9 * (1 - THREE.MathUtils.smoothstep(dist, 8, 14)) : 0;
       for (const sat of satMarkers) {
         sat.holder.updateWorldMatrix(true, false);
         sat.holder.localToWorld(sat.at.copy(sat.def.tagAt));
@@ -2390,32 +2518,14 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       }
 
       // ── camera ──
-      // The view closes in on the body in focus for the consequences, unless that body comes to no harm or the
-      // user has taken the view over: just before the blast arrives where the body is large enough in the
-      // overview to show the flash on it, otherwise as soon as the explosion has been seen going off.
-      const bodyFate = focusFate();
-      const bodyShockAt = bodyFate ? bodyFate.shockAtSec : hasBlast ? LAB_SHOCK_SEC : null;
-      const pxPerUnit = viewH / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * dist);
-      const closeAt = bodyShockAt !== null && body.radius * pxPerUnit >= 26 ? bodyShockAt - 1.4 : 0.9;
-      if (playing && !closedIn && elapsed > closeAt) {
-        closedIn = true;
-        if (chosen === null && !manual && (bodyFate ? bodyFate.level : impact.level) !== 'safe') {
-          applyFraming('close');
-          ease = 2;
-        }
-      }
-      // The whole-orbit view widens to keep Earth in the frame as the blast carries it off.
-      if (framing === 'orbit' && !manual && push > 0) tDist = Math.max(tDist, fitDistance(push + 4.5, tLat));
       const k = Math.min(1, dt * ease);
       lon += (tLon - lon) * k;
       lat += (tLat - lat) * k;
       dist += (tDist - dist) * k;
       close += (tClose - close) * k;
 
-      // Earth's and the explosion's names are for views far enough out that the two are only a few pixels wide.
-      const farOut = THREE.MathUtils.smoothstep(dist, 34, 52);
-      name(earthTag, earthGroup.position, earthPx, broken ? 0 : 0.95 * farOut);
-      name(blastTag, srcPos, look.starRadius * 1.3 * pxAt(srcPos), kind === 'cme' ? 0 : 0.95 * farOut);
+      name(earthTag, earthGroup.position, earthPx, broken ? 0 : 0.95);
+      name(blastTag, starPos, look.starRadius * BLAST_SCALE * 1.3 * pxAt(starPos), solar ? 0 : 0.95);
       for (const mark of landmarks) {
         // A star of the map that explodes is the explosion itself.
         const exploding = mark.position.distanceToSquared(srcPos) < 0.3;
@@ -2497,21 +2607,18 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
         } else {
           evaVel.multiplyScalar(Math.exp(-dt * 1.4));
         }
-        // The passing blast front shoves the astronaut outward and runs on ahead: it gives at most a share of
-        // its own speed, only where it is (a cloud's cone, a burst's two beams), and nothing once it has
-        // faded or the time-lapse has stopped.
-        if (running && blastAlpha > 0.004) {
-          const toAstro = scratchA.copy(evaPos).sub(srcPos);
-          const dAstro = toAstro.length();
-          if (Math.abs(dAstro - blastR) < 1.2 && dAstro > 0.3) {
-            toAstro.divideScalar(dAstro);
-            const offAxis = Math.acos(THREE.MathUtils.clamp(toAstro.dot(away), -1, 1));
-            const inFront = solar ? offAxis <= CME_HALF_WIDTH_RAD : !burst || offAxis <= beamHalf || offAxis >= Math.PI - beamHalf;
-            const frontSpeed = hasBlast || frontR < reach * 0.55 ? labFrontSpeed(reach, elapsed) : 0;
-            const lag = EVA_SHOVE_SHARE * frontSpeed - evaVel.dot(toAstro);
-            if (inFront && lag > 0) evaVel.addScaledVector(toAstro, Math.min(lag, flow * 16 * blastAlpha));
-          }
+        // A passing front (a blast, a cloud, a burst's rays) shoves the astronaut away from the explosion:
+        // once, as it passes the real place the astronaut's spot on the map stands for, and only where the
+        // front is (a cloud's cone, a burst's two beams).
+        const astro = labUnproject({ x: evaPos.x, z: evaPos.z }, earthReal);
+        const astroAU = Math.hypot(astro.x - srcReal.x, astro.z - srcReal.z);
+        const offAxis = Math.abs(Math.atan2(astro.z - srcReal.z, astro.x - srcReal.x) - toEarth) % (2 * Math.PI);
+        const fromAxis = Math.min(offAxis, 2 * Math.PI - offAxis);
+        const inFront = fromAxis <= halfRad || (burst && fromAxis >= Math.PI - halfRad);
+        if (running && inFront && frontWasAU < astroAU && frontAU >= astroAU) {
+          evaVel.addScaledVector(scratchA.copy(evaPos).sub(srcPos).setY(0).normalize(), EVA_SHOVE * fade);
         }
+        frontWasAU = frontAU;
         evaPos.addScaledVector(evaVel, dt);
         suit.root.position.copy(evaPos);
         suit.root.rotation.y = -lon + Math.PI / 2;
@@ -2520,11 +2627,11 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
           rRaise: 18 - Math.sin(time * 1.6) * 6, rSpread: 14, rElbow: 32,
           lHip: 12, lKnee: 28, rHip: 6, rKnee: 22,
         });
-        const back = Math.min(10, dist * 0.45);
+        const back = Math.min(3.5, dist * 0.2);
         camera.position.set(evaPos.x + back * cp * Math.cos(lon), evaPos.y + back * Math.sin(lat) + 0.6, evaPos.z + back * cp * Math.sin(lon));
         camera.lookAt(evaPos);
       } else {
-        // Overview: centred on where Earth started, so its drift shows against the map. Close view: aimed just
+        // Overview: centred on the Sun. Close view: aimed just
         // ahead of the body in focus, following it most of the way as it is carried off and backing away a little.
         const lead = Math.min(body.home.distanceTo(srcPos) * 0.5, ((4.5 - 2 * Math.min(1, body.push / (KICK_RADII * body.radius))) * body.radius) / LAB_EARTH_R);
         const aim = tmp.copy(body.home).addScaledVector(body.away, body.push * 0.82 - lead).multiplyScalar(close);
@@ -2542,86 +2649,66 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
 
     layoutFor(jdTT: number): LabBody[] {
       const places = geocentricPlaces(jdTT);
-      const put = (out: THREE.Vector3, angleRad: number, au: number): void => {
-        out.set(Math.cos(angleRad), 0, Math.sin(angleRad)).multiplyScalar(labSceneRadius(au));
-      };
       // Ecliptic longitude runs anticlockwise seen from the north; the map is looked at from the north.
       const sunAngle = -THREE.MathUtils.degToRad(places.sun.lonDeg);
-      put(sunBody.home, sunAngle, places.sun.distanceAU);
-      // The tokens of the solar system. The Sun is given the room it takes when it is the one erupting.
-      const placed: Array<{ body: LabBody; position: THREE.Vector3; radius: number }> = [{
-        body: { id: 'sun', name: BODY_NAMES.sun, kind: 'sun', angleRad: sunAngle, skyAngleRad: sunAngle, spotRad: sunAngle, distanceAU: places.sun.distanceAU },
-        position: sunBody.home,
-        radius: Math.max(SUN_TOKEN_R, LOOK.cme.starRadius),
-      }];
-      // The tokens are far bigger than the bodies they stand for, so bodies close together in the sky would hide
-      // one another: a token that would overlap another is moved aside along its own ring, by as little as it
-      // takes (11° at most). The map is seen at a slant, which brings tokens a quarter closer together.
-      for (const p of tokens) {
+      earthReal = labPlaceFromEarth({ x: 0, z: 0 }, sunAngle + Math.PI, places.sun.distanceAU);
+      const earthSpot = labProject(earthReal, earthReal);
+      earthHome.set(earthSpot.x, 0, earthSpot.z);
+      earthOrbit.scale.setScalar(earthHome.length());
+      lensEdge.position.copy(earthHome);
+      originRing.position.copy(earthHome);
+      originLabel.position.set(earthHome.x + 0.25 * EARTH_SCALE, 0.05, earthHome.z - (LAB_EARTH_R + 0.5) * EARTH_SCALE);
+      const bodies: LabBody[] = [{ id: 'sun', name: BODY_NAMES.sun, kind: 'sun', angleRad: sunAngle, distanceAU: places.sun.distanceAU }];
+      tokens.forEach((p, n) => {
         const place = places[p.def.place];
-        const skyAngleRad = -THREE.MathUtils.degToRad(place.lonDeg);
-        const radius = p.def.radius * p.def.reach;
-        // A moon of another planet is at its planet's place in space: its token starts out beside the planet's.
-        const host = placed.find((other) => other.body.id === p.def.host);
-        const startRad = host ? host.body.angleRad + ((host.radius + radius) * 1.3) / labSceneRadius(place.distanceAU) : skyAngleRad;
-        let angleRad = startRad;
-        for (let step = 0; step <= 40; step++) {
-          // That direction first, then ever farther to either side of it.
-          angleRad = startRad + (step % 2 === 0 ? 0.01 : -0.01) * Math.ceil(step / 2);
-          put(p.home, angleRad, place.distanceAU);
-          if (placed.every((other) => other.position.distanceTo(p.home) > (other.radius + radius) * 1.25 + 0.3)) break;
+        const angleRad = -THREE.MathUtils.degToRad(place.lonDeg);
+        const host = tokens.find((other) => other.id === p.def.host);
+        if (host) {
+          // A moon of another planet is at its planet's place in space, a few thousandths of an AU from it:
+          // its token stands beside the planet's, ahead of it on its orbit.
+          const gap = (host.def.radius * host.def.reach + p.def.radius) * 1.3;
+          p.home.set(-host.home.z, 0, host.home.x).normalize().multiplyScalar(gap).add(host.home);
+        } else {
+          const spot = labProject(labPlaceFromEarth(earthReal, angleRad, place.distanceAU), earthReal);
+          p.home.set(spot.x, 0, spot.z);
         }
-        placed.push({
-          body: { id: p.id, name: p.def.name, kind: p.def.id === 'moon' || p.def.host !== null ? 'moon' : 'planet', angleRad, skyAngleRad, spotRad: angleRad, distanceAU: place.distanceAU },
-          position: p.home,
-          radius,
-        });
-      }
-      // An explosion set at one of these stands beside it on its own ring, on the side with more room.
-      for (const token of placed) {
-        const ring = token.position.length();
-        const step = (token.radius + SPOT_GAP) / ring;
-        let room = -Infinity;
-        for (const side of [1, -1]) {
-          const a = token.body.angleRad + side * step;
-          scratchA.set(Math.cos(a) * ring, 0, Math.sin(a) * ring);
-          let least = Infinity;
-          for (const other of placed) {
-            if (other !== token) least = Math.min(least, other.position.distanceTo(scratchA) - other.radius);
+        orbits[n]?.scale.setScalar(p.home.length());
+        if (p.def.id === 'moon') {
+          // The Moon's way round Earth, as the magnified neighbourhood shows it.
+          const way = moonOrbit.geometry.getAttribute('position') as THREE.BufferAttribute;
+          for (let i = 0; i < way.count; i++) {
+            const spot = labProject(labPlaceFromEarth(earthReal, (i / (way.count - 1)) * Math.PI * 2, place.distanceAU), earthReal);
+            way.setXYZ(i, spot.x, 0, spot.z);
           }
-          if (least > room) {
-            room = least;
-            token.body.spotRad = a;
-          }
+          way.needsUpdate = true;
         }
-      }
+        bodies.push({ id: p.id, name: p.def.name, kind: p.def.id === 'moon' || p.def.host !== null ? 'moon' : 'planet', angleRad, distanceAU: place.distanceAU });
+      });
       clickable = [
-        { tag: sunTag, body: placed[0].body },
-        ...tokens.map((p, i) => ({ tag: p.tag, body: placed[i + 1].body })),
+        { tag: sunTag, body: bodies[0] },
+        ...tokens.map((p, i) => ({ tag: p.tag, body: bodies[i + 1] })),
         ...landmarks.map((mark) => ({ tag: mark.tag, body: mark.body })),
       ];
+      laidOut = clickable.map((entry) => entry.body);
       applyConfig();
       seedWreckage();
-      return clickable.map((entry) => entry.body).sort((a, b) => a.distanceAU - b.distanceAU);
+      return [...laidOut].sort((a, b) => a.distanceAU - b.distanceAU);
     },
 
-    configure(nextKind: LabExplosionKind, angleRad: number, nextDistanceAU: number, keepView: boolean): void {
-      const kindChanged = nextKind !== kind;
-      kind = nextKind;
-      angle = angleRad;
-      distanceAU = Math.min(LAB_MAX_AU, Math.max(LAB_MIN_AU, nextDistanceAU));
+    configure(next: LabSetup, keepView: boolean): void {
+      const kindChanged = next.kind !== setup.kind;
+      setup = next;
       applyConfig();
       if (kindChanged) seedEjecta();
       seedWreckage();
       if (!keepView) frameView();
     },
 
-    setResults(nextImpact: LabImpact, fates: LabFate[]): void {
-      impact = nextImpact;
-      runSec = labRunSeconds(impact, fates);
+    setResults(results: LabResults): void {
+      ({ impact, runSec, clock } = results);
       earthMark.material.color.setHex(LEVEL_COLOUR[impact.level]);
       for (const body of [sunBody, ...tokens]) {
-        body.fate = fates.find((f) => f.id === body.id) ?? null;
+        body.fate = results.fates.find((f) => f.id === body.id) ?? null;
         body.mark.material.color.setHex(LEVEL_COLOUR[body.fate?.level ?? 'safe']);
       }
       for (const sat of satMarkers) {
@@ -2652,7 +2739,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       playing = true;
       paused = false;
       elapsed = 0;
-      closedIn = false;
+      frontWasAU = 0;
     },
 
     resetExplosion(): void {
@@ -2661,8 +2748,6 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       playing = false;
       paused = false;
       elapsed = 0;
-      if (closedIn && !manual) frameView();
-      closedIn = false;
     },
 
     setPaused(on: boolean): void {
@@ -2769,13 +2854,15 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       disposed = true;
       for (const map of maps) map.dispose();
       for (const g of [
-        starGeo, unitSphere, capGeo, burstCapGeo, beamConeGeo, debrisGeo, fieldGeo, bowGeo, orbitGeo, craftGeo, oneCraftGeo, linkGeo, discGeo, beamGeo,
+        starGeo, unitSphere, debrisGeo, fieldGeo, bowGeo, orbitGeo, craftGeo, oneCraftGeo, linkGeo, discGeo, beamGeo, circleGeo, moonOrbitGeo,
         ejectaGeo, originGeo, driftGeo, carriedGeo, markGeo, ringGeo, skyDome.geometry, earthMesh.geometry, markerRing.geometry, ...ringGeos,
+        ...[lightBand, ...edgeBands, ...glowBands].map((band) => band.geometry),
       ]) g.dispose();
       for (const m of [
-        starMat, skyMat, ringMat, sunMat, starMat2, companionMat, earthMat, atmoMat, ozoneMat, fieldMat, bowMat, discMat, beamMat, beamConeMat, ejectaMat,
-        originMat, carriedMat, earthMark.material, sunGlow.material, linkLine.material, markerRing.material, progenitorGlow.material, flashSprite.material,
-        pulsarGlow.material,
+        starMat, skyMat, ringMat, sunMat, starMat2, companionMat, earthMat, atmoMat, ozoneMat, fieldMat, bowMat, discMat, beamMat, ejectaMat,
+        originMat, carriedMat, orbitMat, earthOrbitMat, lensMat, earthMark.material, sunGlow.material, linkLine.material, markerRing.material,
+        progenitorGlow.material, flashSprite.material, pulsarGlow.material, fireball.material,
+        ...[lightBand, ...edgeBands, ...glowBands].map((band) => band.material),
       ]) m.dispose();
       for (const look of ringLooks) look.line.dispose();
       for (const sat of satMarkers) {
@@ -2792,7 +2879,6 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
         mark.glow.material.dispose();
         mark.core.material.dispose();
       }
-      for (const shell of [shockShell, ejectaShell, fireball, lightFront, cmeFront, cmeCore, ...burstFronts]) shell.material.dispose();
       for (const item of labelSprites) {
         item.sprite.material.map?.dispose();
         item.sprite.material.dispose();

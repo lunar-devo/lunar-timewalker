@@ -1,12 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import type { LabBody, LabCmeStrength, LabExplosionKind, LabFate, LabImpact } from '../../core/types';
-import { computeLabFates, computeLabImpact, LAB_MIN_AU, LAB_SHOCK_SEC, labFrontRadius, labRunSeconds, labSceneRadius, LY_AU } from './physics';
+import type { LabBody, LabCmeStrength, LabExplosionKind, LabFate, LabImpact, LabSetup } from '../../core/types';
+import {
+  LAB_MAX_AU, LAB_MIN_AU, LAB_ORBITS_AU, labEarthPlace, labPlaceFromEarth, labProject, labSunDistanceAU, labSunRadius, labUnproject, LY_AU,
+  type MapPoint,
+} from './map';
+import { computeLabResults, labBlastPlace, labClockRealSec, labClockSec, labFrontsAU, type LabResults } from './physics';
 import { labLinkQuery, parseLabLink, type LabLink } from './link';
 import { GALAXIES, WORLDS } from '../../content';
 import { loc } from '../../core/l10n';
 
+/** An explosion `distanceAU` from Earth in direction `angleRad`, set at no body. */
+const setupOf = (kind: LabExplosionKind, angleRad: number, distanceAU: number, cmeStrength: LabCmeStrength = 'may2024'): LabSetup => (
+  { kind, angleRad, distanceAU, cmeStrength, anchorId: null }
+);
 const impactOf = (kind: LabExplosionKind, distanceAU: number, cmeStrength: LabCmeStrength = 'may2024'): LabImpact => (
-  computeLabImpact({ kind, angleRad: 0, distanceAU, cmeStrength })
+  computeLabResults(setupOf(kind, 0, distanceAU, cmeStrength), [], []).impact
 );
 const stepIds = (kind: LabExplosionKind, distanceAU: number): string[] => impactOf(kind, distanceAU).steps.map((s) => s.id);
 const rank: Record<string, number> = { safe: 0, caution: 1, danger: 2, extreme: 3 };
@@ -54,6 +62,8 @@ describe('Explosion Lab: supernovae', () => {
     expect(res.kickKmS).toBeGreaterThan(3);
     expect(res.kickKmS).toBeLessThan(7);
     expect(stepIds('sn2', 1)).toEqual(['light', 'scorch', 'ozone', 'shock', 'atmosphere', 'oceans', 'crust', 'breakup', 'kick']);
+    // The light's steps are over before the blast is there, although the blast follows after only 4 hours.
+    expect(res.shockAtSec ?? 0).toBeGreaterThan(res.lightAtSec + 1.6);
   });
 
   it('never throws the remains faster than the ejecta that hit them', () => {
@@ -118,8 +128,8 @@ describe('Explosion Lab: gamma-ray bursts', () => {
   });
 
   it('strikes a body that stands at the burst’s own place instead of counting it as beside the beam', () => {
-    const mars: LabBody = { id: 'mars', name: { tr: 'Mars', en: 'Mars' }, kind: 'planet', angleRad: 0.4, skyAngleRad: 0.4, spotRad: 0.4, distanceAU: 1.5 };
-    const [fate] = computeLabFates({ kind: 'grb', angleRad: 0.4, distanceAU: 1.5, cmeStrength: 'may2024' }, [mars], []);
+    const mars: LabBody = { id: 'mars', name: { tr: 'Mars', en: 'Mars' }, kind: 'planet', angleRad: 0.4, distanceAU: 1.5 };
+    const [fate] = computeLabResults(setupOf('grb', 0.4, 1.5), [mars], []).fates;
     expect(fate.level).toBe('extreme');
     expect(fate.energyJ).toBeGreaterThan(0);
   });
@@ -233,7 +243,7 @@ describe('Explosion Lab: solar eruptions', () => {
 
 describe('Explosion Lab: the other bodies', () => {
   const body = (id: string, kind: LabBody['kind'], angleRad: number, distanceAU: number): LabBody => (
-    { id, name: { tr: id, en: id }, kind, angleRad, skyAngleRad: angleRad, spotRad: angleRad, distanceAU }
+    { id, name: { tr: id, en: id }, kind, angleRad, distanceAU }
   );
   // Earth is at the centre: the Sun on one side, the Moon, Mars and Saturn (with Titan) on the other, Jupiter
   // (with Europa) and Neptune at right angles to that line.
@@ -248,11 +258,19 @@ describe('Explosion Lab: the other bodies', () => {
     body('neptune', 'planet', -Math.PI / 2, 30),
     body('sirius', 'star', 1, 8.6 * LY_AU),
   ];
+  const resultsOf = (
+    kind: LabExplosionKind, angleRad: number, distanceAU: number, removed: string[] = ['europa', 'titan'], cmeStrength: LabCmeStrength = 'may2024',
+  ): LabResults => computeLabResults(setupOf(kind, angleRad, distanceAU, cmeStrength), system, removed);
   const fatesOf = (
     kind: LabExplosionKind, angleRad: number, distanceAU: number, removed: string[] = ['europa', 'titan'], cmeStrength: LabCmeStrength = 'may2024',
   ): Record<string, LabFate> => (
-    Object.fromEntries(computeLabFates({ kind, angleRad, distanceAU, cmeStrength }, system, removed).map((f) => [f.id, f]))
+    Object.fromEntries(resultsOf(kind, angleRad, distanceAU, removed, cmeStrength).fates.map((f) => [f.id, f]))
   );
+  /** The real place of a body of `system`, AU from the Sun. */
+  const placeOf = (id: string): MapPoint => {
+    const at = system.find((b) => b.id === id);
+    return labPlaceFromEarth(labEarthPlace(system), at?.angleRad ?? 0, at?.distanceAU ?? 0);
+  };
 
   it('a supernova just beyond Mars destroys Mars and the Moon, strips Jupiter and leaves the Sun standing', () => {
     const fates = fatesOf('sn2', 0, 0.9);
@@ -315,15 +333,89 @@ describe('Explosion Lab: the other bodies', () => {
   });
 
   it('a blast set off at the Moon’s distance still reaches Neptune within the run, where the drawn front is', () => {
-    const fates = fatesOf('sn2', 0, LAB_MIN_AU);
+    const setup = setupOf('sn2', 0, LAB_MIN_AU);
+    const results = computeLabResults(setup, system, ['europa', 'titan']);
+    const fates = Object.fromEntries(results.fates.map((f) => [f.id, f]));
     const arrives = fates.neptune.shockAtSec ?? Infinity;
     expect(arrives).toBeGreaterThan(fates.mars.shockAtSec ?? Infinity);
-    expect(arrives).toBeLessThan(LAB_SHOCK_SEC + 12);
-    // Neptune's token stands a quarter turn from the explosion, which is at the Moon's ring.
-    const reach = labSceneRadius(LAB_MIN_AU);
-    expect(labFrontRadius(reach, arrives)).toBeCloseTo(Math.hypot(reach, labSceneRadius(30)), 6);
+    expect(arrives).toBeLessThanOrEqual(20);
+    // At that second the blast front is as large as Neptune is far from the explosion.
+    const src = labBlastPlace(setup, system);
+    const neptune = placeOf('neptune');
+    const front = labFrontsAU(setup, labClockRealSec(results.clock, arrives)).blastAU ?? 0;
+    expect(front / Math.hypot(neptune.x - src.x, neptune.z - src.z)).toBeCloseTo(1, 9);
     // The time-lapse is taken to last until the last of it has happened.
-    expect(labRunSeconds(impactOf('sn2', LAB_MIN_AU), Object.values(fates))).toBeGreaterThan(arrives);
+    expect(results.runSec).toBeGreaterThan(arrives);
+  });
+
+  it('reaches the bodies in the order of their real distance from the explosion, each front at the body at its moment', () => {
+    for (const [kind, angleRad, distanceAU] of [['sn2', 0.7, 0.3], ['sn1a', 2.5, 40], ['grb', 0, 100], ['cme', Math.PI, 1], ['sn2', 1.1, 3 * LY_AU]] as const) {
+      const setup = setupOf(kind, angleRad, distanceAU);
+      const results = computeLabResults(setup, system, []);
+      const src = labBlastPlace(setup, system);
+      const reached = results.fates.filter((f) => f.shockAtSec !== null).map((f) => {
+        const at = placeOf(f.id);
+        return { id: f.id, au: Math.max(Math.hypot(at.x - src.x, at.z - src.z), 1e-6), sec: f.shockAtSec ?? 0 };
+      });
+      const byDistance = [...reached].sort((a, b) => a.au - b.au);
+      const byMoment = [...reached].sort((a, b) => a.sec - b.sec || a.au - b.au);
+      expect(byMoment.map((r) => r.id)).toEqual(byDistance.map((r) => r.id));
+      for (const body of reached) {
+        const fronts = labFrontsAU(setup, labClockRealSec(results.clock, body.sec));
+        expect((kind === 'grb' ? fronts.lightAU : fronts.blastAU ?? 0) / body.au).toBeCloseTo(1, 6);
+      }
+      // The light is at every body, struck or not, at that body's own moment.
+      for (const fate of results.fates) {
+        if (kind === 'grb' && fate.shockAtSec === null) continue;
+        const at = placeOf(fate.id);
+        const au = Math.max(Math.hypot(at.x - src.x, at.z - src.z), 1e-6);
+        expect(labFrontsAU(setup, labClockRealSec(results.clock, fate.lightAtSec)).lightAU / au).toBeCloseTo(1, 6);
+      }
+    }
+  });
+
+  it('lets a supernova’s light reach every body before its blast reaches the first, where light has the time', () => {
+    // 40 AU away, the nearest body is 10 AU from the explosion and the farthest 70: the light, 30 times
+    // faster than the ejecta, is past them all before the blast is at the first.
+    const fates = Object.values(fatesOf('sn2', -Math.PI / 2, 40));
+    const firstBlast = Math.min(...fates.map((f) => f.shockAtSec ?? Infinity));
+    for (const fate of fates) expect(fate.lightAtSec).toBeLessThan(firstBlast);
+    // Earth and the Moon, the same distance from it, go at the same moment.
+    const results = resultsOf('sn2', -Math.PI / 2, 40);
+    const moon = results.fates.find((f) => f.id === 'moon');
+    expect(Math.abs((moon?.shockAtSec ?? 0) - (results.impact.shockAtSec ?? 9))).toBeLessThan(0.05);
+  });
+
+  it('runs until the last affected body has played out, and no longer than a class can watch', () => {
+    for (const [kind, angleRad, distanceAU] of [['sn2', 0.7, 0.3], ['sn1a', 2.5, 40], ['grb', 0, 100], ['cme', Math.PI, 1], ['sn2', 1.1, 6500 * LY_AU]] as const) {
+      const results = resultsOf(kind, angleRad, distanceAU, []);
+      const steps = [...results.impact.steps, ...results.fates.flatMap((f) => f.steps)];
+      const last = Math.max(...steps.map((s) => s.atSec));
+      expect(results.runSec).toBeGreaterThanOrEqual(last + 4);
+      expect(results.runSec).toBeLessThan(last + 5);
+      expect(results.runSec).toBeLessThanOrEqual(31);
+      // The clock never runs backwards, and its seconds and the real time are each other's inverse.
+      const knots = results.clock.knots;
+      for (let i = 1; i < knots.length; i++) {
+        expect(knots[i].sec).toBeGreaterThanOrEqual(knots[i - 1].sec);
+        expect(knots[i].realSec).toBeGreaterThanOrEqual(knots[i - 1].realSec);
+      }
+      const mid = knots[Math.floor(knots.length / 2)];
+      expect(labClockSec(results.clock, labClockRealSec(results.clock, mid.sec * 0.83))).toBeCloseTo(mid.sec * 0.83, 6);
+    }
+  });
+
+  it('says in a few words what becomes of each body, and nothing where nothing does', () => {
+    const results = resultsOf('sn2', 0, 0.9);
+    const fates = Object.fromEntries(results.fates.map((f) => [f.id, f]));
+    expect(results.impact.verdict?.en).toBe('destroyed');
+    expect(fates.mars.verdict?.en).toBe('destroyed');
+    expect(fates.jupiter.verdict?.en).toBe('upper layers torn off');
+    expect(fates.sun.verdict?.en).toBe('loses gas from its outer layers');
+    const calm = resultsOf('grb', 0, 100);
+    expect(calm.fates.find((f) => f.id === 'neptune')?.verdict).toBeNull();
+    expect(impactOf('sn2', 6500 * LY_AU).verdict).toBeNull();
+    for (const fate of resultsOf('cme', Math.PI, 1).fates) expect(fate.verdict === null).toBe(fate.shockAtSec === null);
   });
 
   it('a solar eruption aimed at Earth strikes what lies along its way and misses the rest', () => {
@@ -397,37 +489,38 @@ describe('Explosion Lab: the other bodies', () => {
     expect(far.moon.outcome.melt).toBeLessThan(0.1);
   });
 
-  it('takes an explosion set at a body to be right beside it, wherever the map draws the two', () => {
-    // The spot of an explosion set at a body is drawn clear of the body's token, a third of a radian along its
-    // ring. Jupiter on two dates: elsewhere in the sky, nearer to Earth, the spot on the other side of it.
+  it('takes an explosion set at a body to be right beside it, on every date', () => {
+    // Jupiter on two dates: elsewhere in the sky, nearer to Earth.
     const sun = body('sun', 'sun', Math.PI, 1);
-    const jupiterIn = { ...body('jupiter', 'planet', 2.1, 5.2), spotRad: 2.43 };
-    const jupiterLater = { ...body('jupiter', 'planet', 1.6, 4.4), spotRad: 1.25 };
     const setAt = (at: LabBody, kind: LabExplosionKind, bodies: LabBody[]): Record<string, LabFate> => (
-      Object.fromEntries(computeLabFates({ kind, angleRad: at.spotRad, distanceAU: at.distanceAU, cmeStrength: 'may2024' }, bodies, []).map((f) => [f.id, f]))
+      Object.fromEntries(computeLabResults({ ...setupOf(kind, at.angleRad, at.distanceAU), anchorId: at.id }, bodies, []).fates.map((f) => [f.id, f]))
     );
+    const jupiterIn = body('jupiter', 'planet', 2.1, 5.2);
+    const jupiterLater = body('jupiter', 'planet', 1.6, 4.4);
     const first = setAt(jupiterIn, 'sn2', [jupiterIn, sun]).jupiter;
     const later = setAt(jupiterLater, 'sn2', [jupiterLater, sun]).jupiter;
     // Three of Jupiter's radii: 209,733 km, and 0.7 s for the light.
     expect(loc(first.distanceLabel, 'en')).toBe('210 thousand km');
     expect(loc(later.distanceLabel, 'en')).toBe('210 thousand km');
-    expect(later.energyJ).toBeCloseTo(first.energyJ, -30);
-    expect(later.kickKmS).toBeCloseTo(first.kickKmS, 9);
+    expect(later.energyJ / first.energyJ).toBeCloseTo(1, 6);
+    expect(later.kickKmS / first.kickKmS).toBeCloseTo(1, 6);
     expect(first.level).toBe('extreme');
     expect(first.outcome.breakup).toBe(1);
-    // The other bodies are measured from where Jupiter really is: the Sun, 5.2 AU from Earth on the far side.
+    // The other bodies are measured from where Jupiter really is: the Sun is 4.77 AU from Jupiter's own
+    // place, and 4.78 AU from an explosion three radii beyond it.
     const sunFate = setAt(jupiterIn, 'sn2', [jupiterIn, sun]).sun;
-    expect(loc(sunFate.distanceLabel, 'en')).toBe(loc(fatesOf('sn2', 2.1, 5.2).sun.distanceLabel, 'en'));
-    // A place picked by hand a little beside the spot is that place of the map, 1.7 AU from Jupiter.
-    const [beside] = computeLabFates({ kind: 'sn2', angleRad: 2.431, distanceAU: 5.2, cmeStrength: 'may2024' }, [jupiterIn, sun], []);
+    expect(loc(fatesOf('sn2', 2.1, 5.2).sun.distanceLabel, 'en')).toBe('4.77 AU');
+    expect(loc(sunFate.distanceLabel, 'en')).toBe('4.78 AU');
+    // A place picked by hand a third of a radian along is that place, 1.7 AU from Jupiter.
+    const [beside] = computeLabResults(setupOf('sn2', 2.43, 5.2), [jupiterIn, sun], []).fates;
     expect(loc(beside.distanceLabel, 'en')).toBe('1.71 AU');
   });
 
   it('a burst set at a body strikes that body, on every date', () => {
     for (const [id, kind, au] of [['moon', 'moon', 0.00257], ['mars', 'planet', 1.9], ['jupiter', 'planet', 5.2], ['saturn', 'planet', 9.6], ['sun', 'sun', 0.99]] as const) {
-      for (const [skyRad, gapRad] of [[0.3, 0.4], [2.9, -0.25], [-1.2, 0.33]]) {
-        const at = { ...body(id, kind, skyRad, au), spotRad: skyRad + gapRad };
-        const [fate] = computeLabFates({ kind: 'grb', angleRad: at.spotRad, distanceAU: au, cmeStrength: 'may2024' }, [at], []);
+      for (const skyRad of [0.3, 2.9, -1.2]) {
+        const at = body(id, kind, skyRad, au);
+        const [fate] = computeLabResults({ ...setupOf('grb', skyRad, au), anchorId: id }, [at], []).fates;
         expect(fate.shockAtSec).not.toBeNull();
         expect(fate.steps[0].id).toBe('shock');
         expect(fate.energyJ).toBeGreaterThan(0);
@@ -435,23 +528,81 @@ describe('Explosion Lab: the other bodies', () => {
       }
     }
     // The Moon is 5,212 km from a burst set at it: the rays are there in 17 thousandths of a second.
-    const moon = { ...body('moon', 'moon', 0.3, 0.00257), spotRad: 0.7 };
-    const [fate] = computeLabFates({ kind: 'grb', angleRad: 0.7, distanceAU: 0.00257, cmeStrength: 'may2024' }, [moon], []);
+    const moon = body('moon', 'moon', 0.3, 0.00257);
+    const [fate] = computeLabResults({ ...setupOf('grb', 0.3, 0.00257), anchorId: 'moon' }, [moon], []).fates;
     expect(loc(fate.distanceLabel, 'en')).toBe('5 thousand km');
     expect(loc(fate.lightTimeText, 'en')).toBe('17 ms');
   });
 
   it('an explosion set at a planet is the size of its moon’s orbit away from that moon, and the other way round', () => {
-    const jupiter = { ...body('jupiter', 'planet', Math.PI / 2, 5), spotRad: 1.9 };
-    const europa = { ...body('europa', 'moon', Math.PI / 2, 5), angleRad: 1.65, spotRad: 1.3 };
+    const jupiter = body('jupiter', 'planet', Math.PI / 2, 5);
+    const europa = body('europa', 'moon', Math.PI / 2, 5);
     const distanceTo = (id: string, at: LabBody): string => {
-      const fates = computeLabFates({ kind: 'sn2', angleRad: at.spotRad, distanceAU: 5, cmeStrength: 'may2024' }, [jupiter, europa], []);
+      const fates = computeLabResults({ ...setupOf('sn2', at.angleRad, 5), anchorId: at.id }, [jupiter, europa], []).fates;
       return loc(fates.find((f) => f.id === id)?.distanceLabel ?? { tr: '', en: '' }, 'en');
     };
     // Europa goes round Jupiter at 9.4 of Jupiter's radii: 657,000 km.
     expect(distanceTo('europa', jupiter)).toBe('657 thousand km');
     expect(distanceTo('jupiter', europa)).toBe('657 thousand km');
     expect(distanceTo('europa', europa)).toBe('5 thousand km');
+  });
+});
+
+describe('Explosion Lab: the map round the Sun', () => {
+  it('puts the orbits of the planets one step apart in their true order, and never turns back', () => {
+    LAB_ORBITS_AU.forEach((au, i) => expect(labSunRadius(au)).toBeCloseTo((i + 1) * labSunRadius(LAB_ORBITS_AU[0]), 9));
+    let last = -1;
+    for (let e = -4; e <= Math.log10(LAB_MAX_AU); e += 0.01) {
+      const radius = labSunRadius(10 ** e);
+      expect(radius).toBeGreaterThan(last);
+      expect(labSunDistanceAU(radius) / 10 ** e).toBeCloseTo(1, 9);
+      last = radius;
+    }
+  });
+
+  it('gives back the real place of every place it draws, in Earth’s magnified neighbourhood too', () => {
+    for (const earthLon of [0, 1.3, -2.4]) {
+      const earth = { x: Math.cos(earthLon), z: Math.sin(earthLon) };
+      for (const angleRad of [0, 0.9, 2.2, 3.1, -1.4]) {
+        for (const au of [LAB_MIN_AU, 0.01, 0.05, 0.11, 0.3, 0.99, 1.7, 5, 31, 400, LY_AU, 26 * LY_AU, LAB_MAX_AU]) {
+          const place = labPlaceFromEarth(earth, angleRad, au);
+          const back = labUnproject(labProject(place, earth), earth);
+          expect(Math.hypot(back.x - place.x, back.z - place.z) / au).toBeLessThan(1e-6);
+        }
+      }
+    }
+  });
+
+  it('draws the Moon and an explosion at the Moon’s distance apart from Earth, and moves the explosion without a jump', () => {
+    const earth = { x: -0.6, z: 0.8 };
+    const home = labProject(earth, earth);
+    const spot = (au: number): MapPoint => labProject(labPlaceFromEarth(earth, 0.4, au), earth);
+    const near = spot(LAB_MIN_AU);
+    expect(Math.hypot(near.x - home.x, near.z - home.z)).toBeGreaterThan(1);
+    // The whole range of the distance slider: one continuous path. A step ten times finer moves the explosion
+    // about ten times less, everywhere (it moves most between Neptune's and Pluto's rings, a third of a unit
+    // for a hundredth of a decade).
+    for (const [step, most] of [[0.01, 0.4], [0.001, 0.04]]) {
+      let last = near;
+      for (let e = Math.log10(LAB_MIN_AU) + step; e <= Math.log10(LAB_MAX_AU); e += step) {
+        const next = spot(10 ** e);
+        expect(Math.hypot(next.x - last.x, next.z - last.z)).toBeLessThan(most);
+        last = next;
+      }
+    }
+  });
+
+  it('moves a planet anticlockwise seen from the north as its longitude grows', () => {
+    // The map's angle is minus the ecliptic longitude, and the map is looked at from +y with x to the right
+    // and z toward the viewer: a growing longitude turns from +x toward −z, anticlockwise on the screen.
+    const earth = { x: 1, z: 0 };
+    const sun: LabBody = { id: 'sun', name: { tr: 'Güneş', en: 'Sun' }, kind: 'sun', angleRad: Math.PI, distanceAU: 1 };
+    expect(labEarthPlace([sun]).x).toBeCloseTo(1, 12);
+    const at = (lonDeg: number): MapPoint => labProject({ x: 5.2 * Math.cos((-lonDeg * Math.PI) / 180), z: 5.2 * Math.sin((-lonDeg * Math.PI) / 180) }, earth);
+    const before = at(100);
+    const after = at(110);
+    // On the screen (x right, −z up) the cross product of the two places is positive for an anticlockwise turn.
+    expect(before.x * -after.z - -before.z * after.x).toBeGreaterThan(0);
   });
 });
 

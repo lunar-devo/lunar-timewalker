@@ -6,7 +6,8 @@
 import type { EventDef, L10n, Lang, StageMoment, StagingDef, SupernovaDef } from '../../core/types';
 import { fmt, lf, tpl } from '../../core/l10n';
 import { calendarUTFromJdTT } from '../../core/time';
-import { distanceText, labSupernovaMagnitude, LY_AU } from './physics';
+import { LY_AU } from './map';
+import { distanceText, labSupernovaMagnitude } from './physics';
 
 export const LAB_WATCH_EVENT_ID = 'lab_watch';
 export const LAB_WATCH_TARGET_ID = 'lab_sn';

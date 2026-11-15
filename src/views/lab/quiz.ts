@@ -3,7 +3,7 @@
  * whatever the lab's model says for that scenario, so the questions and the model cannot drift apart.
  */
 import type { L10n, LabCmeStrength, LabExplosionKind } from '../../core/types';
-import { LY_AU } from './physics';
+import { LY_AU } from './map';
 
 export interface LabQuestion {
   question: L10n;

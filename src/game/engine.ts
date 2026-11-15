@@ -49,8 +49,8 @@ import { createRemnantView, createSunView } from '../views/special';
 import { createGalaxyView, GALAXY_NO_INSETS } from '../views/galaxy';
 import { createOrbitsView } from '../views/orbits';
 import {
-  computeLabFates, computeLabImpact, createLabView, LAB_EXTRA_IDS, LAB_FIRST_YEAR, LAB_LAST_YEAR, LAB_MAX_AU, LAB_MIN_AU,
-  LAB_QUESTIONS, labLandmarkLatitudeDeg, labLinkQuery, labRunSeconds, parseLabLink, type LabLink,
+  computeLabResults, createLabView, LAB_EXTRA_IDS, LAB_FIRST_YEAR, LAB_LAST_YEAR, LAB_MAX_AU, LAB_MIN_AU,
+  LAB_QUESTIONS, labLandmarkLatitudeDeg, labLinkQuery, parseLabLink, type LabLink, type LabResults,
 } from '../views/lab';
 import { buildLabWatch, LAB_WATCH_EVENT_ID, LAB_WATCH_TARGET_ID } from '../views/lab/watch';
 import { registerGame } from './api';
@@ -127,9 +127,6 @@ function standsOnSite(world: WorldId, site: SiteDef): boolean {
 function viewOnlyStaging(ev: EventDef | undefined): StagingDef | undefined {
   return ev?.staging?.some((s) => s.where === 'surface') ? undefined : ev?.staging?.[0];
 }
-
-/** What the lab's model says of the explosion that is set: for Earth, for the other bodies, and how long the time-lapse runs. */
-type LabResults = Pick<LabState, 'impact' | 'fates' | 'runSec'>;
 
 /** The moments the lab's map can be set to: 1 January of the first year a link may name … 31 December of the last (UT). */
 const LAB_FIRST_JD = jdTTFromCalendarUT({ year: LAB_FIRST_YEAR, month: 1, day: 1 });
@@ -1272,10 +1269,9 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
    * it to the lab's view.
    */
   function labResults(setup: LabSetup, bodies: LabBody[], removed: string[]): LabResults {
-    const impact = computeLabImpact(setup);
-    const fates = computeLabFates(setup, bodies, removed);
-    labView.setResults(impact, fates);
-    return { impact, fates, runSec: labRunSeconds(impact, fates) };
+    const results = computeLabResults(setup, bodies, removed);
+    labView.setResults(results);
+    return results;
   }
 
   /**
@@ -1292,10 +1288,10 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     // the explosion is in now.
     const anchorId = 'anchorId' in q.place ? q.place.anchorId : null;
     const anchor = prev.bodies.find((b) => b.id === anchorId);
-    const angleRad = anchor ? (q.kind === 'cme' ? anchor.angleRad : anchor.spotRad) : prev.angleRad;
+    const angleRad = anchor?.angleRad ?? prev.angleRad;
     const distanceAU = anchor?.distanceAU ?? ('distanceAU' in q.place ? q.place.distanceAU : prev.distanceAU);
-    const setup: LabSetup = { kind: q.kind, angleRad, distanceAU, cmeStrength: q.cmeStrength };
-    labView.configure(q.kind, angleRad, distanceAU, false);
+    const setup: LabSetup = { kind: q.kind, angleRad, distanceAU, cmeStrength: q.cmeStrength, anchorId: anchor?.id ?? null };
+    labView.configure(setup, false);
     labView.setRemoved(removed);
     const results = labResults(setup, prev.bodies, removed);
     labView.resetExplosion();
@@ -1309,7 +1305,6 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         ...prev,
         ...setup,
         ...results,
-        anchorId: anchor?.id ?? null,
         removed,
         focusId: q.bodyId,
         playing: false,
@@ -1370,10 +1365,10 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     }
     const angleRad = preset === 'cme' ? sun?.angleRad ?? 0 : clearAngle;
     const distanceAU = preset === 'cme' ? sun?.distanceAU ?? 1 : 0.3;
-    const setup: LabSetup = { kind: preset, angleRad, distanceAU, cmeStrength: 'may2024' };
+    const setup: LabSetup = { kind: preset, angleRad, distanceAU, cmeStrength: 'may2024', anchorId: preset === 'cme' ? 'sun' : null };
     // Europa, Titan and Pluto are off the map until they are added.
     const removed = [...LAB_EXTRA_IDS];
-    labView.configure(preset, angleRad, distanceAU, false);
+    labView.configure(setup, false);
     labView.setRemoved(removed);
     const results = labResults(setup, bodies, removed);
     labView.resetExplosion();
@@ -1401,7 +1396,6 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       lab: {
         ...setup,
         ...results,
-        anchorId: preset === 'cme' ? 'sun' : null,
         playing: false,
         paused: false,
         elapsedSec: 0,
@@ -1439,7 +1433,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     const place: LabConfigPatch = link.kind === 'cme'
       ? { cmeStrength: link.cmeStrength, distanceAU: sun?.distanceAU ?? freeAU, anchorId: sun ? 'sun' : null }
       : anchor
-        ? { angleRad: anchor.spotRad, distanceAU: anchor.distanceAU, anchorId: anchor.id }
+        ? { angleRad: anchor.angleRad, distanceAU: anchor.distanceAU, anchorId: anchor.id }
         : { angleRad: link.angleDeg * DEG2RAD, distanceAU: freeAU, anchorId: null };
     api.setLabConfig(place);
     if (link.focusId !== 'earth') api.setLabFocus(link.focusId);
@@ -2253,12 +2247,14 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       const named = toSun ? 'sun' : fromSun ? null : set.anchorId !== undefined ? set.anchorId : placed ? null : prev.anchorId;
       const anchorId = named === null || (kind === 'cme' && named !== 'sun') || prev.removed.includes(named) ? null : named;
       const evaMode = set.evaMode ?? prev.evaMode;
-      const moved = placed || kind !== prev.kind || cmeStrength !== prev.cmeStrength;
-      const setup: LabSetup = { kind, angleRad, distanceAU, cmeStrength };
+      // An explosion set at a body is modelled right beside it: taking the same place from another body, or
+      // from none, is another explosion.
+      const moved = placed || kind !== prev.kind || cmeStrength !== prev.cmeStrength || anchorId !== prev.anchorId;
+      const setup: LabSetup = { kind, angleRad, distanceAU, cmeStrength, anchorId };
       let results: LabResults = prev;
       if (moved) {
         // Changing the explosion starts over: what was shown belonged to the old one.
-        labView.configure(kind, angleRad, distanceAU, keepView);
+        labView.configure(setup, keepView);
         results = labResults(setup, prev.bodies, prev.removed);
         labView.resetExplosion();
         labView.setPaused(false);
@@ -2271,7 +2267,6 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         lab: {
           ...prev,
           ...setup,
-          anchorId,
           evaMode,
           playing: moved ? false : prev.playing,
           paused: moved ? false : prev.paused,
@@ -2279,6 +2274,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
           impact: results.impact,
           fates: results.fates,
           runSec: results.runSec,
+          clock: results.clock,
           focusId,
         },
       });
@@ -2299,11 +2295,12 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       // solar eruption stays in the Sun's direction, and at the Sun's distance if it was there.
       const sun = bodies.find((b) => b.id === 'sun');
       const anchor = bodies.find((b) => b.id === prev.anchorId);
-      const angleRad = (prev.kind === 'cme' ? sun?.angleRad : anchor?.spotRad) ?? prev.angleRad;
+      const angleRad = (prev.kind === 'cme' ? sun?.angleRad : anchor?.angleRad) ?? prev.angleRad;
       const distanceAU = Math.min(prev.kind === 'cme' ? 2 : LAB_MAX_AU, Math.max(LAB_MIN_AU, anchor?.distanceAU ?? prev.distanceAU));
-      labView.configure(prev.kind, angleRad, distanceAU, true);
+      const setup: LabSetup = { kind: prev.kind, angleRad, distanceAU, cmeStrength: prev.cmeStrength, anchorId: prev.anchorId };
+      labView.configure(setup, true);
       labView.setRemoved(prev.removed);
-      const results = labResults({ kind: prev.kind, angleRad, distanceAU, cmeStrength: prev.cmeStrength }, bodies, prev.removed);
+      const results = labResults(setup, bodies, prev.removed);
       labView.resetExplosion();
       labView.setPaused(false);
       const focusId = labFocusValid(prev.focusId, prev.kind, results) ? prev.focusId : 'earth';
@@ -2346,8 +2343,10 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       // An explosion set at the body that goes stays where it is, tied to nothing.
       const anchorId = prev.anchorId === bodyId && !onMap ? null : prev.anchorId;
       audio.cue('ui-click');
+      const setup: LabSetup = { kind: prev.kind, angleRad: prev.angleRad, distanceAU: prev.distanceAU, cmeStrength: prev.cmeStrength, anchorId };
+      labView.configure(setup, true);
       labView.setRemoved(removed);
-      const results = labResults(prev, prev.bodies, removed);
+      const results = labResults(setup, prev.bodies, removed);
       if (focusId !== prev.focusId) labView.setFocus(focusId, false);
       setGame({ lab: { ...prev, ...results, removed, focusId, anchorId } });
     },
@@ -2420,8 +2419,8 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       // its explosion included.
       const kept = labBeforeQuiz ?? prev;
       labBeforeQuiz = null;
-      const setup: LabSetup = { kind: kept.kind, angleRad: kept.angleRad, distanceAU: kept.distanceAU, cmeStrength: kept.cmeStrength };
-      labView.configure(setup.kind, setup.angleRad, setup.distanceAU, false);
+      const setup: LabSetup = { kind: kept.kind, angleRad: kept.angleRad, distanceAU: kept.distanceAU, cmeStrength: kept.cmeStrength, anchorId: kept.anchorId };
+      labView.configure(setup, false);
       labView.setRemoved(kept.removed);
       const results = labResults(setup, prev.bodies, kept.removed);
       labView.resetExplosion();
@@ -2433,7 +2432,6 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
           ...prev,
           ...setup,
           ...results,
-          anchorId: kept.anchorId,
           removed: kept.removed,
           focusId: kept.focusId,
           playing: false,

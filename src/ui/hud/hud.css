@@ -85,7 +85,7 @@
 }
 
 /* Controls inside a strip that clips its content draw their keyboard focus ring inwards, where it stays whole. */
-:is(.hud-compass-marker, .hud-lab-body button):focus-visible {
+:is(.hud-compass-marker, .hud-lab-body button, .hud-lab-run-line):focus-visible {
   outline-offset: -2px;
 }
 
@@ -1145,6 +1145,72 @@
   color: var(--c-ok);
   font-weight: 700;
 }
+
+/* Running list of the whole map: one line per body, in the order the explosion reaches them. A line is muted
+   until the time-lapse reaches its moment, and only its colour changes then; its dot has the colour of how
+   the body fares. */
+.hud-lab-run {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hud-lab-run-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  padding: 2px 4px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--c-dim);
+  font-family: var(--font-ui);
+  font-size: 0.74rem;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hud-lab-run-line:hover {
+  background: rgba(125, 211, 252, 0.16);
+}
+
+.hud-lab-run-line[aria-current='true'] {
+  background: rgba(125, 211, 252, 0.2);
+}
+
+.hud-lab-run-line.is-done {
+  color: var(--c-text);
+  font-weight: 600;
+}
+
+.hud-lab-run-line.is-never {
+  opacity: 0.65;
+}
+
+/* The dot is a ring in the colour of the body's fate until the run reaches the line, then it fills and glows. */
+.hud-lab-run-line > i {
+  --dot: var(--c-ok);
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  margin-top: 0.35em;
+  border: 1.5px solid var(--dot);
+  border-radius: 50%;
+}
+
+.hud-lab-run-line.is-done > i {
+  background: var(--dot);
+  box-shadow: 0 0 6px var(--dot);
+}
+
+.hud-lab-run-line.is-caution > i { --dot: var(--c-warn); }
+.hud-lab-run-line.is-danger > i { --dot: #fb923c; }
+.hud-lab-run-line.is-extreme > i { --dot: var(--c-bad); }
 
 .hud-lab-sources {
   border-top: 1px solid var(--c-line-soft);
