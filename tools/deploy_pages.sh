@@ -27,14 +27,19 @@ commit="$(git commit-tree "$tree" -m "Lunar Timewalker")"
 git push --force site "$commit:refs/heads/main"
 echo "Published $(git rev-parse --short HEAD) on $(git remote get-url site)."
 
-# Waits until Pages has built this commit, then deletes the finished Actions runs and every deployment but the
-# newest. Needs the GitHub CLI signed in to the site's account.
+# Waits until Pages has built this commit and its Actions run has finished (the run reports a little after the
+# build), then deletes the finished runs and every deployment but the newest. Needs the GitHub CLI signed in to
+# the site's account.
 clear_build_records() {
   local repo status run deployment
   repo="$(git remote get-url site | sed -E 's#^https://([^@/]+@)?github\.com/##; s#\.git$##')"
   for _ in $(seq 60); do
     status="$(gh api "repos/$repo/pages/builds/latest" --jq '.status + " " + .commit' 2>/dev/null || true)"
     [ "$status" = "built $commit" ] && break
+    sleep 5
+  done
+  for _ in $(seq 24); do
+    [ "$(gh api "repos/$repo/actions/runs?per_page=100" --jq '[.workflow_runs[] | select(.status != "completed")] | length')" = 0 ] && break
     sleep 5
   done
   for run in $(gh api "repos/$repo/actions/runs?per_page=100" --jq '.workflow_runs[] | select(.status == "completed") | .id'); do

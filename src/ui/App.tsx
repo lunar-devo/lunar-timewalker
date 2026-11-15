@@ -216,6 +216,14 @@ function CreditsModal() {
               </ul>
             </div>
           ))}
+          <h3>{tx(lang, 'Süper Zekâ (SI) araçlarının kullanımı', 'Use of Super Intelligence (SI) tools')}</h3>
+          <p style={{ margin: 0 }}>
+            {tx(
+              lang,
+              'Bu proje SI kodlama asistanlarıyla (Claude Code ve diğerleri) geliştirildi: yazılım mimarisinde, TypeScript, three.js ve GLSL kodunda, veri hazırlama betiklerinde, Türkçe ve İngilizce metinlerin taslaklarında ve Almanca, Fransızca, İspanyolca, İtalyanca ve Rusça çevirilerde kullanıldı; bu çeviriler makine çevirisidir ve ana dili konuşanlarca gözden geçirilmemiştir. Uygulamadaki hiçbir görüntü, video ya da ses bir SI üretim aracından gelmez: resimler ve veriler yukarıda listelenen NASA ve ortak ajans kaynaklarıdır, model olan kısımları (bulutlar, küçük kraterler, ses) uygulamanın kendi kodu çizer. Gök cisimlerinin konumları otomatik testlerde JPL Horizons ile karşılaştırılır.',
+              'This project was developed with SI coding assistants (Claude Code and others): they were used for the software architecture, the TypeScript, three.js and GLSL code, the data-preparation scripts, drafts of the Turkish and English texts, and the German, French, Spanish, Italian and Russian translations, which are machine translations not reviewed by native speakers. No image, video or sound in the app comes from an SI generator: the pictures and data are the NASA and partner-agency sources listed above, and the modelled parts (clouds, small craters, sound) are drawn by the app’s own code. Celestial positions are checked against JPL Horizons in automated tests.',
+            )}
+          </p>
           <h3>{tx(lang, 'Ekip', 'Team')}</h3>
           <p style={{ margin: 0 }}>NASA Space Apps Challenge 2026 · Sakarya</p>
         </div>

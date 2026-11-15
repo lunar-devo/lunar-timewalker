@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Browser-based lunar exploration and time-travel story game built on NASA open data (NASA Space Apps Challenge 2026).",
+  "description": "Browser-based Moon, Mars and sky exhibit built on NASA open data (NASA Space Apps Challenge 2026). Developed with Super Intelligence (SI) coding assistants (Claude Code and others); the README says where and how.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
