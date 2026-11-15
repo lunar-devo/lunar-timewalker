@@ -183,7 +183,7 @@ export const useGame = create<GameState>(() => ({
   subtitle: null,
   toast: null,
   panels: {
-    telemetry: true, info: false, about: false, settings: false, help: false, pause: false, credits: false,
+    telemetry: true, info: false, about: false, settings: false, help: false, pause: false, credits: false, navigator: false,
   },
   infoTopicId: null,
   focusAssetId: null,

@@ -11,5 +11,6 @@ export { GLOBE_CAPTIONS } from './globeCaptions';
 export {
   TUTORIAL_DATE, TUTORIAL_SITE_ID, TUTORIAL_STEPS, type TutorialCheck, type TutorialStep,
 } from './tutorial';
+export { SITE_GROUP_NAMES, SITE_GROUP_ORDER } from './siteGroups';
 export { WORLDS, WORLD_ORDER } from './worlds';
 export { BRIGHT_STARS, GALAXIES, type BrightStarLabel } from './galaxies';

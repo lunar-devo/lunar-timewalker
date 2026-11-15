@@ -31,6 +31,22 @@ export const CREDIT_GROUPS: Array<{ title: L10n; items: CreditItem[] }> = [
         text: 'NASA SVS #4720 / LRO LROC — colour mosaic of the Moon (8K)',
         url: 'https://svs.gsfc.nasa.gov/4720',
       },
+      {
+        text: 'NASA NSSDCA — Apollo landing site coordinates from LRO images (Wagner et al. 2017, Icarus 283, 92–103)',
+        url: 'https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html',
+      },
+      {
+        text: 'NASA/GSFC/Arizona State University LROC — landing coordinates of SLIM, Chang’e 5, Chang’e 6 and IM-2 Athena',
+        url: 'https://lroc.asu.edu/images/1358',
+      },
+      {
+        text: 'NASA/GSFC/Arizona State University LROC — coordinates of robotic spacecraft (Luna 16, Surveyor 1)',
+        url: 'https://lroc.im-ldi.com/news/117',
+      },
+      {
+        text: 'Blewett et al. 2025, LPSC 56, abstract 1233 — the Lunar Vertex (IM-3) target at Reiner Gamma',
+        url: 'https://www.hou.usra.edu/meetings/lpsc2025/pdf/1233.pdf',
+      },
     ],
   },
   {

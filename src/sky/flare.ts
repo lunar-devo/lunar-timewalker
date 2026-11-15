@@ -19,6 +19,9 @@ const GHOSTS: Ghost[] = [
   { t: 1.9, size: 0.14, color: new THREE.Color(0.12, 0.2, 0.3) },
 ];
 
+/** Time constant (ms) with which the flare follows changes of its strength. */
+const FLARE_EASE_MS = 100;
+
 function ringTexture(): THREE.CanvasTexture {
   const s = 128;
   const c = document.createElement('canvas');
@@ -92,6 +95,9 @@ export function createLensFlare(): LensFlare {
   });
   scene.add(halo, streak);
   let visible = false;
+  /** The strength drawn, eased towards the asked one, and when it was last updated (ms). */
+  let shown = 0;
+  let lastMs = performance.now();
   const ndc = new THREE.Vector3();
 
   return {
@@ -101,7 +107,12 @@ export function createLensFlare(): LensFlare {
       // Fade out as the Sun leaves the frame (a little beyond the edge still scatters light into the lens).
       const edge = Math.max(Math.abs(ndc.x), Math.abs(ndc.y));
       const k = inFront ? strength * (1 - THREE.MathUtils.smoothstep(edge, 0.9, 1.4)) : 0;
-      visible = k > 0.005;
+      // The skyline the strength comes from is rebuilt in steps as the astronaut walks: easing over a tenth of a
+      // second turns those steps into a fade, while the Sun setting behind a ridge is still followed closely.
+      const nowMs = performance.now();
+      shown += (k - shown) * (1 - Math.exp(-(nowMs - lastMs) / FLARE_EASE_MS));
+      lastMs = nowMs;
+      visible = shown > 0.005;
       if (!visible) return;
       const aspect = cam.aspect;
       const place = (mesh: THREE.Mesh, x: number, y: number, size: number, sx = 1): void => {
@@ -109,13 +120,13 @@ export function createLensFlare(): LensFlare {
         mesh.scale.set((size * sx) / aspect, size, 1);
       };
       place(halo, ndc.x, ndc.y, 0.55, 1);
-      (halo.material as THREE.MeshBasicMaterial).opacity = 0.35 * k;
+      (halo.material as THREE.MeshBasicMaterial).opacity = 0.35 * shown;
       place(streak, ndc.x, ndc.y, 0.035, 22);
-      (streak.material as THREE.MeshBasicMaterial).opacity = 0.25 * k;
+      (streak.material as THREE.MeshBasicMaterial).opacity = 0.25 * shown;
       for (const g of ghosts) {
         const t = g.def.t;
         place(g.mesh, ndc.x * (1 - t), ndc.y * (1 - t), g.def.size * 2, 1);
-        (g.mesh.material as THREE.MeshBasicMaterial).opacity = 0.55 * k;
+        (g.mesh.material as THREE.MeshBasicMaterial).opacity = 0.55 * shown;
       }
     },
     render(renderer: THREE.WebGLRenderer, view?: FlareView): void {

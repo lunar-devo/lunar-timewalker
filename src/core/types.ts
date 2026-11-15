@@ -60,6 +60,9 @@ export interface SiteCoord { latDeg: number; lonDeg: number }
 /** The body a site lies on: its own elevation data, radius and sky. */
 export type SiteBody = 'moon' | 'mars';
 
+/** The kind of mission or interest a curated site belongs to; the map lists sites under these headings. */
+export type SiteGroup = 'apollo' | 'robotic' | 'commercial' | 'international' | 'artemis' | 'science';
+
 export interface SiteDef extends SiteCoord {
   id: string;                 // e.g. 'apollo11'; 'custom' for a free pick on the globe
   /** The body the site lies on; a site without one is on the Moon. */
@@ -71,6 +74,8 @@ export interface SiteDef extends SiteCoord {
   packId?: string;
   tags?: string[];            // 'apollo' | 'pole' | 'farside' | 'clps' | 'artemis' | ...
   spawnHeadingDeg?: number;
+  /** The heading the site is listed under on the map. */
+  group?: SiteGroup;
 }
 
 // ───────────────────────────── astronomy ─────────────────────────────
@@ -851,7 +856,7 @@ export interface Subtitle {
 }
 
 export type Phase = 'boot' | 'title' | 'menu' | 'map' | 'loading' | 'surface' | 'space';
-export type PanelId = 'telemetry' | 'info' | 'about' | 'settings' | 'help' | 'pause' | 'credits';
+export type PanelId = 'telemetry' | 'info' | 'about' | 'settings' | 'help' | 'pause' | 'credits' | 'navigator';
 
 export interface Settings {
   lang: Lang;
@@ -1138,6 +1143,10 @@ export interface GameAPI {
   previewSite(site: SiteDef): void;
   /** Load terrain for the site and drop the player there. */
   landAt(site: SiteDef): Promise<void>;
+  /** Free visit to `site` at `jdTT`: closes the navigator, sets the clock and lands there, the clock staying at `jdTT`. */
+  visitSite(site: SiteDef, jdTT: number): Promise<void>;
+  /** Selects the point on the map globe of the current body, as a click on the globe does. */
+  pickMapPoint(latDeg: number, lonDeg: number): void;
   /** Pausing also holds a running staging sequence. */
   setPaused(paused: boolean): void;
   /** Manual time travel; takes the clock away from a running staging sequence. */

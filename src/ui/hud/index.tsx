@@ -1216,6 +1216,10 @@ export function SurfaceHud() {
             </button>
             {moreOpen && (
               <div className="hud-more-menu" onClick={() => setMoreOpen(false)}>
+                <button type="button" className="hud-bar-btn" onClick={() => game.togglePanel('navigator', true)}>
+                  <span>{tx(lang, 'İniş Yeri Navigatörü', 'Landing Site Navigator')}</span>
+                  <span />
+                </button>
                 {barActions.filter((a) => tight >= a.dropAt).map((a) => (
                   <button key={a.id} type="button" className={`hud-bar-btn ${a.on ? 'is-on' : ''}`} onClick={a.run}>
                     <span>{a.label}</span>
@@ -1430,6 +1434,11 @@ export function SurfaceHud() {
                       ? tx(lang, tpl`Var (${fmt(telemetry.lightTimeSec, 2, lang)} sn)`, tpl`Yes (${fmt(telemetry.lightTimeSec, 2, lang)} s)`)
                       : (tx(lang, 'Yok (ufuk altı)', 'No (below horizon)'))}
                   </span>
+                </div>
+                {/* The next Earthset or Earthrise is searched for 15 days ahead: without one, the Earth stays where it is for longer. */}
+                <div className="hud-telem-row">
+                  <span>{(telemetry.earthEvent ? telemetry.earthEvent.kind === 'set' : telemetry.dteLink) ? tx(lang, 'Dünya batımına', 'Until Earthset') : tx(lang, 'Dünya doğumuna', 'Until Earthrise')}</span>
+                  <span className="hud-telem-val">{telemetry.earthEvent ? formatDuration(telemetry.earthEvent.inHours, lang) : tx(lang, '15 günden fazla', 'over 15 days')}</span>
                 </div>
               </div>
             ) : (() => {

@@ -86,6 +86,15 @@ describe('JPL Horizons DE441 validation', () => {
     const profile = new Float32Array(360).fill(2.0);
     expect(horizonElevationAt(profile, 123.4)).toBeCloseTo(2.0, 5);
     expect(discVisibleFraction(profile, 90, 2.0, 0.2666)).toBeCloseTo(0.5, 2);
+    // A disc mostly above the skyline is mostly visible, and the other way round; the two shares add up to one.
+    const r = 0.2666;
+    const mostlyUp = discVisibleFraction(profile, 90, 2.0 + 0.9 * r, r);
+    const mostlyDown = discVisibleFraction(profile, 90, 2.0 - 0.9 * r, r);
+    expect(mostlyUp).toBeGreaterThan(0.9);
+    expect(mostlyDown).toBeLessThan(0.1);
+    expect(mostlyUp + mostlyDown).toBeCloseTo(1, 6);
+    // The centre 0.5·r above the chord: the segment's share is (acos(−0.5) + 0.5·√0.75) / π ≈ 0.8045.
+    expect(discVisibleFraction(profile, 90, 2.0 + 0.5 * r, r)).toBeCloseTo(0.8045, 3);
     expect(solarFluxWm2(1.0)).toBeCloseTo(1361, 1);
 
     const snPeak = supernovaMagnitude({

@@ -1,0 +1,380 @@
+/* Landing Site Navigator: a wide dialog holding a comparison table that scrolls sideways inside it. */
+
+.mn-modal.nav-modal {
+  width: min(1560px, 98vw);
+  max-height: 96vh;
+  overflow: hidden;
+  gap: 10px;
+}
+
+.nav-modal .mn-modal-head {
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.nav-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px 12px;
+  flex-shrink: 0;
+}
+
+.nav-subtitle {
+  margin: 4px 0 0;
+  color: var(--c-dim);
+  font-size: 0.9rem;
+}
+
+.nav-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.nav-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--c-dim);
+}
+
+.nav-modal input,
+.nav-select {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--c-line);
+  border-radius: 8px;
+  color: var(--c-text);
+  padding: 6px 9px;
+  font-size: 0.88rem;
+  color-scheme: dark;
+}
+
+.nav-select {
+  max-width: 300px;
+}
+
+.nav-modal input[aria-invalid='true'] {
+  border-color: var(--c-bad);
+}
+
+.nav-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.nav-steps .mn-btn {
+  padding: 6px 10px;
+}
+
+.nav-custom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.nav-custom label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--c-dim);
+}
+
+.nav-custom input {
+  width: 92px;
+}
+
+.nav-error {
+  color: var(--c-bad);
+  font-size: 0.82rem;
+}
+
+.nav-note {
+  color: var(--c-dim);
+  font-size: 0.8rem;
+}
+
+.nav-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  font-size: 0.8rem;
+  color: var(--c-dim);
+}
+
+.nav-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-sw {
+  display: inline-block;
+  width: 18px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.nav-status {
+  color: var(--c-accent);
+  font-weight: 600;
+}
+
+/* The table scrolls inside the dialog, in both directions; its header stays in view. */
+.nav-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--c-line-soft);
+  border-radius: 10px;
+}
+
+.nav-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.9rem;
+}
+
+.nav-table th,
+.nav-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--c-line-soft);
+  text-align: left;
+  vertical-align: top;
+}
+
+.nav-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #0a0f18;
+}
+
+.nav-table thead th {
+  color: var(--c-dim);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.nav-table thead .nav-group {
+  color: var(--c-accent);
+  letter-spacing: 0.04em;
+  text-align: center;
+  border-bottom: 1px solid var(--c-line);
+}
+
+.nav-sort {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.nav-sort:hover,
+.nav-sort.is-active {
+  color: var(--c-text);
+}
+
+.nav-table td b {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.nav-table td small,
+.nav-site-col small {
+  display: block;
+  color: var(--c-dim);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.nav-table td small.nav-ok,
+.nav-table td b.nav-ok {
+  color: var(--c-ok);
+}
+
+.nav-table td small.nav-bad,
+.nav-table td b.nav-bad {
+  color: var(--c-bad);
+}
+
+.nav-event {
+  display: block;
+  min-width: 96px;
+  font-weight: 600;
+}
+
+.nav-site-col {
+  position: relative;
+  min-width: 170px;
+  max-width: 230px;
+  padding-right: 28px !important;
+}
+
+tbody .nav-site-col {
+  font-weight: 400;
+}
+
+.nav-name {
+  display: block;
+  font-weight: 700;
+}
+
+.nav-row-date {
+  display: block;
+  color: var(--c-accent);
+  font-size: 0.95rem;
+}
+
+.nav-remove {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  padding: 2px 7px;
+  font-size: 1rem;
+}
+
+.nav-pending {
+  color: var(--c-dim);
+  font-style: italic;
+}
+
+/* Each site takes two table rows: its numbers, then its Go button under the name and its timeline across the metrics. */
+.nav-table tr.nav-row > * {
+  border-bottom: none;
+  padding-bottom: 2px;
+}
+
+.nav-table tr.nav-strip-row > td {
+  padding-top: 2px;
+  vertical-align: middle;
+}
+
+.nav-strip svg {
+  display: block;
+  width: 100%;
+  height: 30px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.nav-strip-read {
+  margin-top: 3px;
+  font-size: 0.76rem;
+  color: var(--c-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-sun-lit {
+  fill: #f59e0b;
+  background: #f59e0b;
+}
+
+.nav-sun-part {
+  fill: #a16207;
+  background: #a16207;
+}
+
+.nav-sun-dark {
+  fill: #1e293b;
+  background: #1e293b;
+}
+
+.nav-earth-vis {
+  fill: #38bdf8;
+  background: #38bdf8;
+}
+
+.nav-earth-hid {
+  fill: #5b2330;
+  background: #5b2330;
+}
+
+.nav-tick {
+  stroke: rgba(4, 7, 13, 0.55);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+.nav-tick-week {
+  stroke: rgba(4, 7, 13, 0.95);
+  stroke-width: 2px;
+}
+
+.nav-cursor {
+  stroke: #ffffff;
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+
+.nav-go {
+  white-space: nowrap;
+}
+
+.nav-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.nav-source {
+  margin: 0;
+  color: var(--c-dim);
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+@media (max-height: 680px), (max-width: 1100px) {
+  .nav-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .nav-table {
+    font-size: 0.84rem;
+  }
+
+  .nav-table th,
+  .nav-table td {
+    padding: 6px 8px;
+  }
+
+  .nav-table td b {
+    font-size: 0.95rem;
+  }
+
+  .nav-source {
+    font-size: 0.68rem;
+  }
+}
+
+/* Low windows: the whole dialog scrolls, so the table is never squeezed to a row or two. */
+@media (max-height: 680px) {
+  .mn-modal.nav-modal {
+    overflow-y: auto;
+  }
+
+  .nav-table-wrap {
+    flex: none;
+  }
+}

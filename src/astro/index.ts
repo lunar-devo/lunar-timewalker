@@ -210,17 +210,17 @@ export function accuracyTier(jdTT: number): AccuracyTier {
 
 // ─────────────────────────── core sky state ───────────────────────────
 
-export function computeSky(jdTT: number, site: SiteCoord, worldId: WorldId = 'moon'): SkyState {
-  const t = astroTime(jdTT);
-  const jdUT = jdUTfromTT(jdTT);
+/** A Moon site's local frame at an instant: the Moon's orientation, the scene axes and the site's geocentric place. */
+interface MoonSiteFrame {
+  moonFixedToIcrf: Mat3;
+  localFromIcrf: Mat3;
+  moonVecAU: Vec3;
+  siteGeoAU: Vec3;
+}
 
-  if (worldId !== 'moon' && worldId !== 'orbit') {
-    return computePlanetSky(jdTT, jdUT, t, site, worldId);
-  }
+function moonSiteFrame(t: A.AstroTime, site: SiteCoord): MoonSiteFrame {
   // 1. Moon orientation (IAU pole & prime meridian W)
-  const moonAxis = A.RotationAxis(A.Body.Moon, t);
-  const moonFixedToIcrf = axisFixedToIcrf(moonAxis);
-  const icrfToMoonFixed = transposeMat3(moonFixedToIcrf);
+  const moonFixedToIcrf = axisFixedToIcrf(A.RotationAxis(A.Body.Moon, t));
 
   // 2. Site topocentric basis in Moon body-fixed frame, then rotated to ICRF
   const phi = site.latDeg * DEG2RAD;
@@ -249,34 +249,59 @@ export function computeSky(jdTT: number, site: SiteCoord, worldId: WorldId = 'mo
     moonVecAU[1] + U[1] * rmAU,
     moonVecAU[2] + U[2] * rmAU,
   ];
+  return { moonFixedToIcrf, localFromIcrf, moonVecAU, siteGeoAU };
+}
+
+/** Where a body of radius `radiusKm` at geocentric `targetGeoAU` stands in the sky of a site. */
+export interface TopocentricPlace {
+  dirIcrf: Vec3;
+  dirLocal: Vec3;
+  azDeg: number;
+  elDeg: number;
+  distanceKm: number;
+  distanceAU: number;
+  angularDiameterDeg: number;
+  lightTimeSec: number;
+}
+
+function topocentricPlace(frame: MoonSiteFrame, targetGeoAU: Vec3, radiusKm: number): TopocentricPlace {
+  const { siteGeoAU } = frame;
+  const relAU: Vec3 = [
+    targetGeoAU[0] - siteGeoAU[0],
+    targetGeoAU[1] - siteGeoAU[1],
+    targetGeoAU[2] - siteGeoAU[2],
+  ];
+  const distanceAU = Math.hypot(relAU[0], relAU[1], relAU[2]);
+  const distanceKm = distanceAU * AU_KM;
+  const dirIcrf = norm(relAU);
+  const dirLocal = mulMat3Vec(frame.localFromIcrf, dirIcrf);
+  const { azDeg, elDeg } = azElFromDir(dirLocal);
+  const angularDiameterDeg = 2 * Math.asin(Math.min(1, radiusKm / Math.max(distanceKm, radiusKm))) * RAD2DEG;
+  const lightTimeSec = distanceKm / LIGHT_SPEED_KM_S;
+  return { dirIcrf, dirLocal, azDeg, elDeg, distanceKm, distanceAU, angularDiameterDeg, lightTimeSec };
+}
+
+export function computeSky(jdTT: number, site: SiteCoord, worldId: WorldId = 'moon'): SkyState {
+  const t = astroTime(jdTT);
+  const jdUT = jdUTfromTT(jdTT);
+
+  if (worldId !== 'moon' && worldId !== 'orbit') {
+    return computePlanetSky(jdTT, jdUT, t, site, worldId);
+  }
+  const frame = moonSiteFrame(t, site);
+  const { localFromIcrf, moonVecAU } = frame;
+  const icrfToMoonFixed = transposeMat3(frame.moonFixedToIcrf);
 
   // 4. Geocentric astrometric vectors for Sun and planets
   const sunGeoVec = A.GeoVector(A.Body.Sun, t, false);
   const sunGeoAU: Vec3 = [sunGeoVec.x, sunGeoVec.y, sunGeoVec.z];
-
-  const sunRelObserverAU: Vec3 = [
-    sunGeoAU[0] - siteGeoAU[0],
-    sunGeoAU[1] - siteGeoAU[1],
-    sunGeoAU[2] - siteGeoAU[2],
-  ];
-  const sunDirIcrf = norm(sunRelObserverAU);
+  const sunDirIcrf = topocentricPlace(frame, sunGeoAU, SUN_RADIUS_KM).dirIcrf;
 
   const bodies = {} as Record<BodyId, BodyState>;
 
   const buildBody = (id: BodyId, targetGeoAU: Vec3): BodyState => {
-    const relAU: Vec3 = [
-      targetGeoAU[0] - siteGeoAU[0],
-      targetGeoAU[1] - siteGeoAU[1],
-      targetGeoAU[2] - siteGeoAU[2],
-    ];
-    const distanceAU = Math.hypot(relAU[0], relAU[1], relAU[2]);
-    const distanceKm = distanceAU * AU_KM;
-    const dirIcrf = norm(relAU);
-    const dirLocal = mulMat3Vec(localFromIcrf, dirIcrf);
-    const { azDeg, elDeg } = azElFromDir(dirLocal);
-    const radiusKm = BODY_RADIUS_KM[id];
-    const angularDiameterDeg = 2 * Math.asin(Math.min(1, radiusKm / Math.max(distanceKm, radiusKm))) * RAD2DEG;
-    const lightTimeSec = distanceKm / LIGHT_SPEED_KM_S;
+    const place = topocentricPlace(frame, targetGeoAU, BODY_RADIUS_KM[id]);
+    const { dirIcrf, distanceAU } = place;
     const elongationDeg = id === 'sun' ? 0 : angularSeparationDeg(dirIcrf, sunDirIcrf);
 
     // Phase illumination fraction at the target body (angle between Sun->body and Observer->body)
@@ -303,20 +328,7 @@ export function computeSky(jdTT: number, site: SiteCoord, worldId: WorldId = 'mo
       magnitude = -26.74 + 5 * Math.log10(Math.max(distanceAU, 1e-4));
     }
 
-    return {
-      id,
-      dirLocal,
-      dirIcrf,
-      azDeg,
-      elDeg,
-      distanceKm,
-      distanceAU,
-      angularDiameterDeg,
-      magnitude,
-      illuminatedFraction,
-      lightTimeSec,
-      elongationDeg,
-    };
+    return { id, ...place, magnitude, illuminatedFraction, elongationDeg };
   };
 
   bodies.sun = buildBody('sun', sunGeoAU);
@@ -446,6 +458,31 @@ export function computeSky(jdTT: number, site: SiteCoord, worldId: WorldId = 'mo
     subSolar,
     accuracy: accuracyTier(jdTT),
   };
+}
+
+/** The Sun and Earth seen from a Moon site, and how much of the Sun's disc the Earth covers (a lunar eclipse). */
+export interface SunEarthPlaces {
+  sun: TopocentricPlace;
+  earth: TopocentricPlace;
+  sunObscuredByEarth: number;
+}
+
+/**
+ * The Sun's and Earth's topocentric places from a Moon site: the same arithmetic as `computeSky` (equal to
+ * the last bit), without the planets, the eclipse track on Earth and the sub-points, for long time series.
+ */
+export function sunEarthFromMoon(jdTT: number, site: SiteCoord): SunEarthPlaces {
+  const t = astroTime(jdTT);
+  const frame = moonSiteFrame(t, site);
+  const sunGeo = A.GeoVector(A.Body.Sun, t, false);
+  const sun = topocentricPlace(frame, [sunGeo.x, sunGeo.y, sunGeo.z], SUN_RADIUS_KM);
+  const earth = topocentricPlace(frame, [0, 0, 0], EARTH_RADIUS_KM);
+  const sunObscuredByEarth = discOverlapFraction(
+    sun.angularDiameterDeg * 0.5,
+    earth.angularDiameterDeg * 0.5,
+    angularSeparationDeg(sun.dirIcrf, earth.dirIcrf),
+  );
+  return { sun, earth, sunObscuredByEarth };
 }
 
 /** Sky computation from any Solar System planet (Mercury..Neptune) using heliocentric vectors + IAU axis. */
@@ -972,10 +1009,11 @@ export function discVisibleFraction(
   const dh = elDeg - hDeg;
   if (dh <= -r) return 0;
   if (dh >= r) return 1;
-  // Circular segment above a horizontal chord at y = -dh
+  // The part of the disc above the skyline, a horizontal chord dh below the disc's centre: the circular segment
+  // r²·acos(−dh/r) + dh·√(r² − dh²).
   const u = Math.max(-1, Math.min(1, -dh / r));
-  const cutArea = r * r * Math.acos(u) + dh * Math.sqrt(Math.max(0, r * r - dh * dh));
-  return Math.max(0, Math.min(1, 1 - cutArea / (Math.PI * r * r)));
+  const visibleArea = r * r * Math.acos(u) + dh * Math.sqrt(Math.max(0, r * r - dh * dh));
+  return Math.max(0, Math.min(1, visibleArea / (Math.PI * r * r)));
 }
 
 export function nextHorizonEvent(
@@ -988,8 +1026,7 @@ export function nextHorizonEvent(
 ): HorizonEvent | null {
   const visAt = (j: number): boolean => {
     const { azDeg, elDeg } = targetAltAz(j, site, body, worldId);
-    const radius = body === 'sun' ? 0.2666 : 0.95;
-    return discVisibleFraction(profile, azDeg, elDeg, radius) > 0.05;
+    return discVisibleFraction(profile, azDeg, elDeg, HORIZON_DISC_RADIUS_DEG[body]) > VISIBLE_DISC_FRACTION;
   };
   const startVis = visAt(jdTT);
   const stepDays = (worldId === 'moon' || worldId === 'mercury' || worldId === 'venus'
@@ -1017,6 +1054,15 @@ export function nextHorizonEvent(
   }
   return null;
 }
+
+/** Angular radii (degrees) of the Sun and Earth used for rising and setting from the Moon: their mean sizes. */
+export const HORIZON_DISC_RADIUS_DEG: Record<'sun' | 'earth', number> = { sun: 0.2666, earth: 0.95 };
+
+/** A body counts as visible when more than this share of its disc stands above the skyline. */
+export const VISIBLE_DISC_FRACTION = 0.05;
+
+/** Share of the photovoltaic panel's incident sunlight it turns into electric power (the in-app panel). */
+export const PANEL_EFFICIENCY = 0.30;
 
 export function solarFluxWm2(distanceAU: number): number {
   return 1361.0 / Math.max(0.01, distanceAU * distanceAU);

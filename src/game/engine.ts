@@ -20,6 +20,7 @@ import { loadManifest, setMaxTextureSize } from '../core/assets';
 import { BODY_RADIUS_M } from '../core/dem';
 import { frame, type FrameProjection } from '../core/frame';
 import { fmt, lf, loadDict, loc, tpl } from '../core/l10n';
+import { customSite } from '../content/customSite';
 import { Input, keyBelongsToControl } from '../core/input';
 import { attachPinch } from '../core/pinch';
 import { QUALITY } from '../core/quality';
@@ -31,8 +32,8 @@ import {
 } from '../core/time';
 import {
   angularSeparationDeg, azElFromDir, bodyOrientation, computeSky, dirLocalFromRaDec,
-  discVisibleFraction, horizonElevationAt, illuminationStats, mapPointSeenFrom, nextHorizonEvent, solarFluxWm2,
-  targetAltAz, transientState, worldTemperatureK,
+  discVisibleFraction, horizonElevationAt, illuminationStats, mapPointSeenFrom, nextHorizonEvent, PANEL_EFFICIENCY, solarFluxWm2,
+  targetAltAz, transientState, VISIBLE_DISC_FRACTION, worldTemperatureK,
 } from '../astro';
 import { createArtifacts } from '../artifacts';
 import { createAudio } from '../audio';
@@ -90,24 +91,6 @@ const WATCHED_ONLY_FROM: Record<SiteBody, (title: L10n) => L10n> = {
     tpl`“${title}” yalnızca Mars’tan izlenir. İzlemek için üstteki listeden Mars’ı seçin.`,
     tpl`“${title}” can only be watched from Mars. Choose Mars in the list above to watch it.`,
   ),
-};
-
-/** How a place picked freely on a body's globe is described. */
-const PICKED_SITE_TEXT: Record<SiteBody, Pick<SiteDef, 'region' | 'blurb'>> = {
-  moon: {
-    region: { tr: 'Serbest Seçim Koordinatı', en: 'Custom Selenographic Coordinate' },
-    blurb: {
-      tr: '3B Ay küresi üzerinden doğrudan seçtiğiniz özel iniş koordinatı.',
-      en: 'Custom lunar coordinates picked directly on the 3D Moon globe.',
-    },
-  },
-  mars: {
-    region: { tr: 'Serbest Seçim Koordinatı', en: 'Custom Areographic Coordinate' },
-    blurb: {
-      tr: '3B Mars küresi üzerinden doğrudan seçtiğiniz özel iniş koordinatı.',
-      en: 'Custom Martian coordinates picked directly on the 3D Mars globe.',
-    },
-  },
 };
 
 /** The body an event takes place on and can only be watched from; null for an event of the sky. */
@@ -1068,22 +1051,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       quality: QUALITY[st.settings.quality],
       mode: 'picker',
       markers,
-      onPick: (latDeg, lonDeg) => {
-        audio.cue('ui-click');
-        const customSite: SiteDef = {
-          id: 'custom',
-          body,
-          latDeg,
-          lonDeg,
-          name: lf(
-            tpl`Özel Nokta (${(l: Lang) => fmt(latDeg, 1, l)}°, ${(l: Lang) => fmt(lonDeg, 1, l)}°)`,
-            tpl`Custom Site (${(l: Lang) => fmt(latDeg, 1, l)}°, ${(l: Lang) => fmt(lonDeg, 1, l)}°)`,
-          ),
-          ...PICKED_SITE_TEXT[body],
-        };
-        setGame({ mapSelection: customSite });
-        globeView.setSelection(customSite, false);
-      },
+      onPick: (latDeg, lonDeg) => api.pickMapPoint(latDeg, lonDeg),
       onMarker: (markerId) => {
         const found = sites.find((s) => s.id === markerId);
         if (found) {
@@ -1542,6 +1510,23 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       globeView.setSelection(site, true);
     },
 
+    pickMapPoint(latDeg: number, lonDeg: number): void {
+      audio.cue('ui-click');
+      const site = customSite(getGame().mapWorld === 'mars' ? 'mars' : 'moon', latDeg, lonDeg);
+      setGame({ mapSelection: site });
+      globeView.setSelection(site, false);
+    },
+
+    async visitSite(site: SiteDef, jdTT: number): Promise<void> {
+      if (!Number.isFinite(jdTT)) return;
+      api.togglePanel('navigator', false);
+      leaveModes();
+      // A free visit at the chosen moment: the landing reads the clock, so it is set before.
+      prepareEvent(null, jdTT);
+      setGame({ mapWorld: site.body ?? 'moon' });
+      await api.landAt(site);
+    },
+
     async landAt(site: SiteDef): Promise<void> {
       audio.unlock();
       audio.cue('teleport');
@@ -1706,11 +1691,15 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     },
 
     setTime(jdTT: number): void {
+      // A moment that is no number (an empty or broken date field) leaves the clock as it is.
+      if (!Number.isFinite(jdTT)) return;
       endStaging(false);
       setGame((s) => ({ clock: { ...s.clock, jdTT: Math.max(CLOCK_FIRST_JD, Math.min(CLOCK_LAST_JD, jdTT)) } }));
+      lastEventCalcMs = -Infinity;
     },
 
     setRate(rate: number): void {
+      if (!Number.isFinite(rate)) return;
       endStaging(false);
       setGame((s) => ({ clock: { ...s.clock, rate, paused: rate === 0 } }));
     },
@@ -2542,7 +2531,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     const st = getGame();
     // A card or a panel over the page: Tab moves through its controls instead of grabbing the pointer.
     const covered = st.focusAssetId !== null || st.panels.info || st.panels.about || st.panels.settings
-      || st.panels.help || st.panels.credits || st.panels.pause;
+      || st.panels.help || st.panels.credits || st.panels.pause || st.panels.navigator;
     if (e.code === 'KeyK' && !e.ctrlKey && !e.metaKey && !e.altKey) {
       // Sound on / off, in every phase.
       const soundOn = !st.settings.soundOn;
@@ -2574,7 +2563,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         setGame({ focusAssetId: null });
         return;
       }
-      for (const p of ['info', 'about', 'settings', 'help', 'credits', 'pause'] as const) {
+      for (const p of ['navigator', 'info', 'about', 'settings', 'help', 'credits', 'pause'] as const) {
         if (st.panels[p]) {
           api.togglePanel(p, false);
           return;
@@ -2706,7 +2695,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       // A card or a panel over the scene takes the keys: under it only the key that closes it acts (and Esc,
       // in the key listener); nothing is toggled, photographed or walked behind it.
       const covered = st.focusAssetId !== null || st.panels.info || st.panels.about || st.panels.settings
-        || st.panels.help || st.panels.credits || st.panels.pause;
+        || st.panels.help || st.panels.credits || st.panels.pause || st.panels.navigator;
       // 1. Handle surface mode hotkeys
       if (input.wasPressed('KeyI')) {
         if (st.panels.info) api.togglePanel('info', false);
@@ -2815,6 +2804,8 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       if (player.state.position.distanceTo(lastHorizonPos) > 12) {
         lastHorizonPos.copy(player.state.position);
         cachedHorizonProfile = terrain.horizonProfile(player.state.position.x, player.state.position.z, 1.62, 180);
+        // The next rise and set follow this skyline: they are worked out again at the next telemetry update.
+        lastEventCalcMs = -Infinity;
       }
 
       const isSolid = WORLDS[st.world].solidSurface;
@@ -2827,7 +2818,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         : (sunBody.elDeg > -2 ? 1 : 0))
         * (1 - currentSky.sunObscuredByEarth * 0.95);
       const earthVis = st.world !== 'earth' && (isSolid
-        ? discVisibleFraction(cachedHorizonProfile, earthBody.azDeg, earthBody.elDeg, earthBody.angularDiameterDeg * 0.5) > 0.05
+        ? discVisibleFraction(cachedHorizonProfile, earthBody.azDeg, earthBody.elDeg, earthBody.angularDiameterDeg * 0.5) > VISIBLE_DISC_FRACTION
         : earthBody.elDeg > -2);
       // Brightest active supernova extra light (e.g. SN 1006 / SN 1054)
       let brightestSn: TransientState | null = null;
@@ -3216,7 +3207,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         const nVec = terrain.normalAt(player.state.position.x, player.state.position.z);
         const slopeDeg = isSolid ? Math.acos(Math.max(-1, Math.min(1, nVec.y))) * RAD2DEG : 0;
         const flux = solarFluxWm2(sunBody.distanceAU);
-        const panelPowerW = flux * 0.30 * sunVis;
+        const panelPowerW = flux * PANEL_EFFICIENCY * sunVis;
         const tempK = worldTemperatureK(st.world, sunBody.elDeg, sunVis, sunBody.distanceAU, st.terrainInfo?.albedo ?? 0.12);
 
         const telem: Telemetry = {
@@ -3240,7 +3231,8 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
           earthVisible: earthVis,
           earthEvent: timeUntil(earthEventAt, jdTT),
           earthPhase: earthBody.illuminatedFraction,
-          dteLink: earthVis && earthBody.elDeg > earthHorizonDeg + 0.5,
+          // Direct contact needs the Earth in sight, by the same rule as its rise and set (and the navigator's).
+          dteLink: earthVis,
           lightTimeSec: earthBody.lightTimeSec,
           surfaceTempK: tempK,
           radiationMsvDay: SURFACE_RADIATION_MSV_DAY[st.world] ?? null,

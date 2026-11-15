@@ -5,21 +5,24 @@
  *   - 3D map of the Moon or Mars for choosing where to land or where to watch an event from
  *   - Loading screen, SurfaceHud, SpaceHud, and clean glass panels
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import './theme.css';
 import type { EventCategory, L10n, Lang, Quality, SiteBody, SiteDef, WorldId } from '../core/types';
 import { fmt, lf, loc, tpl, tx, useLang } from '../core/i18n';
 import { useGame } from '../core/store';
 import { formatDate } from '../core/time';
 import { useDialog } from './useDialog';
-import { targetAltAz } from '../astro';
+import { discVisibleFraction, HORIZON_DISC_RADIUS_DEG, targetAltAz, VISIBLE_DISC_FRACTION } from '../astro';
+import type { Dem } from '../core/dem';
+import { globalHorizonProfile, loadMoonGlobalDem } from '../terrain/globalHorizon';
 import {
-  BODY_NAMES, CREDIT_GROUPS, EVENTS, GALAXIES, SITES_BY_BODY, TRANSIENTS, WORLD_ORDER, WORLDS,
+  BODY_NAMES, CREDIT_GROUPS, EVENTS, GALAXIES, SITE_GROUP_NAMES, SITE_GROUP_ORDER, SITES_BY_BODY, TRANSIENTS, WORLD_ORDER, WORLDS,
 } from '../content';
 import { game } from '../game/api';
 import { EVENT_BODY, ONLY_FROM_BODY, SpaceHud, SurfaceHud } from './hud';
 import { LangPicker } from './LangPicker';
 import { SpectatorBar, TutorialPanel } from './modes';
+import { NavigatorScreen } from './navigator/NavigatorScreen';
 
 // ─────────────────────────── Modals ───────────────────────────
 
@@ -293,6 +296,20 @@ interface SiteBadge {
   targetEl: number | null;
 }
 
+/** Skylines of Moon places from the global elevation map, by "lat,lon": the same for every moment. */
+const moonSkylines = new Map<string, Float32Array>();
+
+/** The skyline of `s` as the navigator and the surface telemetry take it (eye 1.62 m, 180 azimuths), worked out once. */
+function moonSkyline(dem: Dem, s: SiteDef): Float32Array {
+  const key = `${s.latDeg},${s.lonDeg}`;
+  let profile = moonSkylines.get(key);
+  if (!profile) {
+    profile = globalHorizonProfile(dem, s.latDeg, s.lonDeg, 1.62, 180);
+    moonSkylines.set(key, profile);
+  }
+  return profile;
+}
+
 function SiteBadges({ badge, targetName, lang }: { badge: SiteBadge; targetName: string; lang: Lang }) {
   return (
     <div className="mn-badge-row">
@@ -337,6 +354,58 @@ const BODY_TEXTS: Record<SiteBody, { landingPlaces: L10n; viewingPlaces: L10n; f
   },
 };
 
+/** Reads a typed angle: signed degrees, with a decimal point or comma. NaN when it is not a number. */
+function parseDegrees(text: string): number {
+  const t = text.trim().replace(',', '.');
+  return t === '' ? NaN : Number(t);
+}
+
+/**
+ * Typed coordinates for a point on the map's globe: latitude −90..90, longitude −180..180 or 0..360 east.
+ * Going there selects the point as a click on the globe does.
+ */
+function CoordinateForm({ body, lang }: { body: SiteBody; lang: Lang }) {
+  const [latText, setLatText] = useState('');
+  const [lonText, setLonText] = useState('');
+  const [error, setError] = useState<L10n | null>(null);
+
+  const submit = (e: FormEvent): void => {
+    e.preventDefault();
+    const lat = parseDegrees(latText);
+    const lonIn = parseDegrees(lonText);
+    if (!(lat >= -90 && lat <= 90)) {
+      setError({ tr: '−90° ile 90° arasında bir enlem girin.', en: 'Enter a latitude between −90° and 90°.' });
+      return;
+    }
+    if (!(lonIn >= -180 && lonIn <= 360)) {
+      setError({ tr: '−180° ile 180° arasında (ya da doğuya 0° ile 360°) bir boylam girin.', en: 'Enter a longitude between −180° and 180° (or 0° to 360° east).' });
+      return;
+    }
+    setError(null);
+    game.pickMapPoint(lat, lonIn > 180 ? lonIn - 360 : lonIn);
+  };
+
+  return (
+    <form className="mn-coord-form" onSubmit={submit} noValidate>
+      <div className="mn-section-label">
+        {body === 'mars' ? tx(lang, 'Mars’ta koordinata git', 'Go to coordinates on Mars') : tx(lang, 'Ay’da koordinata git', 'Go to coordinates on the Moon')}
+      </div>
+      <div className="mn-coord-row">
+        <label>
+          <span>{tx(lang, 'Enlem (°K +)', 'Latitude (°N +)')}</span>
+          <input className="mn-coord-input" inputMode="decimal" value={latText} placeholder="-89.45" onChange={(e) => setLatText(e.target.value)} />
+        </label>
+        <label>
+          <span>{tx(lang, 'Boylam (°D +)', 'Longitude (°E +)')}</span>
+          <input className="mn-coord-input" inputMode="decimal" value={lonText} placeholder="-137.31" onChange={(e) => setLonText(e.target.value)} />
+        </label>
+      </div>
+      {error && <div className="mn-coord-error" role="alert">{loc(error, lang)}</div>}
+      <button type="submit" className="mn-btn">{tx(lang, 'Bu koordinatlara git', 'Go to these coordinates')}</button>
+    </form>
+  );
+}
+
 function MapScreen() {
   const lang = useLang();
   const activeEventId = useGame((s) => s.activeEventId);
@@ -353,6 +422,10 @@ function MapScreen() {
   const body: SiteBody = shownWorld === 'mars' ? 'mars' : 'moon';
   const elsewhere = shownWorld !== body;
   const sites = SITES_BY_BODY[body];
+  const [moonDem, setMoonDem] = useState<Dem | null>(null);
+  useEffect(() => {
+    loadMoonGlobalDem().then(setMoonDem).catch(() => undefined);
+  }, []);
 
   // The listed places, and the point picked on the globe if there is one: what their own sky holds.
   const siteBadges = useMemo(() => {
@@ -369,18 +442,33 @@ function MapScreen() {
       } else if (transient && transient.kind === 'supernova') {
         targetEl = targetAltAz(clock.jdTT, s, { raDeg: transient.raDeg, decDeg: transient.decDeg }, body).elDeg;
       }
-      out[s.id] = { sunUp: sun.elDeg > 0, earthUp: earth.elDeg > 0, targetEl };
+      // On the Moon, once its elevation map is in, by the skyline as on the ground; until then by the bare horizon.
+      const skyline = body === 'moon' && moonDem ? moonSkyline(moonDem, s) : null;
+      out[s.id] = skyline
+        ? {
+          sunUp: discVisibleFraction(skyline, sun.azDeg, sun.elDeg, HORIZON_DISC_RADIUS_DEG.sun) > VISIBLE_DISC_FRACTION,
+          earthUp: discVisibleFraction(skyline, earth.azDeg, earth.elDeg, HORIZON_DISC_RADIUS_DEG.earth) > VISIBLE_DISC_FRACTION,
+          targetEl,
+        }
+        : { sunUp: sun.elDeg > 0, earthUp: earth.elDeg > 0, targetEl };
     }
     return out;
-  }, [clock.jdTT, activeEvent, mapSelection, sites, body]);
+  }, [clock.jdTT, activeEvent, mapSelection, sites, body, moonDem]);
 
-  const orderedSites = useMemo(() => {
-    const rec = new Set(activeEvent?.recommendedSiteIds ?? []);
-    return [...sites].sort((a, b) => (rec.has(b.id) ? 1 : 0) - (rec.has(a.id) ? 1 : 0));
-  }, [activeEvent, sites]);
+  const recommended = useMemo(() => new Set(activeEvent?.recommendedSiteIds ?? []), [activeEvent]);
+  // The recommended places first, without a heading; then the others under their group's heading, in the
+  // order of SITE_GROUP_ORDER, each group in the listed order; places without a group last.
+  const siteSections = useMemo(() => {
+    const rest = sites.filter((s) => !recommended.has(s.id));
+    return [
+      { key: 'recommended', label: null, sites: sites.filter((s) => recommended.has(s.id)) },
+      ...SITE_GROUP_ORDER.map((g) => ({ key: g, label: SITE_GROUP_NAMES[g], sites: rest.filter((s) => s.group === g) })),
+      { key: 'other', label: null, sites: rest.filter((s) => !s.group) },
+    ].filter((section) => section.sites.length > 0);
+  }, [recommended, sites]);
 
   // A selection that lies on the other body (the map has just changed worlds) gives way to the first place here.
-  const selectedSite: SiteDef = mapSelection && (mapSelection.body ?? 'moon') === body ? mapSelection : orderedSites[0];
+  const selectedSite: SiteDef = mapSelection && (mapSelection.body ?? 'moon') === body ? mapSelection : siteSections[0].sites[0];
   const targetName = activeEvent?.primaryTargetId ? shortTargetName(activeEvent.primaryTargetId, lang) : '';
   const worldName = WORLDS[shownWorld].name;
 
@@ -435,6 +523,9 @@ function MapScreen() {
             {site
               ? (tx(lang, '← Yüzeye dön', '← Back to surface'))
               : (tx(lang, '← Ana menü', '← Home menu'))}
+          </button>
+          <button type="button" className="mn-btn" onClick={() => game.togglePanel('navigator', true)}>
+            {tx(lang, 'Yerleri karşılaştır', 'Compare sites')}
           </button>
           <button
             type="button"
@@ -510,6 +601,7 @@ function MapScreen() {
             {loc(BODY_TEXTS[body].freeVisit, lang)}
           </p>
         )}
+        <CoordinateForm body={body} lang={lang} />
       </div>
 
       <div className="mn-map-center-hint">
@@ -534,36 +626,41 @@ function MapScreen() {
         )}
 
         <div className="mn-site-list">
-          {orderedSites.map((s) => {
-            const isSel = selectedSite.id === s.id;
-            const b = siteBadges[s.id];
-            const isRec = activeEvent?.recommendedSiteIds.includes(s.id);
-            return (
-              <button
-                key={s.id}
-                type="button"
-                className={`mn-site-item ${isSel ? 'is-selected' : ''}`}
-                aria-pressed={isSel}
-                onClick={() => game.previewSite(s)}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                  <strong style={{ fontSize: '0.86rem', color: '#f8fafc' }}>{loc(s.name, lang)}</strong>
-                  {isRec && (
-                    <span className="mn-badge ok">
-                      {tx(lang, 'Önerilen', 'Recommended')}
-                    </span>
-                  )}
-                </div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--c-dim)' }}>
-                  {loc(s.region, lang)} · {fmt(s.latDeg, 2, lang)}°, {fmt(s.lonDeg, 2, lang)}°
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#cbd5e1', lineHeight: 1.4 }}>
-                  {loc(s.blurb, lang)}
-                </div>
-                {b && !elsewhere && <SiteBadges badge={b} targetName={targetName} lang={lang} />}
-              </button>
-            );
-          })}
+          {siteSections.map((section) => (
+            <Fragment key={section.key}>
+              {section.label && <div className="mn-site-group">{loc(section.label, lang)}</div>}
+              {section.sites.map((s) => {
+                const isSel = selectedSite.id === s.id;
+                const b = siteBadges[s.id];
+                const isRec = recommended.has(s.id);
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className={`mn-site-item ${isSel ? 'is-selected' : ''}`}
+                    aria-pressed={isSel}
+                    onClick={() => game.previewSite(s)}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                      <strong style={{ fontSize: '0.86rem', color: '#f8fafc' }}>{loc(s.name, lang)}</strong>
+                      {isRec && (
+                        <span className="mn-badge ok">
+                          {tx(lang, 'Önerilen', 'Recommended')}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--c-dim)' }}>
+                      {loc(s.region, lang)} · {fmt(s.latDeg, 2, lang)}°, {fmt(s.lonDeg, 2, lang)}°
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#cbd5e1', lineHeight: 1.4 }}>
+                      {loc(s.blurb, lang)}
+                    </div>
+                    {b && !elsewhere && <SiteBadges badge={b} targetName={targetName} lang={lang} />}
+                  </button>
+                );
+              })}
+            </Fragment>
+          ))}
         </div>
       </div>
     </div>
@@ -654,6 +751,11 @@ function EventMenuScreen() {
           </div>
         </div>
       </div>
+
+      <button type="button" className="mn-navigator-entry" onClick={() => game.togglePanel('navigator', true)}>
+        <strong>{tx(lang, 'İniş Yeri Navigatörü', 'Landing Site Navigator')}</strong>
+        <span>{tx(lang, 'İniş yerlerini ve tarihlerini karşılaştırın: güneş ışığı, güç ve Dünya ile iletişim', 'Compare landing sites and dates: sunlight, power and contact with Earth')}</span>
+      </button>
 
       <div className="mn-nav-row">
         <div className="mn-seg">
@@ -892,6 +994,7 @@ export default function App() {
       <SettingsModal />
       <HelpModal />
       <CreditsModal />
+      <NavigatorScreen />
       <TutorialPanel />
       <SpectatorBar />
     </>
