@@ -190,7 +190,7 @@ export const CREDIT_GROUPS: Array<{ title: L10n; items: CreditItem[] }> = [
     title: { tr: '3B modeller', en: '3D models' },
     items: [
       {
-        text: 'NASA 3D Resources — Apollo Lunar Module, Mark III spacesuit, Viking Lander, Mars Global Surveyor, InSight, Perseverance, Ingenuity',
+        text: 'NASA 3D Resources — Apollo Lunar Module, Mark III spacesuit, Viking Lander, Mars Global Surveyor, InSight, Perseverance, Ingenuity (NASA and JPL logos and the Mars 2020 wordmark painted out of the textures)',
         url: 'https://github.com/nasa/NASA-3D-Resources',
       },
     ],
