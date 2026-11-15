@@ -78,6 +78,13 @@
   cursor: pointer;
 }
 
+/* The list is as wide as its longest entry; in a narrow window that pushes the last button off the bar. */
+@media (max-width: 1100px) {
+  .hud-bar-select {
+    max-width: 220px;
+  }
+}
+
 /* A list that cannot be changed now (the world list during an event that belongs to the Moon). */
 .hud-bar-select:disabled {
   opacity: 0.55;
