@@ -1,7 +1,8 @@
 /**
  * Keyboard, mouse and touch state for the surface game loop. Keys are tracked by KeyboardEvent.code so the
- * layout (Turkish Q / F keyboards included) does not change the physical WASD cluster. On a touch screen
- * one finger looks around and taps, and the keys come from the on-screen pad (`setKey`).
+ * layout (Turkish Q / F keyboards included) does not change the physical WASD cluster; the few keys that act
+ * by the character they type have codes of their own (see `CHARACTER_CODES`). On a touch screen one finger
+ * looks around and taps, and the keys come from the on-screen pad (`setKey`).
  */
 import { getGame, setGame } from './store';
 
@@ -13,15 +14,40 @@ const GAME_KEYS: Record<string, true> = {
   Space: true, ArrowUp: true, ArrowDown: true, ArrowLeft: true, ArrowRight: true, Tab: true, PageUp: true, PageDown: true,
 };
 
+/**
+ * Characters that act by what they are, not by where their key sits: plus and minus are on other keys in
+ * every layout (on a Turkish Q keyboard "+" is Shift+4, and "-" is where a US keyboard has "="). A press
+ * that types one of them counts as the code given here and not as its physical key, so that "+" does not
+ * also act as the digit it shares a key with. "=" is the plus key of a US keyboard without Shift.
+ */
+const CHARACTER_CODES: Record<string, string> = { '+': 'ZoomIn', '=': 'ZoomIn', '-': 'ZoomOut' };
+
 /** A point on the screen, in CSS pixels from the top-left corner of the window. */
 export interface ScreenPoint {
   x: number;
   y: number;
 }
 
+/**
+ * True when a key press belongs to the control that has the focus: a text, number or date field, an open
+ * list, the space bar on a checkbox, the arrows on a slider. Letters pressed on a checkbox, a slider or a
+ * button do not: shortcuts still work from them.
+ */
+export function keyBelongsToControl(e: KeyboardEvent): boolean {
+  const t = e.target as HTMLElement | null;
+  if (!t || typeof t.tagName !== 'string') return false;
+  if (t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable) return true;
+  if (!(t instanceof HTMLInputElement)) return false;
+  if (t.type === 'checkbox' || t.type === 'radio') return e.code === 'Space';
+  if (t.type === 'range') return e.code.startsWith('Arrow') || e.code === 'Home' || e.code === 'End' || e.code.startsWith('Page');
+  return true;
+}
+
 export class Input {
   private readonly down = new Set<string>();
   private readonly pressedThisFrame = new Set<string>();
+  /** Physical keys held that count as a character's code, by KeyboardEvent.code: the key is released by it. */
+  private readonly heldAsCharacter = new Map<string, string>();
   private lookX = 0;
   private lookY = 0;
   private wheel = 0;
@@ -146,27 +172,32 @@ export class Input {
     this.canvas.removeEventListener('contextmenu', this.onContextMenu);
   }
 
-  private isTyping(e: KeyboardEvent): boolean {
-    const t = e.target as HTMLElement | null;
-    return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
-  }
-
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (!this.enabled || this.isTyping(e) || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (!this.enabled || keyBelongsToControl(e) || e.metaKey || e.ctrlKey || e.altKey) return;
     if (GAME_KEYS[e.code]) e.preventDefault();
     // A real key: the on-screen pad of a touch screen is not needed any more.
     if (getGame().touchInput) setGame({ touchInput: false });
-    if (!this.down.has(e.code)) this.pressedThisFrame.add(e.code);
-    this.down.add(e.code);
+    // A key that went down as a character stays that character while it repeats, also once Shift is let go.
+    const code = CHARACTER_CODES[e.key] ?? this.heldAsCharacter.get(e.code) ?? e.code;
+    if (code !== e.code) this.heldAsCharacter.set(e.code, code);
+    if (!this.down.has(code)) this.pressedThisFrame.add(code);
+    this.down.add(code);
   };
 
+  /** The character a key typed when it went down is what is released, whatever Shift does in between. */
   private onKeyUp = (e: KeyboardEvent): void => {
+    const character = this.heldAsCharacter.get(e.code);
+    if (character) {
+      this.heldAsCharacter.delete(e.code);
+      this.down.delete(character);
+    }
     this.down.delete(e.code);
   };
 
   /** The window lost the keyboard: nothing stays held, and nothing queued acts when it comes back. */
   private onBlur = (): void => {
     this.down.clear();
+    this.heldAsCharacter.clear();
     this.pressedThisFrame.clear();
     this.leftDown = false;
     this.rightDown = false;
@@ -181,7 +212,7 @@ export class Input {
   private onLockChange = (): void => {
     setGame({ pointerLocked: this.locked });
     if (this.locked) this.hover = null;
-    else { this.down.clear(); this.leftDown = false; this.rightDown = false; }
+    else { this.down.clear(); this.heldAsCharacter.clear(); this.leftDown = false; this.rightDown = false; }
   };
 
   private onMouseMove = (e: MouseEvent): void => {

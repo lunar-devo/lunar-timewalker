@@ -19,14 +19,27 @@ export interface LabWatch {
 
 /** Days the template light curves of src/astro take to their brightest. */
 const RISE_DAYS: Record<'sn2' | 'sn1a', number> = { sn2: 10, sn1a: 17 };
+/** The sequence opens this many days before the light arrives. */
+const LEAD_DAYS = 1;
+/**
+ * The day after first light on which the sequence ends: six sidereal rotations of the Moon (27.321661 days
+ * each) after it opens. The view is held under the same stars while it plays (`heldToStars`), and after a
+ * whole number of rotations a lunar site has those stars overhead again: the sky the sequence ends on is the
+ * site's own.
+ */
+const END_DAY = 6 * 27.321661 - LEAD_DAYS;
+/** The Sun is in the picture with the star when it stands closer to it than this, degrees. */
+const SUN_IN_VIEW_DEG = 35;
 
 /**
  * `kind`, `distanceAU`: the lab's supernova and its distance from Earth; `jdTT`: the moment its light arrives
  * (the date of the lab's map); `seen`: its direction and distance from the world it is watched from (see
- * `mapPointSeenFrom`); `aftermath`: what the lab's model says becomes of that world.
+ * `mapPointSeenFrom`); `sunGapDeg`: the Sun's angular distance from the star in that world's sky, degrees;
+ * `aftermath`: what the lab's model says becomes of that world.
  */
 export function buildLabWatch(
-  kind: 'sn2' | 'sn1a', distanceAU: number, jdTT: number, seen: { raDeg: number; decDeg: number; distanceAU: number }, aftermath: L10n,
+  kind: 'sn2' | 'sn1a', distanceAU: number, jdTT: number, seen: { raDeg: number; decDeg: number; distanceAU: number },
+  sunGapDeg: number, aftermath: L10n,
 ): LabWatch {
   const firstLight = calendarUTFromJdTT(jdTT);
   const peakMag = labSupernovaMagnitude(kind, seen.distanceAU);
@@ -37,12 +50,15 @@ export function buildLabWatch(
     where: 'surface',
     focusId: LAB_WATCH_TARGET_ID,
     autoSeat: true,
+    heldToStars: true,
     endRate: 3600,
     stages: [
       {
         id: 'lab_before', kind: 'before', label: { tr: 'ÖNCE', en: 'BEFORE' }, seconds: 5,
-        from: at(-1), to: at(-0.02),
-        caption: { tr: 'Patlamadan önce: gökyüzünün bu yanında göze çarpan bir şey yok.', en: 'Before the explosion: nothing stands out in this part of the sky.' },
+        from: at(-LEAD_DAYS), to: at(-0.02),
+        caption: sunGapDeg < SUN_IN_VIEW_DEG
+          ? { tr: 'Patlamadan önce: gökyüzünün bu yanında Güneş’ten başka göze çarpan bir şey yok.', en: 'Before the explosion: nothing but the Sun stands out in this part of the sky.' }
+          : { tr: 'Patlamadan önce: gökyüzünün bu yanında göze çarpan bir şey yok.', en: 'Before the explosion: nothing stands out in this part of the sky.' },
       },
       {
         id: 'lab_rise', kind: 'event', label: { tr: 'OLAY', en: 'EVENT' }, seconds: 12,
@@ -54,7 +70,7 @@ export function buildLabWatch(
       },
       {
         id: 'lab_fade', kind: 'after', label: { tr: 'SONRA', en: 'AFTER' }, seconds: 10,
-        from: at(riseDays), to: at(riseDays + 150),
+        from: at(riseDays), to: at(END_DAY),
         caption: lf(tpl`Aylar içinde söner. Modele göre sonrası: ${aftermath}`, tpl`It fades over months. What the model says comes next: ${aftermath}`),
       },
     ],

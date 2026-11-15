@@ -230,7 +230,10 @@ function FateResult({ fate, kind, lang }: { fate: LabFate; kind: LabExplosionKin
 function MapDate({ jdTT, lang }: { jdTT: number; lang: Lang }) {
   const day = calendarUTFromJdTT(jdTT);
   const value = `${String(day.year).padStart(4, '0')}-${String(day.month).padStart(2, '0')}-${String(day.day).padStart(2, '0')}`;
-  const label = tx(lang, 'Haritanın tarihi', 'Date of the map');
+  // What is being typed, while it is not a day the map can show: a year typed digit by digit passes through
+  // 0002 and 0020, which are out of range. The map keeps its date until the field holds a day in range.
+  const [draft, setDraft] = useState<string | null>(null);
+  const label = tx(lang, 'Haritanın tarihi (UT)', 'Date of the map (UT)');
   const back = tx(lang, '30 gün geri', 'Back 30 days');
   const on = tx(lang, '30 gün ileri', 'Forward 30 days');
   return (
@@ -244,14 +247,18 @@ function MapDate({ jdTT, lang }: { jdTT: number; lang: Lang }) {
           type="date"
           min={MAP_DATE_MIN}
           max={MAP_DATE_MAX}
-          value={value}
+          value={draft ?? value}
           aria-label={label}
           onChange={(e) => {
-            if (!e.target.validity.valid) return;
             const [year, month, dayOfMonth] = e.target.value.split('-').map(Number);
-            // A field that is being typed in reads empty: the map keeps its date until a whole day is there.
-            if (year && month && dayOfMonth) game.setLabDate(jdTTFromCalendarUT({ year, month, day: dayOfMonth, hour: 12 }));
+            if (e.target.validity.valid && year && month && dayOfMonth) {
+              setDraft(null);
+              game.setLabDate(jdTTFromCalendarUT({ year, month, day: dayOfMonth, hour: 12 }));
+            } else {
+              setDraft(e.target.value);
+            }
           }}
+          onBlur={() => setDraft(null)}
         />
         <button type="button" className="hud-look-chip" aria-label={on} title={on} onClick={() => game.setLabDate(Math.min(MAP_JD_MAX, jdTT + 30))}>
           ›
@@ -568,7 +575,7 @@ function LabTable({ lab, lang, onClose }: { lab: LabState; lang: Lang; onClose: 
             <span className="mn-badge">MODEL</span>
           </h2>
           <button type="button" className="mn-btn" onClick={onClose}>
-            {tx(lang, 'Kapat', 'Close')}
+            {tx(lang, 'Kapat [Esc]', 'Close [Esc]')}
           </button>
         </div>
         <div className="hud-lab-table-wrap">
@@ -636,6 +643,10 @@ export function LabDrawer() {
   const solar = lab.kind === 'cme';
   const supernova = lab.kind === 'sn2' || lab.kind === 'sn1a';
   const maxAU = solar ? 2 : LAB_MAX_AU;
+  // The distance slider counts whole steps of a hundredth of a decade from the nearest distance: whole
+  // numbers, so that its last step is the far end exactly.
+  const logMinAU = Math.log10(LAB_MIN_AU);
+  const sliderSteps = Math.ceil((Math.log10(maxAU) - logMinAU) * 100);
   const sun = lab.bodies.find((b) => b.id === 'sun');
   const sunAU = sun?.distanceAU ?? 1;
   // Distances that no body on the map marks.
@@ -714,11 +725,11 @@ export function LabDrawer() {
               <input
                 type="range"
                 className="hud-lab-slider"
-                min={Math.log10(LAB_MIN_AU)}
-                max={Math.log10(maxAU)}
-                step={0.01}
-                value={Math.log10(Math.min(maxAU, lab.distanceAU))}
-                onChange={(e) => game.setLabConfig({ distanceAU: 10 ** Number(e.target.value), anchorId: null })}
+                min={0}
+                max={sliderSteps}
+                step={1}
+                value={lab.distanceAU >= maxAU ? sliderSteps : Math.round((Math.log10(lab.distanceAU) - logMinAU) * 100)}
+                onChange={(e) => game.setLabConfig({ distanceAU: Math.min(maxAU, 10 ** (logMinAU + Number(e.target.value) / 100)), anchorId: null })}
                 aria-label={tx(lang, 'Dünya’ya uzaklığı', 'Distance from Earth')}
               />
               <div className="hud-look-row" style={{ marginTop: 6 }}>
@@ -788,14 +799,29 @@ export function LabDrawer() {
       <div className="hud-lab-views" style={{ left: insets.left + 12, right: insets.right + 12 }}>
         {lab.playing && (
           <div className="hud-lab-transport">
-            <button
-              type="button"
-              aria-label={lab.paused ? tx(lang, 'Devam et', 'Resume') : tx(lang, 'Duraklat', 'Pause')}
-              title={lab.paused ? tx(lang, 'Devam et', 'Resume') : tx(lang, 'Duraklat', 'Pause')}
-              onClick={() => game.setLabPaused(!lab.paused)}
-            >
-              {lab.paused ? '▶\uFE0E' : '⏸\uFE0E'}
-            </button>
+            {lab.elapsedSec >= lab.runSec ? (
+              // The run has reached its end and waits there: the button plays it again from the start.
+              <button
+                type="button"
+                aria-label={tx(lang, 'Baştan oynat', 'Play again')}
+                title={tx(lang, 'Baştan oynat', 'Play again')}
+                onClick={() => {
+                  game.seekLab(0);
+                  game.setLabPaused(false);
+                }}
+              >
+                ↺
+              </button>
+            ) : (
+              <button
+                type="button"
+                aria-label={lab.paused ? tx(lang, 'Devam et', 'Resume') : tx(lang, 'Duraklat', 'Pause')}
+                title={lab.paused ? tx(lang, 'Devam et', 'Resume') : tx(lang, 'Duraklat', 'Pause')}
+                onClick={() => game.setLabPaused(!lab.paused)}
+              >
+                {lab.paused ? '▶\uFE0E' : '⏸\uFE0E'}
+              </button>
+            )}
             <input
               type="range"
               min={0}
@@ -841,7 +867,8 @@ export function LabDrawer() {
               ) : (
                 <p className="hud-lab-summary">{fate ? fate.summary.map((s) => loc(s, lang)).join(' ') : loc(impact.summary, lang)}</p>
               )}
-              {supernova && (
+              {/* Not in the class mode: the way back would start its questions again. */}
+              {supernova && !lab.quiz && (
                 <button
                   type="button"
                   className="mn-btn hud-lab-watch"

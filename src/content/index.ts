@@ -2,9 +2,11 @@ export { archiveTopicAt } from './archive';
 export {
   ARTIFACT_PLACEMENTS, BODY_NAMES, BODY_TOPICS, INFO_TOPICS, SITES, SURFACE_ASSETS, TRANSIENTS,
 } from './catalog';
+export { CREDIT_GROUPS, type CreditItem } from './credits';
 export { EVENTS } from './events';
 export { marsDustState, type MarsDustState } from './marsDust';
 export { cityLightsFor, earthImageryFor, type EarthImagery } from './earthImagery';
+export { GLOBE_CAPTIONS } from './globeCaptions';
 export {
   TUTORIAL_DATE, TUTORIAL_SITE_ID, TUTORIAL_STEPS, type TutorialCheck, type TutorialStep,
 } from './tutorial';

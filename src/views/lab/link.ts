@@ -29,6 +29,20 @@ const STRENGTHS: LabCmeStrength[] = ['ordinary', 'may2024', 'carrington'];
 const ID = /^[a-z][a-z0-9_]*$/;
 /** The map holds far fewer bodies than this: a list in a link is read no further, and each id counts once. */
 const MAX_IDS = 32;
+/** The years the lab's map can be set to: 1 January of the first … 31 December of the last. */
+export const LAB_FIRST_YEAR = 1900;
+export const LAB_LAST_YEAR = 2100;
+
+/** Whether `text` is YYYY-MM-DD and names a day of the calendar within those years. */
+function isLabDay(text: string): boolean {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (!parts) return false;
+  const [year, month, day] = parts.slice(1).map(Number);
+  if (year < LAB_FIRST_YEAR || year > LAB_LAST_YEAR) return false;
+  // A day that does not exist rolls over into another month, or another year.
+  const made = new Date(Date.UTC(year, month - 1, day));
+  return made.getUTCFullYear() === year && made.getUTCMonth() === month - 1 && made.getUTCDate() === day;
+}
 
 /** Writes a number with six significant digits: enough for any place on the map, short in the address. */
 const short = (x: number): string => String(Number(x.toPrecision(6)));
@@ -48,7 +62,11 @@ export function labLinkQuery(link: LabLink): string {
   return q.toString();
 }
 
-/** The scenario in an address's query, or null when it names none. Anything it leaves out or garbles gets the lab's own default. */
+/**
+ * The scenario in an address's query, or null when it names none. Anything it leaves out or garbles gets the
+ * lab's own default: a date that is no day of the calendar, or lies outside the lab's years, is left out,
+ * and the lab opens on the day the link is opened.
+ */
 export function parseLabLink(search: string): LabLink | null {
   const q = new URLSearchParams(search);
   const kind = KINDS.find((k) => k === q.get('lab'));
@@ -68,7 +86,7 @@ export function parseLabLink(search: string): LabLink | null {
     distanceAU: Math.max(0, number('d', kind === 'cme' ? 1 : 0.3)),
     angleDeg: number('a', 0),
     anchorId: anchor !== null && ID.test(anchor) ? anchor : null,
-    date: date !== null && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null,
+    date: date !== null && isLabDay(date) ? date : null,
     off: ids('off'),
     add: ids('add'),
     focusId: focus !== null && ID.test(focus) ? focus : 'earth',

@@ -35,6 +35,10 @@
  *     (or, for a giant planet or the Sun, the outer thousandth of its mass) out of its gravity, the energy
  *     that melts a crust like Earth's (or a 20 km shell of ice) over its surface, and its binding energy as
  *     a uniform sphere.
+ *   - An explosion set at a body (it stands on the body's spot of the map, clear of its token so that both
+ *     can be seen) is taken to be right beside that body, three of its radii from its centre, and its other
+ *     distances are measured from the body's real place. Set at a planet it is the size of the moon's orbit
+ *     away from a moon of that planet, and the other way round. The body counts as on the axis of a burst.
  *   - The flash is compared with the sunlight the body normally gets, and its temperature follows the
  *     radiative balance, T ∝ (light received)^¼.
  *   - A CME is a cloud about 70° wide thrown from the Sun toward Earth: bodies outside that cone are missed.
@@ -203,6 +207,12 @@ export function labFrontRadius(reach: number, elapsedSec: number): number {
   return elapsedSec <= LAB_SHOCK_SEC ? speed * elapsedSec : toEarth + Math.max(speed, FRONT_MIN_SPEED) * (elapsedSec - LAB_SHOCK_SEC);
 }
 
+/** Scene units a second at which that front is moving `elapsedSec` into the time-lapse. */
+export function labFrontSpeed(reach: number, elapsedSec: number): number {
+  const speed = (reach - 0.9 * LAB_EARTH_R) / LAB_SHOCK_SEC;
+  return elapsedSec <= LAB_SHOCK_SEC ? speed : Math.max(speed, FRONT_MIN_SPEED);
+}
+
 /** Seconds into the time-lapse at which that front has grown to `radius`: the inverse of `labFrontRadius`. */
 function frontArrivalSec(reach: number, radius: number): number {
   const toEarth = reach - 0.9 * LAB_EARTH_R;
@@ -257,6 +267,8 @@ export function distanceText(distanceAU: number): L10n {
 
 function durationText(seconds: number): L10n {
   const pick = (value: number): ((l: Lang) => string) => (l) => fmt(value, value < 10 ? 1 : 0, l);
+  // Light crosses the few thousand km to a body right beside the explosion in milliseconds.
+  if (seconds < 0.095) return lf(tpl`${pick(seconds * 1000)} ms`, tpl`${pick(seconds * 1000)} ms`);
   if (seconds < 90) return lf(tpl`${pick(seconds)} sn`, tpl`${pick(seconds)} s`);
   if (seconds < 5400) return lf(tpl`${pick(seconds / 60)} dk`, tpl`${pick(seconds / 60)} min`);
   if (seconds < 172_800) return lf(tpl`${pick(seconds / 3600)} saat`, tpl`${pick(seconds / 3600)} hours`);
@@ -289,7 +301,15 @@ type Steps = LabImpact['steps'];
 const NEVER: L10n = { tr: 'ulaşmaz', en: 'never arrives' };
 const MISSES: L10n = { tr: 'ıskalar', en: 'misses' };
 const SCORCH_STEP: L10n = { tr: 'Patlamaya bakan yüz kavruluyor', en: 'The side facing the blast is scorched' };
+/**
+ * The push is worked out as for a body that stays slow against light. Past a tenth of the speed of light
+ * that no longer holds: the model's speed stops there, and the text says only that it is beyond it.
+ */
+const KICK_LIMIT_KM_S = 0.1 * LIGHT_KM_S;
 const kickText = (kickKmS: number): L10n => {
+  if (kickKmS >= KICK_LIMIT_KM_S) {
+    return { tr: 'Kalıntılar ışık hızının onda birinden hızlı savruluyor', en: 'What is left is pushed away at more than a tenth of the speed of light' };
+  }
   const speed = (l: Lang): string => fmt(kickKmS, kickKmS < 10 ? 1 : 0, l);
   return lf(tpl`Kalıntılar ${speed} km/s hızla savruluyor`, tpl`What is left is pushed away at ${speed} km/s`);
 };
@@ -450,7 +470,7 @@ function burstImpact(distanceAU: number): LabImpact {
   const fluxSolar = fluenceJm2 / BURST_SECONDS / SOLAR_CONSTANT;
   const energyJ = BURST_ISOTROPIC_J * (EARTH_RADIUS_M / (2 * distanceAU * AU_M)) ** 2;
   // Light pushes with its momentum, E / c.
-  const kickKmS = energyJ / (LIGHT_KM_S * 1000) / EARTH_MASS_KG / 1000;
+  const kickKmS = Math.min(KICK_LIMIT_KM_S, energyJ / (LIGHT_KM_S * 1000) / EARTH_MASS_KG / 1000);
   const ozoneLoss = Math.min(0.98, 0.35 * (BURST_HAZARD_AU / distanceAU) ** 2);
   const damage = earthDamage(energyJ);
   const scorch = burstScorchOf(fluenceJm2);
@@ -476,7 +496,11 @@ function burstImpact(distanceAU: number): LabImpact {
   const raysTimeText = lightTime(distanceAU);
   const steps: Steps = [{ id: 'shock', atSec: LAB_SHOCK_SEC, text: lf(tpl`Gama ışınları ulaştı: ${raysTimeText} sonra`, tpl`The gamma rays arrive: after ${raysTimeText}`) }];
   if (scorch > 0.05) steps.push({ id: 'scorch', atSec: LAB_SHOCK_SEC + 0.8, text: SCORCH_STEP });
-  steps.push(ozoneStep(LAB_SHOCK_SEC + 1.6, ozoneLoss), ...earthRuinSteps(LAB_SHOCK_SEC, damage, kickKmS));
+  const ruinSteps = earthRuinSteps(LAB_SHOCK_SEC, damage, kickKmS);
+  // The rays thin the ozone layer and tear at the air in the same moment: where the air itself is blown
+  // off, its ozone is not a step of its own.
+  if (!ruinSteps.some((s) => s.id === 'atmosphere')) steps.push(ozoneStep(LAB_SHOCK_SEC + 1.6, ozoneLoss));
+  steps.push(...ruinSteps);
   steps.sort((a, b) => a.atSec - b.atSec);
 
   return {
@@ -570,16 +594,26 @@ function cmeImpact(distanceAU: number, strength: LabCmeStrength): LabImpact {
     tr: 'Sıradan bir jeomanyetik fırtına. Kutup ışıkları yüksek enlemlerde görülür; yeryüzünde tehlike yoktur.',
     en: 'An ordinary geomagnetic storm. Auroras are seen at high latitudes; there is no danger on the ground.',
   };
-  if (calm) {
+  if (distanceAU * AU_M <= BODY_TRAITS.sun.radiusM) {
+    // Nearer than the Sun is wide there is no cloud on its way to Earth: the numbers are what the formulas
+    // give, and the text says that they mean nothing here.
+    level = 'extreme';
+    summary = {
+      tr: 'Model bu uzaklığı kapsamaz: Güneş’in yarıçapı 696 bin km’dir, Dünya bu kadar yakında Güneş’in içinde kalır. Burada bir plazma bulutundan ve etkilerinden söz edilemez.',
+      en: 'The model does not cover this distance: the Sun’s radius is 696 thousand km, so this close Earth would be inside the Sun. There is no plasma cloud, and nothing it does, to speak of here.',
+    };
+  } else if (calm) {
     summary = {
       tr: 'Bulut buraya vardığında sıradan güneş rüzgârından seyrektir: manyetosfer sıkışmaz, belirgin bir etki olmaz.',
       en: 'By the time it arrives the cloud is thinner than the ordinary solar wind: the magnetosphere is not squeezed and there is no noticeable effect.',
     };
   } else if (auroraLatDeg <= 5) {
+    // Only a Sun brought to within about half its real distance drives a storm this strong, and from there
+    // its light does more harm than its eruption: the text is about the cloud and says so.
     level = 'extreme';
     summary = {
-      tr: 'Manyetosfer yer sabit uyduların yörüngesinin çok altına kadar sıkışır; kutup ışıkları bütün gökyüzünü kaplar. Uyduların çoğu ve elektrik şebekeleri devre dışı kalır, üst atmosfer ısınıp genişler. Yine de atmosfer yeryüzünü korur: insanlar zarar görmez, zarar gören teknolojidir.',
-      en: 'The magnetosphere is squeezed far below the orbit of the geostationary satellites and auroras fill the whole sky. Most satellites and power grids fail, and the upper atmosphere heats and swells. The air still shields the ground: people are not harmed, technology is.',
+      tr: 'Manyetosfer yer sabit uyduların yörüngesinin çok altına kadar sıkışır; kutup ışıkları bütün gökyüzünü kaplar. Uyduların çoğu ve elektrik şebekeleri devre dışı kalır, üst atmosfer ısınıp genişler. Bu yalnızca bulutun etkisidir: Güneş bu kadar yakınken ışığı ve ısısı Dünya’ya çok daha büyük zarar verir; model bunu hesaba katmaz.',
+      en: 'The magnetosphere is squeezed far below the orbit of the geostationary satellites and auroras fill the whole sky. Most satellites and power grids fail, and the upper atmosphere heats and swells. That is the cloud’s doing alone: with the Sun this close its light and heat would harm Earth far more, and the model leaves them out.',
     };
   } else if (auroraLatDeg <= 22) {
     level = 'danger';
@@ -747,7 +781,7 @@ function burstStrike(traits: BodyTraits, geo: BodyGeometry): Strike {
     blastJ,
     energyJ: blastJ,
     // Light pushes with its momentum, E / c.
-    kickKmS: blastJ / (LIGHT_KM_S * 1000) / traits.massKg / 1000,
+    kickKmS: Math.min(KICK_LIMIT_KM_S, blastJ / (LIGHT_KM_S * 1000) / traits.massKg / 1000),
     fluenceJm2,
     lightTimeText: raysTimeText,
     frontTimeText: raysTimeText,
@@ -1017,36 +1051,59 @@ function cmeFate(id: string, traits: BodyTraits, geo: BodyGeometry, strength: La
 }
 
 /**
+ * Size of the orbit that ties two bodies of the model, AU: a moon and the planet it goes round, in either
+ * order. 0 for any other pair.
+ */
+function sharedOrbitAU(idA: string, idB: string): number {
+  for (const [moonId, planetId] of [[idA, idB], [idB, idA]]) {
+    const host = BODY_TRAITS[moonId]?.host;
+    if (host?.id === planetId) return (host.orbitRadii * BODY_TRAITS[planetId].radiusM) / AU_M;
+  }
+  return 0;
+}
+
+/**
  * What the explosion does to the Moon, the Sun and the other bodies: those of `bodies` that are not in
  * `removed`, in the order given. In a solar eruption the Sun is the explosion itself and has no fate of its
  * own. A moon of another planet is taken to stand where its planet does.
+ *
+ * An explosion that stands on a body's spot (`spotRad`, at the body's distance) is set at that body. The map
+ * draws it clear of the body's token; the model takes it to be at the body's real place, whatever the date.
  */
 export function computeLabFates(setup: LabSetup, bodies: LabBody[], removed: string[]): LabFate[] {
   const { kind, angleRad } = setup;
   const d = Math.min(LAB_MAX_AU, Math.max(LAB_MIN_AU, setup.distanceAU));
   const reach = labSceneRadius(d);
   const sun = bodies.find((b) => b.id === 'sun');
+  // The same direction, whatever the number of turns in it, and the same distance.
+  const anchor = bodies.find((b) => (
+    Math.abs(Math.sin((b.spotRad - angleRad) / 2)) < 1e-9 && Math.abs(Math.min(LAB_MAX_AU, Math.max(LAB_MIN_AU, b.distanceAU)) - d) <= 1e-9 * d
+  ));
+  // The explosion's place in the plane of the map, AU from Earth.
+  const blastRad = anchor ? anchor.skyAngleRad : angleRad;
+  const blastAU = anchor ? anchor.distanceAU : d;
   const fates: LabFate[] = [];
   for (const body of bodies) {
     const traits = BODY_TRAITS[body.id];
     if (!traits || removed.includes(body.id) || (kind === 'cme' && body.id === 'sun')) continue;
-    // In the plane of the map, AU, with the explosion at the origin: the body, Earth, and the Sun's real place.
-    const bx = Math.cos(body.skyAngleRad) * body.distanceAU - Math.cos(angleRad) * d;
-    const by = Math.sin(body.skyAngleRad) * body.distanceAU - Math.sin(angleRad) * d;
-    const ex = -Math.cos(angleRad) * d;
-    const ey = -Math.sin(angleRad) * d;
+    // In that plane with the explosion at the origin: the body, Earth, and the Sun's real place.
+    const bx = Math.cos(body.skyAngleRad) * body.distanceAU - Math.cos(blastRad) * blastAU;
+    const by = Math.sin(body.skyAngleRad) * body.distanceAU - Math.sin(blastRad) * blastAU;
+    const ex = -Math.cos(blastRad) * blastAU;
+    const ey = -Math.sin(blastRad) * blastAU;
     const sunAU = sun && sun !== body
       ? Math.hypot(Math.cos(body.skyAngleRad) * body.distanceAU - Math.cos(sun.skyAngleRad) * sun.distanceAU, Math.sin(body.skyAngleRad) * body.distanceAU - Math.sin(sun.skyAngleRad) * sun.distanceAU)
       : 1;
-    // The same on the map, scene units: the token stands where the map has put it.
+    // On the map, scene units: the token and the explosion stand where the map has put them.
     const onMap = Math.hypot(
       Math.cos(body.angleRad) * labSceneRadius(body.distanceAU) - Math.cos(angleRad) * reach,
       Math.sin(body.angleRad) * labSceneRadius(body.distanceAU) - Math.sin(angleRad) * reach,
     );
     const away = Math.hypot(bx, by);
     const geo: BodyGeometry = {
-      // Never nearer than three of the body's own radii.
-      distanceAU: Math.max(away, (3 * traits.radiusM) / AU_M),
+      // Never nearer than three of the body's own radii; a planet and its moon, which share one place on the
+      // map, never nearer than the moon's orbit to an explosion set at the other.
+      distanceAU: Math.max(away, (3 * traits.radiusM) / AU_M, anchor ? sharedOrbitAU(body.id, anchor.id) : 0),
       sunAU,
       // A body at the explosion's own place has no direction from it: it counts as on the axis, not beside it.
       offAxisRad: away < 1e-9 ? 0 : Math.acos(Math.min(1, Math.max(-1, (bx * ex + by * ey) / (away * Math.hypot(ex, ey))))),

@@ -349,6 +349,8 @@ export interface SkyFrame {
   year: number;
   /** When true, bright flashes are softened (photosensitivity setting). */
   reducedFlash: boolean;
+  /** Simulated seconds per real second of the clock (0 while it is paused). */
+  clockRate: number;
 }
 
 export interface ISky {
@@ -713,6 +715,11 @@ export interface StagingDef {
   focusId?: string;
   /** Surface sequences: land at the best seat for watching `focusId` instead of the chapter's default site. */
   autoSeat?: boolean;
+  /**
+   * Surface sequences that run through many rotations of the Moon: there too the view is held under the same
+   * stars while they play, as it is on every other world, and the site is chosen for their first moment.
+   */
+  heldToStars?: boolean;
   stages: StageDef[];
   /** Simulated seconds per real second once the sequence has finished. */
   endRate: number;
@@ -796,9 +803,11 @@ export interface Telemetry {
   earthPhase: number;
   dteLink: boolean;
   lightTimeSec: number;
-  // environment (models)
+  // environment
+  /** An indicative model for this world, not a measurement. */
   surfaceTempK: number;
-  radiationMsvDay: number;
+  /** Dose rate measured on the surface of this world, mSv per day; null where none has been measured. */
+  radiationMsvDay: number | null;
   // provenance
   accuracy: AccuracyTier;
   terrainSource: L10n;

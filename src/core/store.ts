@@ -9,6 +9,7 @@ import type {
 } from './types';
 import { isLang } from './l10n';
 import { QUALITY, detectQuality } from './quality';
+import { jdTTNow } from './time';
 
 const SETTINGS_KEY = 'lunar-timewalker.settings.v1';
 
@@ -165,7 +166,8 @@ export const useGame = create<GameState>(() => ({
   mapSelection: null,
   terrainInfo: null,
 
-  clock: { jdTT: 2451545.0, rate: 1, paused: false },
+  // The moment the page is opened: the clock never shows a date nobody chose.
+  clock: { jdTT: jdTTNow(), rate: 1, paused: false },
   telemetry: null,
   targets: [],
   reticleId: null,

@@ -3,6 +3,7 @@ import type { LabBody, LabCmeStrength, LabExplosionKind, LabFate, LabImpact } fr
 import { computeLabFates, computeLabImpact, LAB_MIN_AU, LAB_SHOCK_SEC, labFrontRadius, labRunSeconds, labSceneRadius, LY_AU } from './physics';
 import { labLinkQuery, parseLabLink, type LabLink } from './link';
 import { GALAXIES, WORLDS } from '../../content';
+import { loc } from '../../core/l10n';
 
 const impactOf = (kind: LabExplosionKind, distanceAU: number, cmeStrength: LabCmeStrength = 'may2024'): LabImpact => (
   computeLabImpact({ kind, angleRad: 0, distanceAU, cmeStrength })
@@ -122,6 +123,29 @@ describe('Explosion Lab: gamma-ray bursts', () => {
     expect(fate.level).toBe('extreme');
     expect(fate.energyJ).toBeGreaterThan(0);
   });
+
+  it('does not report thinner ozone after the air itself has been blown off', () => {
+    expect(stepIds('grb', LAB_MIN_AU)).toEqual(['shock', 'scorch', 'atmosphere', 'oceans', 'crust', 'breakup', 'kick']);
+    for (const d of [LAB_MIN_AU, 0.1, 1, 30, 1000, LY_AU, 100 * LY_AU, 6500 * LY_AU]) {
+      const ids = stepIds('grb', d);
+      expect(ids.includes('ozone') && ids.includes('atmosphere')).toBe(false);
+      expect(ids.includes('ozone') || ids.includes('atmosphere')).toBe(true);
+    }
+  });
+
+  it('stops the push at a tenth of the speed of light and gives no speed beyond it', () => {
+    // From the Moon's distance the momentum of the rays over Earth's mass comes to 0.64 c: outside what that formula is for.
+    const close = impactOf('grb', LAB_MIN_AU);
+    expect(close.kickKmS).toBeCloseTo(29_979.2458, 3);
+    const told = loc(close.steps.find((s) => s.id === 'kick')?.text ?? { tr: '', en: '' }, 'en');
+    expect(told).toContain('more than a tenth of the speed of light');
+    expect(told).not.toContain('km/s');
+    // From 0.3 AU it is about 14 km/s, and the step says so.
+    const farther = impactOf('grb', 0.3);
+    expect(farther.kickKmS).toBeGreaterThan(10);
+    expect(farther.kickKmS).toBeLessThan(16);
+    expect(loc(farther.steps.find((s) => s.id === 'kick')?.text ?? { tr: '', en: '' }, 'en')).toMatch(/at 1\d km\/s$/);
+  });
 });
 
 describe('Explosion Lab: solar eruptions', () => {
@@ -192,6 +216,18 @@ describe('Explosion Lab: solar eruptions', () => {
     expect(warning('carrington')).toContain('11 minutes');
     // With the Sun moved to inside their orbit there is nothing between it and Earth.
     expect(impactOf('cme', LAB_MIN_AU).satellites.some((s) => s.id === 'l1')).toBe(false);
+  });
+
+  it('says that it has nothing to tell where Earth would be inside the Sun, and speaks only for the cloud where the Sun is far too close', () => {
+    const inside = impactOf('cme', LAB_MIN_AU);
+    expect(inside.level).toBe('extreme');
+    expect(loc(inside.summary, 'en')).toContain('The model does not cover this distance');
+    expect(loc(inside.summary, 'tr')).toContain('Model bu uzaklığı kapsamaz');
+    // The Sun's radius is 0.00465 AU: from just outside it the storm is described again.
+    const near = impactOf('cme', 0.1);
+    expect(near.level).toBe('extreme');
+    expect(loc(near.summary, 'en')).toContain('the model leaves them out');
+    for (const d of [LAB_MIN_AU, 0.004, 0.005, 0.1, 0.3]) expect(loc(impactOf('cme', d, 'carrington').summary, 'en')).not.toContain('people are not harmed');
   });
 });
 
@@ -360,6 +396,63 @@ describe('Explosion Lab: the other bodies', () => {
     expect(far.europa.outcome.melt).toBeGreaterThan(0.3);
     expect(far.moon.outcome.melt).toBeLessThan(0.1);
   });
+
+  it('takes an explosion set at a body to be right beside it, wherever the map draws the two', () => {
+    // The spot of an explosion set at a body is drawn clear of the body's token, a third of a radian along its
+    // ring. Jupiter on two dates: elsewhere in the sky, nearer to Earth, the spot on the other side of it.
+    const sun = body('sun', 'sun', Math.PI, 1);
+    const jupiterIn = { ...body('jupiter', 'planet', 2.1, 5.2), spotRad: 2.43 };
+    const jupiterLater = { ...body('jupiter', 'planet', 1.6, 4.4), spotRad: 1.25 };
+    const setAt = (at: LabBody, kind: LabExplosionKind, bodies: LabBody[]): Record<string, LabFate> => (
+      Object.fromEntries(computeLabFates({ kind, angleRad: at.spotRad, distanceAU: at.distanceAU, cmeStrength: 'may2024' }, bodies, []).map((f) => [f.id, f]))
+    );
+    const first = setAt(jupiterIn, 'sn2', [jupiterIn, sun]).jupiter;
+    const later = setAt(jupiterLater, 'sn2', [jupiterLater, sun]).jupiter;
+    // Three of Jupiter's radii: 209,733 km, and 0.7 s for the light.
+    expect(loc(first.distanceLabel, 'en')).toBe('210 thousand km');
+    expect(loc(later.distanceLabel, 'en')).toBe('210 thousand km');
+    expect(later.energyJ).toBeCloseTo(first.energyJ, -30);
+    expect(later.kickKmS).toBeCloseTo(first.kickKmS, 9);
+    expect(first.level).toBe('extreme');
+    expect(first.outcome.breakup).toBe(1);
+    // The other bodies are measured from where Jupiter really is: the Sun, 5.2 AU from Earth on the far side.
+    const sunFate = setAt(jupiterIn, 'sn2', [jupiterIn, sun]).sun;
+    expect(loc(sunFate.distanceLabel, 'en')).toBe(loc(fatesOf('sn2', 2.1, 5.2).sun.distanceLabel, 'en'));
+    // A place picked by hand a little beside the spot is that place of the map, 1.7 AU from Jupiter.
+    const [beside] = computeLabFates({ kind: 'sn2', angleRad: 2.431, distanceAU: 5.2, cmeStrength: 'may2024' }, [jupiterIn, sun], []);
+    expect(loc(beside.distanceLabel, 'en')).toBe('1.71 AU');
+  });
+
+  it('a burst set at a body strikes that body, on every date', () => {
+    for (const [id, kind, au] of [['moon', 'moon', 0.00257], ['mars', 'planet', 1.9], ['jupiter', 'planet', 5.2], ['saturn', 'planet', 9.6], ['sun', 'sun', 0.99]] as const) {
+      for (const [skyRad, gapRad] of [[0.3, 0.4], [2.9, -0.25], [-1.2, 0.33]]) {
+        const at = { ...body(id, kind, skyRad, au), spotRad: skyRad + gapRad };
+        const [fate] = computeLabFates({ kind: 'grb', angleRad: at.spotRad, distanceAU: au, cmeStrength: 'may2024' }, [at], []);
+        expect(fate.shockAtSec).not.toBeNull();
+        expect(fate.steps[0].id).toBe('shock');
+        expect(fate.energyJ).toBeGreaterThan(0);
+        expect(fate.level).toBe('extreme');
+      }
+    }
+    // The Moon is 5,212 km from a burst set at it: the rays are there in 17 thousandths of a second.
+    const moon = { ...body('moon', 'moon', 0.3, 0.00257), spotRad: 0.7 };
+    const [fate] = computeLabFates({ kind: 'grb', angleRad: 0.7, distanceAU: 0.00257, cmeStrength: 'may2024' }, [moon], []);
+    expect(loc(fate.distanceLabel, 'en')).toBe('5 thousand km');
+    expect(loc(fate.lightTimeText, 'en')).toBe('17 ms');
+  });
+
+  it('an explosion set at a planet is the size of its moon’s orbit away from that moon, and the other way round', () => {
+    const jupiter = { ...body('jupiter', 'planet', Math.PI / 2, 5), spotRad: 1.9 };
+    const europa = { ...body('europa', 'moon', Math.PI / 2, 5), angleRad: 1.65, spotRad: 1.3 };
+    const distanceTo = (id: string, at: LabBody): string => {
+      const fates = computeLabFates({ kind: 'sn2', angleRad: at.spotRad, distanceAU: 5, cmeStrength: 'may2024' }, [jupiter, europa], []);
+      return loc(fates.find((f) => f.id === id)?.distanceLabel ?? { tr: '', en: '' }, 'en');
+    };
+    // Europa goes round Jupiter at 9.4 of Jupiter's radii: 657,000 km.
+    expect(distanceTo('europa', jupiter)).toBe('657 thousand km');
+    expect(distanceTo('jupiter', europa)).toBe('657 thousand km');
+    expect(distanceTo('europa', europa)).toBe('5 thousand km');
+  });
 });
 
 describe('Explosion Lab: scenarios as links', () => {
@@ -390,6 +483,16 @@ describe('Explosion Lab: scenarios as links', () => {
     expect(repeated?.add).toEqual(['titan']);
     const many = parseLabLink(`?lab=sn2&off=${Array.from({ length: 500 }, (_, i) => `b${i}`).join(',')}`);
     expect(many?.off.length).toBeLessThanOrEqual(32);
+  });
+
+  it('leaves out a date that is no day of the calendar or lies outside the lab’s years', () => {
+    const dateOf = (text: string): string | null | undefined => parseLabLink(`?lab=sn2&date=${text}`)?.date;
+    for (const text of ['2100-13-45', '9999-99-99', '0000-00-00', '2026-02-30', '2023-02-29', '2026-00-10', '2026-04-31', '1899-12-31', '2101-01-01', '2026-1-5', '2026-11-15T00']) {
+      expect(dateOf(text)).toBeNull();
+    }
+    for (const text of ['1900-01-01', '2024-02-29', '2026-11-15', '2100-12-31']) expect(dateOf(text)).toBe(text);
+    // The rest of such a link is still read.
+    expect(parseLabLink('?lab=grb&date=2026-02-30&at=jupiter')?.anchorId).toBe('jupiter');
   });
 });
 

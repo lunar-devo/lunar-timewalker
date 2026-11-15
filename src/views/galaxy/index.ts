@@ -57,21 +57,24 @@ interface DepthModel {
   coreDeg: number;
   /** ball: dark ring of dust in the equatorial plane, inner and outer radius. */
   dustRingDeg: [number, number] | null;
+  /** ball: whether blue light in the picture is a jet, which stays in the picture's plane, and not the galaxy's stars. */
+  blueJet: boolean;
   /** How far the view may be tipped up or down from the picture's own direction, degrees. */
   maxPitchDeg: number;
 }
 
 const DEPTH: Record<string, DepthModel> = {
-  m31: { kind: 'disc', reachDeg: 1.75, bulgeDeg: 0.156, layerDeg: 0.02, flattening: 1, coreDeg: 0, dustRingDeg: null, maxPitchDeg: 80 },
-  m33: { kind: 'disc', reachDeg: 0.5, bulgeDeg: 0.018, layerDeg: 0.0095, flattening: 1, coreDeg: 0, dustRingDeg: null, maxPitchDeg: 80 },
+  m31: { kind: 'disc', reachDeg: 1.75, bulgeDeg: 0.156, layerDeg: 0.02, flattening: 1, coreDeg: 0, dustRingDeg: null, blueJet: false, maxPitchDeg: 80 },
+  m33: { kind: 'disc', reachDeg: 0.5, bulgeDeg: 0.018, layerDeg: 0.0095, flattening: 1, coreDeg: 0, dustRingDeg: null, blueJet: false, maxPitchDeg: 80 },
   // Wide enough to take in the companion, NGC 5195.
-  m51: { kind: 'disc', reachDeg: 0.087, bulgeDeg: 0.0033, layerDeg: 0.0013, flattening: 1, coreDeg: 0, dustRingDeg: null, maxPitchDeg: 80 },
-  lmc: { kind: 'disc', reachDeg: 3.67, bulgeDeg: 0, layerDeg: 0.18, flattening: 1, coreDeg: 0, dustRingDeg: null, maxPitchDeg: 80 },
+  m51: { kind: 'disc', reachDeg: 0.087, bulgeDeg: 0.0033, layerDeg: 0.0013, flattening: 1, coreDeg: 0, dustRingDeg: null, blueJet: false, maxPitchDeg: 80 },
+  lmc: { kind: 'disc', reachDeg: 3.67, bulgeDeg: 0, layerDeg: 0.18, flattening: 1, coreDeg: 0, dustRingDeg: null, blueJet: false, maxPitchDeg: 80 },
   // The Sombrero's thin disc cannot be told from its bulge in the picture's light and ends up spread through
   // the ball's equatorial plane: the model is only good for looking at nearly edge-on, as the picture does.
-  m104: { kind: 'ball', reachDeg: 0, bulgeDeg: 0, layerDeg: 0, flattening: 0.6, coreDeg: 0.0164, dustRingDeg: [0.0457, 0.0621], maxPitchDeg: 7 },
-  m87: { kind: 'ball', reachDeg: 0, bulgeDeg: 0, layerDeg: 0, flattening: 0.9, coreDeg: 0.0017, dustRingDeg: null, maxPitchDeg: 80 },
-  smc: { kind: 'cloud', reachDeg: 0, bulgeDeg: 0, layerDeg: 0.26, flattening: 1, coreDeg: 0, dustRingDeg: null, maxPitchDeg: 80 },
+  // Its brightest parts are blue-white in the picture; they are stars like the rest, and are spread like them.
+  m104: { kind: 'ball', reachDeg: 0, bulgeDeg: 0, layerDeg: 0, flattening: 0.6, coreDeg: 0.0164, dustRingDeg: [0.0457, 0.0621], blueJet: false, maxPitchDeg: 7 },
+  m87: { kind: 'ball', reachDeg: 0, bulgeDeg: 0, layerDeg: 0, flattening: 0.9, coreDeg: 0.0017, dustRingDeg: null, blueJet: true, maxPitchDeg: 80 },
+  smc: { kind: 'cloud', reachDeg: 0, bulgeDeg: 0, layerDeg: 0.26, flattening: 1, coreDeg: 0, dustRingDeg: null, blueJet: false, maxPitchDeg: 80 },
 };
 
 interface Companion {
@@ -264,10 +267,10 @@ function drawParticles(
     } else if (depth.kind === 'ball') {
       // Along the line of sight through a spheroid with the modified Hubble profile, the classic model of an
       // elliptical galaxy or a bulge: density (1 + r²/core²)^(−3/2). At distance R from the centre in the
-      // picture, the depth is then √(R² + core²)·tan θ with sin θ spread evenly. Blue light is not the
-      // galaxy's stars but M87's jet, which stays where the picture shows it.
+      // picture, the depth is then √(R² + core²)·tan θ with sin θ spread evenly. The blue light of a jet is
+      // not the galaxy's stars, and stays where the picture shows it.
       const radial = Math.hypot(along, across / depth.flattening, core);
-      z = b > r * 1.08 ? gauss() * 0.01 * PICTURE_WIDTH : radial * Math.tan(Math.asin(0.93 * spot));
+      z = depth.blueJet && b > r * 1.08 ? gauss() * 0.01 * PICTURE_WIDTH : radial * Math.tan(Math.asin(0.93 * spot));
     }
     // Faint parts are drawn with larger, fainter particles, so that they glow rather than speckle; and a
     // ball of old stars has no detail to keep, so all of its glow is.
@@ -283,7 +286,36 @@ function drawParticles(
   }
 }
 
-export function createGalaxyView(renderer: THREE.WebGLRenderer): ISpaceView {
+/** CSS pixels of the window that the HUD covers, counted in from each side. */
+export interface GalaxyInsets {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+/** The window with nothing over it: the HUD is hidden. */
+export const GALAXY_NO_INSETS: GalaxyInsets = { left: 0, right: 0, top: 0, bottom: 0 };
+
+export interface GalaxyView extends ISpaceView {
+  /**
+   * Tells the view how much of the window the HUD covers: the galaxy is fitted into what is left and stands
+   * in its middle. `null` stands for the HUD's usual layout (bars at the top and bottom, the galaxy's card at
+   * the left), which the view then allows for by itself.
+   */
+  setInsets(insets: GalaxyInsets | null): void;
+}
+
+/**
+ * The particles' light adds up without limit where many of them lie behind one another (a disc seen edge-on,
+ * the middle of a ball). Up to LIGHT_KNEE the sum is shown as it is. Above it the sum is eased along a
+ * logarithm, which leaves the curve smooth at the knee and reaches 1, the white of the picture, only where
+ * the sum is about 24 times that white (the larger LIGHT_SHOULDER, the more light it takes).
+ */
+const LIGHT_KNEE = 0.6;
+const LIGHT_SHOULDER = 5.85;
+
+export function createGalaxyView(renderer: THREE.WebGLRenderer): GalaxyView {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(FOV_DEG, window.innerWidth / Math.max(1, window.innerHeight), 1, 2000);
   scene.add(camera);
@@ -391,9 +423,64 @@ export function createGalaxyView(renderer: THREE.WebGLRenderer): ISpaceView {
   });
   const cloud = new THREE.Points(cloudGeo, cloudMat);
   cloud.frustumCulled = false;
-  cloud.renderOrder = 2;
-  cloud.visible = false;
-  scene.add(cloud);
+
+  // The particles are added up in a buffer of their own, and that sum is laid over the scene through the
+  // curve of LIGHT_KNEE: added straight onto the screen, crowded parts would burn out to flat white.
+  const cloudScene = new THREE.Scene();
+  cloudScene.add(cloud);
+  const cloudTarget = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: false });
+  const cloudLightMat = new THREE.ShaderMaterial({
+    uniforms: { uLight: { value: cloudTarget.texture } },
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthTest: false,
+    depthWrite: false,
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = vec4(position.xy, 0.0, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform sampler2D uLight;
+      varying vec2 vUv;
+      void main() {
+        vec3 light = texture2D(uLight, vUv).rgb;
+        // The strongest of the three colours is eased; the others follow it, so that the colour stays.
+        float top = max(light.r, max(light.g, light.b));
+        float over = max(top - ${LIGHT_KNEE.toFixed(2)}, 0.0) / ${(1 - LIGHT_KNEE).toFixed(2)};
+        float eased = min(top, ${LIGHT_KNEE.toFixed(2)}) + ${(1 - LIGHT_KNEE).toFixed(2)} * min(1.0, log(1.0 + ${LIGHT_SHOULDER.toFixed(2)} * over) / ${LIGHT_SHOULDER.toFixed(2)});
+        gl_FragColor = vec4(light * (eased / max(top, 1e-5)), 1.0);
+      }
+    `,
+  });
+  const cloudLightGeo = new THREE.PlaneGeometry(2, 2);
+  const cloudLight = new THREE.Mesh(cloudLightGeo, cloudLightMat);
+  cloudLight.frustumCulled = false;
+  cloudLight.renderOrder = 2;
+  cloudLight.visible = false;
+  const targetSize = new THREE.Vector2();
+  const clearColor = new THREE.Color();
+  // Drawn just before the sum is laid over the scene, with the camera and into a buffer of the size of the
+  // frame that is being drawn (the screen's, or one tile of a high-resolution capture).
+  cloudLight.onBeforeRender = (r): void => {
+    const into = r.getRenderTarget();
+    if (into) targetSize.set(into.width, into.height);
+    else r.getDrawingBufferSize(targetSize);
+    // A frame drawn at a fraction of the screen's resolution may have a size that is not whole pixels.
+    targetSize.floor();
+    if (cloudTarget.width !== targetSize.x || cloudTarget.height !== targetSize.y) cloudTarget.setSize(targetSize.x, targetSize.y);
+    const clearAlpha = r.getClearAlpha();
+    r.getClearColor(clearColor);
+    r.setClearColor(0x000000, 0);
+    r.setRenderTarget(cloudTarget);
+    r.clear();
+    r.render(cloudScene, camera);
+    r.setRenderTarget(into);
+    r.setClearColor(clearColor, clearAlpha);
+  };
+  scene.add(cloudLight);
 
   // The Sombrero's ring of dust: dark, and seen only where it passes in front of the galaxy's middle.
   const ringUniforms = { uShow: { value: 0 }, uRing: { value: new THREE.Vector2(1, 2) } };
@@ -459,7 +546,7 @@ export function createGalaxyView(renderer: THREE.WebGLRenderer): ISpaceView {
     drawParticles(image, def, shot, depth, count, position, tint, radius);
     for (const name of ['position', 'tint', 'radius']) cloudGeo.getAttribute(name).needsUpdate = true;
     cloudGeo.setDrawRange(0, count);
-    cloud.visible = true;
+    cloudLight.visible = true;
 
     dustRing.visible = depth.dustRingDeg !== null;
     if (depth.dustRingDeg) {
@@ -480,7 +567,7 @@ export function createGalaxyView(renderer: THREE.WebGLRenderer): ISpaceView {
     unitsPerDeg = PICTURE_WIDTH / shot.fieldDeg;
     shownKey = `${def.id}_${shot.id}`;
     shownGalaxyId = def.id;
-    fitPicture();
+    fitPicture(false);
   }
 
   // The view: turned from the picture's own direction by `yaw` and `pitch`, radians.
@@ -496,19 +583,39 @@ export function createGalaxyView(renderer: THREE.WebGLRenderer): ISpaceView {
   let idleSec = 0;
   let viewW = window.innerWidth;
   let viewH = window.innerHeight;
-  /** Distance at which the picture fills the space the info card leaves free, and that space's offset, pixels. */
+  /** What the HUD covers, as told through `setInsets`; null while its usual layout is allowed for. */
+  let insets: GalaxyInsets | null = null;
+  /**
+   * Distance at which the picture fills the space the HUD leaves free, and how far the middle of that space
+   * lies to the right of and below the window's middle, pixels: where the view is, and where it is heading.
+   */
   let fitDistance = 100;
-  let cardInset = 0;
+  let offsetX = 0;
+  let offsetY = 0;
+  let tFitDistance = 100;
+  let tOffsetX = 0;
+  let tOffsetY = 0;
   const dir = new THREE.Vector3();
   const right = new THREE.Vector3();
+  const up = new THREE.Vector3();
   const lookAt = new THREE.Vector3();
   const bufferSize = new THREE.Vector2();
 
-  function fitPicture(): void {
-    // The galaxy's card takes the left of the screen on all but narrow windows.
-    cardInset = viewW >= 720 ? Math.min(356, viewW * 0.32 + 16) + 12 : 0;
-    const pxPerUnit = Math.min(((viewW - cardInset) * 0.92) / PICTURE_WIDTH, ((viewH - 150) * 0.92) / pictureHeight);
-    fitDistance = viewH / (2 * Math.tan((FOV_DEG / 2) * DEG) * Math.max(1, pxPerUnit));
+  /** Fits the picture into the free space; `ease` lets the view glide there instead of jumping. */
+  function fitPicture(ease: boolean): void {
+    // The HUD's usual layout: its bars at the top and bottom, and the galaxy's card at the left of all but narrow windows.
+    const left = insets ? insets.left : viewW >= 720 ? Math.min(356, viewW * 0.32 + 16) + 12 : 0;
+    const rightSide = insets ? insets.right : 0;
+    const top = insets ? insets.top : 75;
+    const bottom = insets ? insets.bottom : 75;
+    const pxPerUnit = Math.min(((viewW - left - rightSide) * 0.92) / PICTURE_WIDTH, ((viewH - top - bottom) * 0.92) / pictureHeight);
+    tFitDistance = viewH / (2 * Math.tan((FOV_DEG / 2) * DEG) * Math.max(1, pxPerUnit));
+    tOffsetX = (left - rightSide) / 2;
+    tOffsetY = (top - bottom) / 2;
+    if (ease) return;
+    fitDistance = tFitDistance;
+    offsetX = tOffsetX;
+    offsetY = tOffsetY;
   }
 
   let el: HTMLElement | null = null;
@@ -572,7 +679,7 @@ export function createGalaxyView(renderer: THREE.WebGLRenderer): ISpaceView {
       // picture goes at once: it must not stand under this galaxy's name.
       if (def.id !== shownGalaxyId) {
         picture.visible = false;
-        cloud.visible = false;
+        cloudLight.visible = false;
         dustRing.visible = false;
         shownKey = '';
         shownGalaxyId = '';
@@ -611,15 +718,21 @@ export function createGalaxyView(renderer: THREE.WebGLRenderer): ISpaceView {
       yaw += (tYaw - yaw) * k;
       pitch += (tPitch - pitch) * k;
       zoom += (tZoom - zoom) * Math.min(1, dt * 6);
+      const kFit = Math.min(1, dt * 5);
+      fitDistance += (tFitDistance - fitDistance) * kFit;
+      offsetX += (tOffsetX - offsetX) * kFit;
+      offsetY += (tOffsetY - offsetY) * kFit;
 
       const cp = Math.cos(pitch);
       dir.set(Math.sin(yaw) * cp, Math.sin(pitch), Math.cos(yaw) * cp);
       right.set(Math.cos(yaw), 0, -Math.sin(yaw));
+      up.set(-Math.sin(yaw) * Math.sin(pitch), cp, -Math.cos(yaw) * Math.sin(pitch));
       const distance = fitDistance * zoom;
-      frame.closeUpPxPerDeg = shownKey ? (viewH / (2 * Math.tan((FOV_DEG / 2) * DEG) * distance)) * unitsPerDeg : 0;
-      // The galaxy stands in the middle of the space the card leaves free.
-      const shift = (cardInset / 2) * ((2 * Math.tan((FOV_DEG / 2) * DEG) * distance) / viewH);
-      lookAt.copy(right).multiplyScalar(-shift);
+      // Scene units at the galaxy to one pixel of the screen.
+      const unitsPerPx = (2 * Math.tan((FOV_DEG / 2) * DEG) * distance) / viewH;
+      frame.closeUpPxPerDeg = shownKey ? unitsPerDeg / unitsPerPx : 0;
+      // The galaxy stands in the middle of the space the HUD leaves free.
+      lookAt.copy(right).multiplyScalar(-offsetX * unitsPerPx).addScaledVector(up, offsetY * unitsPerPx);
       camera.position.copy(dir).multiplyScalar(distance).add(lookAt);
       camera.lookAt(lookAt);
 
@@ -661,12 +774,18 @@ export function createGalaxyView(renderer: THREE.WebGLRenderer): ISpaceView {
       viewH = Math.max(1, h);
       camera.aspect = w / viewH;
       camera.updateProjectionMatrix();
-      fitPicture();
+      fitPicture(false);
+    },
+    setInsets(next: GalaxyInsets | null): void {
+      if (next === insets || (next && insets && next.left === insets.left && next.right === insets.right && next.top === insets.top && next.bottom === insets.bottom)) return;
+      insets = next;
+      fitPicture(true);
     },
     dispose(): void {
       this.detach();
-      for (const g of [backdropGeo, pictureGeo, cloudGeo, ringGeo]) g.dispose();
-      for (const m of [backdropMat, pictureMat, cloudMat, ringMat]) m.dispose();
+      for (const g of [backdropGeo, pictureGeo, cloudGeo, cloudLightGeo, ringGeo]) g.dispose();
+      for (const m of [backdropMat, pictureMat, cloudMat, cloudLightMat, ringMat]) m.dispose();
+      cloudTarget.dispose();
       pictureUniforms.uMap.value.dispose();
     },
   };

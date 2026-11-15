@@ -906,13 +906,19 @@ export function geocentricPlaces(jdTT: number): Record<GeocentricBody, Geocentri
 /**
  * A point of such a map, given by its ecliptic longitude and its distance from Earth, as it is seen from
  * another world at the same moment: its direction (right ascension and declination, J2000 degrees) and its
- * distance from there, AU.
+ * distance from there, AU. `latDeg` is the point's ecliptic latitude: 0 for a place of the map itself, which
+ * lies in the plane of the planets; a star's own for a point that stands for a star, which the map shows at
+ * the star's longitude (see `eclipticOfRaDec`), so that the point is seen where the star is.
  */
-export function mapPointSeenFrom(world: WorldId, jdTT: number, lonDeg: number, distanceAU: number): { raDeg: number; decDeg: number; distanceAU: number } {
+export function mapPointSeenFrom(
+  world: WorldId, jdTT: number, lonDeg: number, distanceAU: number, latDeg = 0,
+): { raDeg: number; decDeg: number; distanceAU: number } {
   const t = astroTime(jdTT);
   const lon = lonDeg * DEG2RAD;
+  const lat = latDeg * DEG2RAD;
+  const inPlane = distanceAU * Math.cos(lat);
   // From Earth's centre, in equatorial axes.
-  const point = rx(J2000_OBLIQUITY_RAD, [distanceAU * Math.cos(lon), distanceAU * Math.sin(lon), 0]);
+  const point = rx(J2000_OBLIQUITY_RAD, [inPlane * Math.cos(lon), inPlane * Math.sin(lon), distanceAU * Math.sin(lat)]);
   let eye: Vec3 = [0, 0, 0];
   if (world === 'moon' || world === 'orbit') {
     const moon = A.GeoMoon(t);

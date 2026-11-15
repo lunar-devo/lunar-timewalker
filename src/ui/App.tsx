@@ -5,7 +5,7 @@
  *   - 3D Moon Map for choosing where to watch an event from
  *   - Loading screen, SurfaceHud, SpaceHud, and clean glass panels
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import './theme.css';
 import type { EventCategory, L10n, Lang, Quality, SiteDef, WorldId } from '../core/types';
 import { fmt, lf, loc, tpl, tx, useLang } from '../core/i18n';
@@ -14,7 +14,7 @@ import { formatDate } from '../core/time';
 import { useDialog } from './useDialog';
 import { targetAltAz } from '../astro';
 import {
-  BODY_NAMES, EVENTS, GALAXIES, SITES, TRANSIENTS, WORLD_ORDER, WORLDS,
+  BODY_NAMES, CREDIT_GROUPS, EVENTS, GALAXIES, SITES, TRANSIENTS, WORLD_ORDER, WORLDS,
 } from '../content';
 import { game } from '../game/api';
 import { SpaceHud, SurfaceHud } from './hud';
@@ -51,14 +51,14 @@ function SettingsModal() {
         <div className="mn-modal-head">
           <h2 className="mn-modal-title">{tx(lang, 'Ayarlar', 'Settings')}</h2>
           <button type="button" className="mn-btn" onClick={() => game.togglePanel('settings', false)}>
-            {tx(lang, 'Kapat', 'Close')}
+            {tx(lang, 'Kapat [Esc]', 'Close [Esc]')}
           </button>
         </div>
 
-        <div className="mn-form-row">
+        <label className="mn-form-row">
           <span>{tx(lang, 'Dil', 'Language')}</span>
           <LangPicker />
-        </div>
+        </label>
 
         <div className="mn-form-row">
           <span>{tx(lang, 'Görüntü kalitesi', 'Picture quality')}</span>
@@ -77,21 +77,15 @@ function SettingsModal() {
           </div>
         </div>
 
-        <div className="mn-form-row">
+        <label className="mn-form-row">
           <span>{tx(lang, 'Ses (müzik ve efektler) [K]', 'Sound (music and effects) [K]')}</span>
-          <input
-            type="checkbox"
-            aria-label={tx(lang, 'Ses (müzik ve efektler) [K]', 'Sound (music and effects) [K]')}
-            checked={settings.soundOn}
-            onChange={(e) => game.updateSettings({ soundOn: e.target.checked })}
-          />
-        </div>
+          <input type="checkbox" checked={settings.soundOn} onChange={(e) => game.updateSettings({ soundOn: e.target.checked })} />
+        </label>
 
-        <div className="mn-form-row">
+        <label className="mn-form-row">
           <span>{tx(lang, 'Ses düzeyi', 'Volume')}</span>
           <input
             type="range"
-            aria-label={tx(lang, 'Ses düzeyi', 'Volume')}
             min={0}
             max={1}
             step={0.05}
@@ -99,36 +93,30 @@ function SettingsModal() {
             onChange={(e) => game.updateSettings({ masterVolume: Number(e.target.value) })}
             disabled={!settings.soundOn}
           />
-        </div>
+        </label>
 
-        <div className="mn-form-row">
+        <label className="mn-form-row">
           <span>{tx(lang, 'Fare hassasiyeti', 'Mouse sensitivity')}</span>
           <input
             type="range"
-            aria-label={tx(lang, 'Fare hassasiyeti', 'Mouse sensitivity')}
             min={0.3}
             max={2.5}
             step={0.1}
             value={settings.mouseSensitivity}
             onChange={(e) => game.updateSettings({ mouseSensitivity: Number(e.target.value) })}
           />
-        </div>
+        </label>
 
         {toggles.map((t) => (
-          <div key={t.key} className="mn-form-row">
+          <label key={t.key} className="mn-form-row">
             <span>{loc(t.label, lang)}</span>
-            <input
-              type="checkbox"
-              aria-label={loc(t.label, lang)}
-              checked={settings[t.key]}
-              onChange={(e) => game.updateSettings({ [t.key]: e.target.checked })}
-            />
-          </div>
+            <input type="checkbox" checked={settings[t.key]} onChange={(e) => game.updateSettings({ [t.key]: e.target.checked })} />
+          </label>
         ))}
 
         {gpu && (
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--c-dim)' }}>
-            {tx(lang, tpl`Ekran kartı: ${gpu.renderer} · En büyük doku: ${gpu.maxTextureSize} px · Ekran: ${gpu.width}×${gpu.height}`, tpl`Graphics card: ${gpu.renderer} · Max texture: ${gpu.maxTextureSize} px · Screen: ${gpu.width}×${gpu.height}`)}
+            {tx(lang, tpl`Ekran kartı: ${gpu.renderer} · En büyük doku: ${gpu.maxTextureSize} px · Pencere: ${gpu.width}×${gpu.height}`, tpl`Graphics card: ${gpu.renderer} · Max texture: ${gpu.maxTextureSize} px · Window: ${gpu.width}×${gpu.height}`)}
             <br />
             {tx(
               lang,
@@ -143,12 +131,12 @@ function SettingsModal() {
 }
 
 const HELP_ROWS: Array<{ keys: L10n; does: L10n }> = [
-  { keys: { tr: 'Sürükle / Fare', en: 'Drag / Mouse' }, does: { tr: 'Sürükleyerek etrafa bakın (Tab isteğe bağlı fare kilidini açar)', en: 'Drag to look around (Tab toggles optional mouse lock)' } },
+  { keys: { tr: 'Sürükle / Fare', en: 'Drag / Mouse' }, does: { tr: 'Sürükleyerek etrafa bak (Tab isteğe bağlı fare kilidini açar)', en: 'Drag to look around (Tab toggles optional mouse lock)' } },
   { keys: { tr: 'W A S D / Oklar', en: 'W A S D / Arrows' }, does: { tr: 'Yürü (veya 0g uzayda itki ver)', en: 'Walk (or thrust in 0g space)' } },
   { keys: { tr: 'Shift + W', en: 'Shift + W' }, does: { tr: 'Koş (Ay/Mars’ta küçük sıçramalar; 0g’de hızlı itki)', en: 'Run (small hops on the Moon and Mars; fast thrust in 0g)' } },
   { keys: { tr: 'Boşluk / Q', en: 'Space / Q' }, does: { tr: 'Zıpla (katı yüzeyde) · yüksel / alçal (0g uzayda)', en: 'Jump (solid ground) · rise / descend (0g space)' } },
   { keys: { tr: 'E', en: 'E' }, does: { tr: 'Ortadaki cisim veya araç hakkında bilgi aç', en: 'Open information for the object in view' } },
-  { keys: { tr: 'Tıklayın', en: 'Click' }, does: { tr: 'Gökteki bir cisme tıkla: yakın görünümü açılır · Araca tıkla: bilgi kartı açılır', en: 'Click an object in the sky: its close-up view opens · Click hardware: its info card opens' } },
+  { keys: { tr: 'Tıkla', en: 'Click' }, does: { tr: 'Gökteki bir cisme tıkla: yakın görünümü açılır · Araca tıkla: bilgi kartı açılır', en: 'Click an object in the sky: its close-up view opens · Click hardware: its info card opens' } },
   { keys: { tr: 'F (basılı tut)', en: 'F (hold)' }, does: { tr: 'Güneş’i elle kapat: sönük yıldızlar ve gezegenler belirir', en: 'Shade the Sun with your hand: faint stars and planets appear' } },
   { keys: { tr: 'T + Tekerlek / + −', en: 'T + Wheel / + −' }, does: { tr: 'Teleskop aç/kapat ve yakınlaştır', en: 'Toggle telescope and zoom' } },
   { keys: { tr: 'Enter', en: 'Enter' }, does: { tr: 'Teleskop açıkken ortadaki cismin yakın görünümünü aç', en: 'With the telescope up: open the close-up of the object in the centre' } },
@@ -157,7 +145,7 @@ const HELP_ROWS: Array<{ keys: L10n; does: L10n }> = [
   { keys: { tr: 'K', en: 'K' }, does: { tr: 'Sesi aç / kapat', en: 'Sound on / off' } },
   { keys: { tr: 'V / G', en: 'V / G' }, does: { tr: '1. / 3. şahıs görünümü · Kask lambası', en: '1st / 3rd person view · Helmet lamp' } },
   { keys: { tr: 'B', en: 'B' }, does: { tr: 'Ölçüm direği koy (29,5 gün Güneş ve Dünya görünürlüğü)', en: 'Place measuring mast (29.5-day Sun & Earth visibility)' } },
-  { keys: { tr: 'M / I / N', en: 'M / I / N' }, does: { tr: 'Ay haritası · NASA görselleri · Veri paneli', en: 'Moon map · NASA images · Data panel' } },
+  { keys: { tr: 'M / I / N', en: 'M / I / N' }, does: { tr: 'Ay haritası · Arşiv (NASA görselleri) · Veriler', en: 'Moon map · Archive (NASA images) · Data' } },
   { keys: { tr: 'P', en: 'P' }, does: { tr: '8K fotoğraf kaydet (7680×4320)', en: 'Save an 8K photo (7680×4320)' } },
   { keys: { tr: '1 … 6 / R', en: '1 … 6 / R' }, does: { tr: 'Zaman hızı · Olayı baştan oynat', en: 'Time speed · Replay event' } },
   { keys: { tr: 'H', en: 'H' }, does: { tr: 'Bu kontrol listesini aç / kapat', en: 'Open / close this list of controls' } },
@@ -177,10 +165,10 @@ function HelpModal() {
         <div className="mn-modal-head">
           <h2 className="mn-modal-title">{tx(lang, 'Kontroller', 'Controls')}</h2>
           <button type="button" className="mn-btn" onClick={() => game.togglePanel('help', false)}>
-            {tx(lang, 'Kapat', 'Close')}
+            {tx(lang, 'Kapat [Esc]', 'Close [Esc]')}
           </button>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div className="mn-help-list">
           {HELP_ROWS.map((r) => (
             <div key={r.keys.en} className="mn-form-row">
               <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--c-accent)' }}>{loc(r.keys, lang)}</strong>
@@ -196,54 +184,6 @@ function HelpModal() {
   );
 }
 
-const CREDIT_GROUPS: Array<{ title: L10n; items: string[] }> = [
-  {
-    title: { tr: 'Ay yüzeyi', en: 'Lunar surface' },
-    items: [
-      'NASA SVS #4720 / LRO LOLA — global elevation (LDEM, 16 px/deg) and relief normal map',
-      'NASA GSFC PGDA / LRO LOLA 5 m/px polar DEMs, Site01 & Site04 (Barker et al. 2021)',
-      'NASA SVS #4720 / LRO LROC — colour mosaic of the Moon (8K)',
-    ],
-  },
-  {
-    title: { tr: 'Gökyüzü, gezegenler ve galaksiler', en: 'Sky, planets and galaxies' },
-    items: [
-      'NASA SVS #4851 — Deep Star Maps 2020 and constellation figures (8K); the Magellanic Clouds in visible light are cut from its 64K map (star catalogues: ESA Gaia DR2, Hipparcos-2, Tycho-2)',
-      'NASA HEASARC — Yale Bright Star Catalogue (BSC5P)',
-      'NASA/JPL SSD Horizons (DE441) — ephemeris checks; astronomy-engine (D. Cross, MIT) for live positions',
-      'NASA/JPL/USGS Mars Trek — Viking MDIM 2.1 colour mosaic (8K)',
-      'NASA/Johns Hopkins APL/Carnegie Institution of Washington — MESSENGER MDIS colour mosaic of Mercury, via NASA Mercury Trek (8K)',
-      'NASA, ESA, A. Simon (NASA GSFC), M. H. Wong (UC Berkeley) and the OPAL team — Hubble maps of Jupiter (2024), Saturn (2025; both hemispheres, the strip under the rings bridged) and Uranus (2015; colour by latitude, observed to 49° south)',
-      'NASA 3D Resources — Neptune texture map',
-      'NASA, ESA, B. F. Williams and Z. Chen (University of Washington), L. C. Johnson (Northwestern); image processing J. DePasquale (STScI) — Hubble mosaic of M31 (PHAT and PHAST surveys, 2025)',
-      'NASA/JPL-Caltech — GALEX ultraviolet pictures of M31 (PIA15416) and M33 (PIA03033); Spitzer infrared pictures of the Large Magellanic Cloud (PIA07137; M. Meixner, STScI, and the SAGE Legacy Team) and the Small Magellanic Cloud (PIA12485; STScI)',
-      'NASA, ESA and the Hubble Heritage Team (STScI/AURA) — Hubble pictures of M51 (S. Beckwith, STScI), M104 and M87 (P. Cote, E. Baltz)',
-      'NASA SkyView (GSFC) — survey images the galaxy pictures were matched with to find their place and turn on the sky (GALEX, IRAS/IRIS, Digitized Sky Survey)',
-      'Messier & Magellanic galaxy coordinates and properties from SIMBAD/NED/NASA',
-    ],
-  },
-  {
-    title: { tr: 'Dünya', en: 'Earth' },
-    items: [
-      'NASA Earth Observatory — Blue Marble Next Generation (2004, twelve months) and Black Marble 2016 (Suomi NPP VIIRS)',
-      'NASA GIBS / Worldview — MODIS Terra and VIIRS SNPP corrected reflectance for 2000-05-05, 2003-08-27, 2018-06-20, 2024-05-10, 2026-08-12',
-    ],
-  },
-  {
-    title: { tr: 'Uzay havası ve arşiv', en: 'Space weather and archive' },
-    items: [
-      'NASA CCMC DONKI — May 2024 CME and flare records',
-      'NASA Image and Video Library — archive images in the info panel',
-    ],
-  },
-  {
-    title: { tr: '3B modeller', en: '3D models' },
-    items: [
-      'NASA 3D Resources — Apollo Lunar Module, Mark III spacesuit, Viking Lander, Mars Global Surveyor, InSight, Perseverance, Ingenuity',
-    ],
-  },
-];
-
 function CreditsModal() {
   const lang = useLang();
   const open = useGame((s) => s.panels.credits);
@@ -256,7 +196,7 @@ function CreditsModal() {
         <div className="mn-modal-head">
           <h2 className="mn-modal-title">{tx(lang, 'Veri Kaynakları', 'Data Sources')}</h2>
           <button type="button" className="mn-btn" onClick={() => game.togglePanel('credits', false)}>
-            {tx(lang, 'Kapat', 'Close')}
+            {tx(lang, 'Kapat [Esc]', 'Close [Esc]')}
           </button>
         </div>
         <div className="mn-credits">
@@ -267,7 +207,13 @@ function CreditsModal() {
             <div key={g.title.en}>
               <h3>{loc(g.title, lang)}</h3>
               {/* Credit lines stay as their owners word them, in English, and say so to a screen reader. */}
-              <ul lang="en">{g.items.map((it) => <li key={it}>{it}</li>)}</ul>
+              <ul lang="en">
+                {g.items.map((it) => (
+                  <li key={it.text}>
+                    {it.url ? <a href={it.url} target="_blank" rel="noopener noreferrer">{it.text}</a> : it.text}
+                  </li>
+                ))}
+              </ul>
             </div>
           ))}
           <h3>{tx(lang, 'Ekip', 'Team')}</h3>
@@ -299,7 +245,7 @@ function PauseModal() {
             {tx(lang, 'Devam et', 'Continue')}
           </button>
           {activeEventId && (
-            <button type="button" className="mn-btn" onClick={() => game.togglePanel('about', true)}>
+            <button type="button" className="mn-btn" onClick={() => { close(); game.togglePanel('about', true); }}>
               {tx(lang, 'Bu olay hakkında', 'About this event')}
             </button>
           )}
@@ -308,10 +254,10 @@ function PauseModal() {
               {tx(lang, 'Harita: konum değiştir [M]', 'Map: change place [M]')}
             </button>
           )}
-          <button type="button" className="mn-btn" onClick={() => game.togglePanel('settings', true)}>
+          <button type="button" className="mn-btn" onClick={() => { close(); game.togglePanel('settings', true); }}>
             {tx(lang, 'Ayarlar', 'Settings')}
           </button>
-          <button type="button" className="mn-btn" onClick={() => game.togglePanel('help', true)}>
+          <button type="button" className="mn-btn" onClick={() => { close(); game.togglePanel('help', true); }}>
             {tx(lang, 'Kontroller', 'Controls')}
           </button>
           <button type="button" className="mn-btn mn-btn-ghost" onClick={() => { close(); game.openMenu(); }}>
@@ -331,6 +277,36 @@ function shortTargetName(id: string, lang: Lang): string {
   return tr ? loc(tr.name, lang).split(' (')[0] : id;
 }
 
+/** What can be seen from a place at the map's moment. */
+interface SiteBadge {
+  sunUp: boolean;
+  earthUp: boolean;
+  /** Height of the event's object above the horizon, in degrees; null when the event has none. */
+  targetEl: number | null;
+}
+
+function SiteBadges({ badge, targetName, lang }: { badge: SiteBadge; targetName: string; lang: Lang }) {
+  return (
+    <div className="mn-badge-row">
+      {badge.targetEl !== null && (
+        <span className={`mn-badge ${badge.targetEl > 2 ? 'ok' : 'dim'}`}>
+          {badge.targetEl > 0
+            ? `${targetName} +${Math.round(badge.targetEl)}°`
+            : tx(lang, tpl`${targetName} ufkun altında`, tpl`${targetName} below horizon`)}
+        </span>
+      )}
+      <span className={`mn-badge ${badge.sunUp ? 'warn' : 'ok'}`}>
+        {badge.sunUp ? (tx(lang, 'Gündüz', 'Day')) : (tx(lang, 'Gece', 'Night'))}
+      </span>
+      <span className={`mn-badge ${badge.earthUp ? 'ok' : 'dim'}`}>
+        {badge.earthUp
+          ? (tx(lang, 'Dünya görünür', 'Earth visible'))
+          : (tx(lang, 'Dünya görünmez', 'Earth hidden'))}
+      </span>
+    </div>
+  );
+}
+
 function MapScreen() {
   const lang = useLang();
   const activeEventId = useGame((s) => s.activeEventId);
@@ -341,12 +317,13 @@ function MapScreen() {
 
   const activeEvent = EVENTS.find((e) => e.id === activeEventId);
 
+  // The listed places, and the point picked on the globe if there is one.
   const siteBadges = useMemo(() => {
-    const out: Record<string, { sunUp: boolean; earthUp: boolean; targetEl: number | null }> = {};
+    const out: Record<string, SiteBadge> = {};
     const targetId = activeEvent?.primaryTargetId;
     const transient = targetId ? TRANSIENTS.find((t) => t.id === targetId && t.kind === 'supernova') : undefined;
 
-    for (const s of SITES) {
+    for (const s of mapSelection?.id === 'custom' ? [...SITES, mapSelection] : SITES) {
       const sun = targetAltAz(clock.jdTT, s, 'sun');
       const earth = targetAltAz(clock.jdTT, s, 'earth');
       let targetEl: number | null = null;
@@ -358,7 +335,7 @@ function MapScreen() {
       out[s.id] = { sunUp: sun.elDeg > 0, earthUp: earth.elDeg > 0, targetEl };
     }
     return out;
-  }, [clock.jdTT, activeEvent]);
+  }, [clock.jdTT, activeEvent, mapSelection]);
 
   const orderedSites = useMemo(() => {
     const rec = new Set(activeEvent?.recommendedSiteIds ?? []);
@@ -370,6 +347,13 @@ function MapScreen() {
   const moonOnly = activeEvent?.seenFrom === 'moon';
   const elsewhere = mapWorld !== 'moon' && !moonOnly;
   const worldName = WORLDS[mapWorld].name;
+
+  // The chosen place is brought into view: it may lie below the fold of the list, or (a point picked on the
+  // globe) above it.
+  const placesRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    placesRef.current?.querySelector('.mn-site-item.is-selected')?.scrollIntoView({ block: 'nearest' });
+  }, [selectedSite.id, selectedSite.latDeg, selectedSite.lonDeg]);
 
   return (
     <div className="mn-map-screen">
@@ -383,7 +367,8 @@ function MapScreen() {
           <h2 style={{ margin: 0, fontSize: '1.12rem' }}>
             {activeEvent ? loc(activeEvent.title, lang) : (tx(lang, 'Serbest dolaşım', 'Free exploration'))}
             <span style={{ marginLeft: 12, fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--c-accent)' }}>
-              {formatDate(clock.jdTT, lang, { time: true, calendarTag: true })}
+              {/* The clock, which for a staged event stands at the start of its "before" scene, not at the event. */}
+              {tx(lang, 'Saat:', 'Clock:')} {formatDate(clock.jdTT, lang, { time: true, calendarTag: true })}
             </span>
           </h2>
         </div>
@@ -433,11 +418,17 @@ function MapScreen() {
             )}
             {elsewhere && (
               <p>
-                {tx(
-                  lang,
-                  tpl`${worldName}: gökyüzü, çekim ve ışık bu gezegen için hesaplanır. Zemin ise seçtiğiniz Ay bölgesinin yükseklik verisinden uyarlanmış bir modeldir.`,
-                  tpl`${worldName}: the sky, gravity and light are computed for this planet. The ground is a model adapted from the elevation data of the Moon site you select.`,
-                )}
+                {WORLDS[mapWorld].solidSurface
+                  ? tx(
+                    lang,
+                    tpl`${worldName}: gökyüzü, çekim ve ışık bu gezegen için hesaplanır. Zemin ise seçtiğiniz Ay bölgesinin yükseklik verisinden uyarlanmış bir modeldir.`,
+                    tpl`${worldName}: the sky, gravity and light are computed for this planet. The ground is a model adapted from the elevation data of the Moon site you select.`,
+                  )
+                  : tx(
+                    lang,
+                    tpl`${worldName}: gökyüzü ve ışık bu gezegen için hesaplanır. Katı bir zemin yoktur: bulutların üzerinde süzülürsünüz.`,
+                    tpl`${worldName}: the sky and light are computed for this planet. There is no solid ground: you float above the clouds.`,
+                  )}
               </p>
             )}
             {elsewhere && activeEvent && activeEvent.staging?.some((s) => s.where === 'surface') && (
@@ -473,7 +464,7 @@ function MapScreen() {
           </>
         ) : (
           <p style={{ margin: 0, fontSize: '0.86rem', lineHeight: 1.55, color: 'var(--c-dim)' }}>
-            {tx(lang, 'Ortadaki Ay küresini sürükleyerek döndürün. Sağdaki listeden bir yer seçin ya da küre üzerinde istediğiniz noktaya tıklayın. İndikten sonra alttaki zaman çubuğuyla istediğiniz tarihe gidebilir, üst çubuktan Mars veya Dünya’ya geçebilirsiniz.', 'Drag the Moon globe to turn it. Pick a site on the right or click anywhere on the sphere. Once on the ground, use the time bar to visit any date or switch worlds from the top bar.')}
+            {tx(lang, 'Ortadaki Ay küresini sürükleyerek döndürün. Sağdaki listeden bir yer seçin ya da küre üzerinde istediğiniz noktaya tıklayın. İndikten sonra alttaki zaman çubuğuyla istediğiniz tarihe gidebilir, üst çubuktan başka bir gezegene geçebilirsiniz.', 'Drag the Moon globe to turn it. Pick a site on the right or click anywhere on the sphere. Once on the ground, use the time bar to visit any date or switch worlds from the top bar.')}
           </p>
         )}
       </div>
@@ -482,7 +473,7 @@ function MapScreen() {
         {tx(lang, 'Küreyi sürükleyerek döndürün · Bir noktaya tıklayarak orayı seçin', 'Drag to turn the globe · Click any point to select it')}
       </div>
 
-      <div className="mn-map-col">
+      <div className="mn-map-col" ref={placesRef}>
         <div className="mn-section-label">
           {activeEvent
             ? (tx(lang, 'Gözlem yerleri (önerilenler üstte)', 'Viewing places (recommended first)'))
@@ -497,6 +488,7 @@ function MapScreen() {
             <div style={{ fontSize: '0.75rem', color: 'var(--c-dim)' }}>
               {loc(selectedSite.blurb, lang)}
             </div>
+            {siteBadges.custom && !elsewhere && <SiteBadges badge={siteBadges.custom} targetName={targetName} lang={lang} />}
           </div>
         )}
 
@@ -510,6 +502,7 @@ function MapScreen() {
                 key={s.id}
                 type="button"
                 className={`mn-site-item ${isSel ? 'is-selected' : ''}`}
+                aria-pressed={isSel}
                 onClick={() => game.previewSite(s)}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
@@ -526,25 +519,7 @@ function MapScreen() {
                 <div style={{ fontSize: '0.75rem', color: '#cbd5e1', lineHeight: 1.4 }}>
                   {loc(s.blurb, lang)}
                 </div>
-                {b && !elsewhere && (
-                  <div className="mn-badge-row">
-                    {b.targetEl !== null && (
-                      <span className={`mn-badge ${b.targetEl > 2 ? 'ok' : 'dim'}`}>
-                        {b.targetEl > 0
-                          ? `${targetName} +${Math.round(b.targetEl)}°`
-                          : tx(lang, tpl`${targetName} ufkun altında`, tpl`${targetName} below horizon`)}
-                      </span>
-                    )}
-                    <span className={`mn-badge ${b.sunUp ? 'warn' : 'ok'}`}>
-                      {b.sunUp ? (tx(lang, 'Gündüz', 'Day')) : (tx(lang, 'Gece', 'Night'))}
-                    </span>
-                    <span className={`mn-badge ${b.earthUp ? 'ok' : 'dim'}`}>
-                      {b.earthUp
-                        ? (tx(lang, 'Dünya görünür', 'Earth visible'))
-                        : (tx(lang, 'Dünya görünmez', 'Earth hidden'))}
-                    </span>
-                  </div>
-                )}
+                {b && !elsewhere && <SiteBadges badge={b} targetName={targetName} lang={lang} />}
               </button>
             );
           })}
@@ -559,6 +534,9 @@ function MapScreen() {
 type MenuTab = 'events' | 'galaxies' | 'worlds';
 type CategoryFilter = 'all' | 'moon_mars' | 'deep' | 'planets' | 'solar_eclipse';
 
+/** The tab and filter last shown: coming back from an event or a galaxy returns to them. */
+const menuMemory: { tab: MenuTab; cat: CategoryFilter } = { tab: 'events', cat: 'all' };
+
 const CATEGORY_MAP: Record<Exclude<CategoryFilter, 'all'>, EventCategory[]> = {
   moon_mars: ['mission', 'mars', 'future'],
   deep: ['supernova', 'comet'],
@@ -569,8 +547,12 @@ const CATEGORY_MAP: Record<Exclude<CategoryFilter, 'all'>, EventCategory[]> = {
 function EventMenuScreen() {
   const lang = useLang();
   const soundOn = useGame((s) => s.settings.soundOn);
-  const [tab, setTab] = useState<MenuTab>('events');
-  const [cat, setCat] = useState<CategoryFilter>('all');
+  const [tab, setTab] = useState<MenuTab>(menuMemory.tab);
+  const [cat, setCat] = useState<CategoryFilter>(menuMemory.cat);
+  useEffect(() => {
+    menuMemory.tab = tab;
+    menuMemory.cat = cat;
+  }, [tab, cat]);
 
   const filteredEvents = useMemo(() => {
     if (cat === 'all') return EVENTS;
@@ -634,13 +616,13 @@ function EventMenuScreen() {
 
       <div className="mn-nav-row">
         <div className="mn-seg">
-          <button type="button" className={`mn-seg-btn ${tab === 'events' ? 'is-active' : ''}`} onClick={() => setTab('events')}>
+          <button type="button" className={`mn-seg-btn ${tab === 'events' ? 'is-active' : ''}`} aria-pressed={tab === 'events'} onClick={() => setTab('events')}>
             {tx(lang, tpl`Olaylar (${EVENTS.length})`, tpl`Events (${EVENTS.length})`)}
           </button>
-          <button type="button" className={`mn-seg-btn ${tab === 'galaxies' ? 'is-active' : ''}`} onClick={() => setTab('galaxies')}>
+          <button type="button" className={`mn-seg-btn ${tab === 'galaxies' ? 'is-active' : ''}`} aria-pressed={tab === 'galaxies'} onClick={() => setTab('galaxies')}>
             {tx(lang, tpl`Galaksiler (${GALAXIES.length})`, tpl`Galaxies (${GALAXIES.length})`)}
           </button>
-          <button type="button" className={`mn-seg-btn ${tab === 'worlds' ? 'is-active' : ''}`} onClick={() => setTab('worlds')}>
+          <button type="button" className={`mn-seg-btn ${tab === 'worlds' ? 'is-active' : ''}`} aria-pressed={tab === 'worlds'} onClick={() => setTab('worlds')}>
             {tx(lang, tpl`Gezegenler (${WORLD_ORDER.length})`, tpl`Worlds (${WORLD_ORDER.length})`)}
           </button>
         </div>
@@ -652,6 +634,7 @@ function EventMenuScreen() {
                 key={c.id}
                 type="button"
                 className={`mn-seg-btn ${cat === c.id ? 'is-active' : ''}`}
+                aria-pressed={cat === c.id}
                 style={{ border: '1px solid var(--c-line-soft)' }}
                 onClick={() => setCat(c.id)}
               >
@@ -704,10 +687,11 @@ function EventMenuScreen() {
                 <div>
                   <div className="mn-card-top">
                     <span>{g.catalogCode}</span>
+                    {/* Round figures: the view's card gives the measured range where one is known. */}
                     <span>
                       {g.distanceMly < 1
-                        ? `${Math.round(g.distanceMly * 1000)} ${tx(lang, 'bin ışık yılı', 'kly')}`
-                        : `${fmt(g.distanceMly, 1, lang)} ${tx(lang, 'milyon ly', 'Mly')}`}
+                        ? tx(lang, tpl`≈ ${Math.round(g.distanceMly * 1000)} bin ışık yılı`, tpl`≈ ${Math.round(g.distanceMly * 1000)} thousand light-years`)
+                        : tx(lang, tpl`≈ ${fmt(g.distanceMly, g.distanceMly < 10 ? 1 : 0, lang)} milyon ışık yılı`, tpl`≈ ${fmt(g.distanceMly, g.distanceMly < 10 ? 1 : 0, lang)} million light-years`)}
                     </span>
                   </div>
                   <h3 className="mn-card-title">{loc(g.name, lang)}</h3>
@@ -777,10 +761,41 @@ export default function App() {
   const loading = useGame((s) => s.loading);
   const fatal = useGame((s) => s.fatal);
   const toast = useGame((s) => s.toast);
+  const mapWorld = useGame((s) => s.mapWorld);
 
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
+
+  // A double click must not fall through to the page its first click opened (the second would pick a place
+  // on the map, or press whatever lies under the pointer there): for a moment after a page change, clicks
+  // are swallowed.
+  const [settling, setSettling] = useState(false);
+  useEffect(() => {
+    setSettling(true);
+    const timer = window.setTimeout(() => setSettling(false), 400);
+    return () => window.clearTimeout(timer);
+  }, [phase]);
+
+  // A control used with the mouse or a finger gives the keyboard back to the scene: left with the focus, a
+  // slider would take the arrow keys, a list the letters and a button the Enter key. Controls reached with
+  // the keyboard keep the focus, and so do text fields and whatever is inside a dialog.
+  useEffect(() => {
+    const release = (e: Event): void => {
+      const el = document.activeElement;
+      if (!(el instanceof HTMLElement) || el === document.body || el.closest('[role="dialog"]')) return;
+      if (el instanceof HTMLSelectElement && e.type !== 'change') return;
+      if (el instanceof HTMLTextAreaElement) return;
+      if (el instanceof HTMLInputElement && el.type !== 'range' && el.type !== 'checkbox' && el.type !== 'radio') return;
+      el.blur();
+    };
+    window.addEventListener('pointerup', release);
+    window.addEventListener('change', release);
+    return () => {
+      window.removeEventListener('pointerup', release);
+      window.removeEventListener('change', release);
+    };
+  }, []);
 
   return (
     <>
@@ -806,7 +821,9 @@ export default function App() {
       {phase === 'loading' && (
         <div className="mn-screen" style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
           <div className="mn-brand-tag">
-            {tx(lang, 'NASA LRO / LOLA arazi verisi yükleniyor', 'Loading NASA LRO / LOLA terrain')}
+            {mapWorld === 'moon'
+              ? tx(lang, 'NASA LRO / LOLA arazi verisi yükleniyor', 'Loading NASA LRO / LOLA terrain')
+              : tx(lang, 'Ortam hazırlanıyor', 'Preparing the world')}
           </div>
           <h2 style={{ margin: '10px 0', fontSize: '1.5rem' }}>
             {loading.label ? loc(loading.label, lang) : (tx(lang, 'Yükleniyor…', 'Loading…'))}
@@ -821,6 +838,7 @@ export default function App() {
       {phase === 'space' && <SpaceHud />}
       {/* Outside the two HUDs (the menu, the map, the loading screen) a toast is shown here. */}
       {toast && phase !== 'surface' && phase !== 'space' && <div className={`hud-toast is-${toast.kind}`}>{loc(toast.text, lang)}</div>}
+      {settling && <div className="mn-click-guard" />}
 
       <PauseModal />
       <SettingsModal />

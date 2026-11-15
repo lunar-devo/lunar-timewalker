@@ -11,15 +11,15 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 import type {
-  BodyId, CmeVisual, Collider, EventDef, GameAPI, GlobeMarker, ISpaceView, L10n, LabBody, LabConfigPatch,
-  LabExplosionKind, LabFate, LabFraming, LabImpactLevel, LabQuiz, LabSetup, LabState, LightingState, LightReading,
-  PanelId, Settings, SiteCoord, SiteDef, SkyState, SkyTarget, StageDef, StagingDef, SupernovaDef, Telemetry,
-  TerrainLoadInfo, TransientDef, TransientState, WorldId,
+  BodyId, CmeVisual, Collider, EventDef, GameAPI, GlobeMarker, HorizonEvent, ISpaceView, L10n, LabBody, LabConfigPatch,
+  LabExplosionKind, LabFate, LabFraming, LabImpactLevel, LabQuiz, LabSetup, LabState, Lang, LightingState,
+  LightReading, PanelId, Settings, SiteCoord, SiteDef, SkyState, SkyTarget, StageDef, StagingDef, SupernovaDef,
+  Telemetry, TerrainLoadInfo, TransientDef, TransientState, WorldId,
 } from '../core/types';
 import { loadManifest, setMaxTextureSize } from '../core/assets';
 import { frame, type FrameProjection } from '../core/frame';
-import { lf, loadDict, loc, tpl } from '../core/l10n';
-import { Input } from '../core/input';
+import { fmt, lf, loadDict, loc, tpl } from '../core/l10n';
+import { Input, keyBelongsToControl } from '../core/input';
 import { attachPinch } from '../core/pinch';
 import { QUALITY } from '../core/quality';
 import {
@@ -37,18 +37,18 @@ import { createArtifacts } from '../artifacts';
 import { createAudio } from '../audio';
 import {
   ARTIFACT_PLACEMENTS, BODY_NAMES, BODY_TOPICS, BRIGHT_STARS, EVENTS, GALAXIES, SITES,
-  SURFACE_ASSETS, TRANSIENTS, TUTORIAL_DATE, TUTORIAL_SITE_ID, TUTORIAL_STEPS, WORLDS,
+  SURFACE_ASSETS, TRANSIENTS, TUTORIAL_DATE, TUTORIAL_SITE_ID, TUTORIAL_STEPS, WORLDS, type TutorialCheck,
 } from '../content';
 import { createNasa } from '../nasa';
 import { createPlayer } from '../player';
-import { createSky } from '../sky';
+import { createSky, OVERCAST_WORLDS } from '../sky';
 import { createTerrain } from '../terrain';
 import { createGlobeView } from '../views/globe';
 import { createRemnantView, createSunView } from '../views/special';
 import { createGalaxyView } from '../views/galaxy';
 import {
-  computeLabFates, computeLabImpact, createLabView, LAB_EXTRA_IDS, LAB_MAX_AU, LAB_MIN_AU, LAB_QUESTIONS,
-  labLinkQuery, labRunSeconds, parseLabLink, type LabLink,
+  computeLabFates, computeLabImpact, createLabView, LAB_EXTRA_IDS, LAB_FIRST_YEAR, LAB_LAST_YEAR, LAB_MAX_AU, LAB_MIN_AU,
+  LAB_QUESTIONS, labLandmarkLatitudeDeg, labLinkQuery, labRunSeconds, parseLabLink, type LabLink,
 } from '../views/lab';
 import { buildLabWatch, LAB_WATCH_EVENT_ID, LAB_WATCH_TARGET_ID } from '../views/lab/watch';
 import { registerGame } from './api';
@@ -69,15 +69,38 @@ const MIN_PIXEL_RATIO = 0.75;
 /** What the lab's model says of the explosion that is set: for Earth, for the other bodies, and how long the time-lapse runs. */
 type LabResults = Pick<LabState, 'impact' | 'fates' | 'runSec'>;
 
-/** The moments the lab's map can be set to: 1 January 1900 … 31 December 2100 (UT). */
-const LAB_FIRST_JD = jdTTFromCalendarUT({ year: 1900, month: 1, day: 1 });
-const LAB_LAST_JD = jdTTFromCalendarUT({ year: 2100, month: 12, day: 31, hour: 23, minute: 59, second: 59 });
+/** The moments the lab's map can be set to: 1 January of the first year a link may name … 31 December of the last (UT). */
+const LAB_FIRST_JD = jdTTFromCalendarUT({ year: LAB_FIRST_YEAR, month: 1, day: 1 });
+const LAB_LAST_JD = jdTTFromCalendarUT({ year: LAB_LAST_YEAR, month: 12, day: 31, hour: 23, minute: 59, second: 59 });
+
+/** The moments the clock can be set to and run to, as the time bar states them: 1 January 3000 BC … 31 December 2035 (UT). */
+const CLOCK_FIRST_JD = jdTTFromCalendarUT({ year: -2999, month: 1, day: 1 });
+const CLOCK_LAST_JD = jdTTFromCalendarUT({ year: 2035, month: 12, day: 31, hour: 23, minute: 59, second: 59 });
+
+/**
+ * Radiation dose rate measured on the surface, mSv per day; a world without a measurement has no value.
+ * Moon: galactic-cosmic-ray background measured by Chang'e-4 LND (Zhang et al. 2020), ≈ 60 µSv/h ≈ 1.44 mSv/day.
+ * Mars: MSL RAD in Gale crater (Hassler et al. 2014), 0.67 mSv/day. Solar particle events are not modelled,
+ * so no storm value is invented.
+ */
+const SURFACE_RADIATION_MSV_DAY: Partial<Record<WorldId, number>> = { moon: 1.44, mars: 0.67 };
+
+/** The tutorial steps that are done through the telescope; any other step begins with it down. */
+const TELESCOPE_CHECKS: Partial<Record<TutorialCheck['kind'], true>> = { telescope: true, telescopeAim: true, enterView: true };
+
+/** A rise or a set as a moment of the clock; what is left until then is counted from it (see `HorizonEvent`). */
+interface HorizonMoment {
+  kind: HorizonEvent['kind'];
+  jdTT: number;
+}
 
 /** The lab scenario whose supernova is watched from the ground: what is needed to show it from any world. */
 interface LabWatchSource {
   kind: 'sn2' | 'sn1a';
   distanceAU: number;
   angleRad: number;
+  /** The body or star of the map the explosion was set at: a star's real place in the sky lies off the map's plane. */
+  anchorId: string | null;
   jdTT: number;
   /** What the lab's model says becomes of Earth, and of the other bodies of its map. */
   earthSummary: L10n;
@@ -242,11 +265,29 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
   const galaxyView = createGalaxyView(renderer);
   const labView = createLabView(renderer);
   labView.onPlace((angleRad, distanceAU, bodyId) => api.setLabConfig({ angleRad, distanceAU, anchorId: bodyId }, true));
+  /** Wall time of the last notice that a run locks the map: it is not repeated for every click. */
+  let lastLockedNoticeMs = -Infinity;
+  labView.onLockedClick(() => {
+    // In the class mode the place is the question's, with or without a run.
+    if (getGame().lab?.quiz || performance.now() - lastLockedNoticeMs < 4000) return;
+    lastLockedNoticeMs = performance.now();
+    showToast({ tr: 'Yeri değiştirmek için önce “Sıfırla”ya basın.', en: 'Press “Reset” first to move the explosion.' });
+  });
   let lastLabSyncMs = 0;
   mainScene.add(terrain.object3d, artifacts.object3d, player.worldObject);
   nearScene.add(player.nearObject);
 
   let activeSpaceView: ISpaceView = globeView;
+
+  /**
+   * Makes `view` the close-up view that is shown, at the window's present size: a view that was not shown
+   * while the window was resized has not heard of it.
+   */
+  function showSpaceView(view: ISpaceView): void {
+    activeSpaceView.detach();
+    activeSpaceView = view;
+    view.resize(window.innerWidth, Math.max(1, window.innerHeight));
+  }
   let coreAssetsLoaded = false;
 
   // Hook player audio events
@@ -284,7 +325,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     composer.setSize(w, h);
     sky.setPixelRatio(ratio);
     activeSpaceView.resize(w, h);
-    setGame((s) => ({ gpu: s.gpu ? { ...s.gpu, pixelRatio: ratio } : null }));
+    setGame((s) => ({ gpu: s.gpu ? { ...s.gpu, pixelRatio: ratio, width: w, height: h } : null }));
   }
   const lensFlare = createLensFlare();
   /** Scratch list of boulders and hardware near the astronaut, refilled every frame. */
@@ -372,9 +413,11 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
   let cachedHorizonProfile: Float32Array = new Float32Array(360);
   let lastHorizonPos = new THREE.Vector3(1e9, 0, 1e9);
   let lastTelemClockMs = 0;
-  let lastSunEvent: Telemetry['sunEvent'] = null;
-  let lastEarthEvent: Telemetry['earthEvent'] = null;
+  /** The next rise or set of the Sun and of Earth, and the wall time and the clock moment they were worked out at. */
+  let sunEventAt: HorizonMoment | null = null;
+  let earthEventAt: HorizonMoment | null = null;
   let lastEventCalcMs = -99999;
+  let lastEventCalcJd = 0;
   let adaptation = 0;
   let surfaceExposure = 1;
   let currentSky: SkyState | null = null;
@@ -406,13 +449,15 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     const src = labWatchSource;
     if (!src) return;
     // The map's angle is minus the ecliptic longitude.
-    const seen = mapPointSeenFrom(world, src.jdTT, -src.angleRad * RAD2DEG, src.distanceAU);
+    const seen = mapPointSeenFrom(world, src.jdTT, -src.angleRad * RAD2DEG, src.distanceAU, labLandmarkLatitudeDeg(src.anchorId));
+    const skyThere = computeSky(src.jdTT, SITES[0], world);
+    const sunGapDeg = angularSeparationDeg(skyThere.bodies.sun.dirLocal, dirLocalFromRaDec(skyThere, seen.raDeg, seen.decDeg));
     // Lunar orbit shares the Moon's fate; a world that was off the lab's map has none, and Earth's is told
     // instead. Only the first sentence of a fate: texts in other languages are looked up by the whole English
     // text, so sentences cannot be joined.
     const bodyId = world === 'orbit' ? 'moon' : world;
     const aftermath = (bodyId === 'earth' ? undefined : src.fates.find((f) => f.id === bodyId)?.summary[0]) ?? src.earthSummary;
-    const watch = buildLabWatch(src.kind, src.distanceAU, src.jdTT, seen, aftermath);
+    const watch = buildLabWatch(src.kind, src.distanceAU, src.jdTT, seen, sunGapDeg, aftermath);
     labEvent = watch.event;
     labTransient = watch.transient;
   }
@@ -438,6 +483,8 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
   let lastClockJd = 0;
   /** Set when a step begins: the view snaps to the step's focus once this frame's sky is known. */
   let pendingSnap = false;
+  /** A sequence that has just been skipped: the view goes where it shows last once the sky of its end is known. */
+  let skippedStaging: StagingDef | null = null;
   /** Where the astronaut stands on a world other than the Moon; null = the landed site's own coordinates. */
   let seat: SiteCoord | null = null;
   /** While a sequence plays on another world: the direction in space that the seat's zenith is held to. */
@@ -465,21 +512,40 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     };
   }
 
-  /** Plays `staging` from step `index` (0 = from its first moment). */
+  /**
+   * Plays `staging` from step `index` (0 = from its first moment). A sequence in the sky is not played on a
+   * world whose clouds hide the sky: a warning says so, and time runs on at the sequence's resting rate.
+   */
   function startStaging(ev: EventDef, staging: StagingDef, index = 0): void {
+    const st = getGame();
+    if (staging.where === 'surface' && OVERCAST_WORLDS[st.world]) {
+      setGame({ stage: null, clock: { ...st.clock, rate: staging.endRate, paused: false } });
+      showToast(lf(
+        tpl`${WORLDS[st.world].name} bulutlarla kaplı: gökyüzü görünmüyor, “${ev.title}” buradan izlenemez.`,
+        tpl`${WORLDS[st.world].name} is covered in clouds: the sky cannot be seen, and “${ev.title}” cannot be watched from here.`,
+      ), 'warn');
+      return;
+    }
     director = createDirector(staging, index);
+    // The sequence steers the view: a turn asked for before it began is dropped.
+    lookTargetId = null;
     playedStagings.add(`${ev.id}:${staging.where}`);
     const startJd = momentJd(staging.stages[index].from);
     lastClockJd = startJd;
     // Quotes tied to clock moments are part of the sequence and replay with it.
     for (const cue of ev.cues ?? []) firedCueIds.delete(cue.id);
-    // On another world the sequence is watched from a seat chosen for it and held under the same stars.
-    const st = getGame();
+    // On another world the sequence is watched from a seat chosen for it and held under the same stars. On
+    // the Moon the astronaut stands at a real place and sees its sky; only a sequence that runs through many
+    // of the Moon's rotations is held, under the stars that are over the place at its first moment.
     seatZenithIcrf = null;
-    if (staging.where === 'surface' && st.world !== 'moon' && st.world !== 'orbit' && st.site) {
-      const picked = staging.focusId ? pickSeat(st.world, startJd, focusFrom(st.world, staging.focusId)) : null;
-      seat = picked ?? seat ?? { latDeg: st.site.latDeg, lonDeg: st.site.lonDeg };
-      seatZenithIcrf = zenithIcrf(st.world, startJd, seat);
+    if (staging.where === 'surface' && st.site && st.world !== 'orbit') {
+      if (st.world !== 'moon') {
+        const picked = staging.focusId ? pickSeat(st.world, startJd, focusFrom(st.world, staging.focusId)) : null;
+        seat = picked ?? seat ?? { latDeg: st.site.latDeg, lonDeg: st.site.lonDeg };
+        seatZenithIcrf = zenithIcrf(st.world, startJd, seat);
+      } else if (staging.heldToStars) {
+        seatZenithIcrf = zenithIcrf('moon', momentJd(staging.stages[0].from), st.site);
+      }
     }
     // A sequence started while time is paused (Pause, then Replay) runs: the director only advances unpaused.
     setGame({
@@ -494,6 +560,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
    * at its moment. Either way time returns to the sequence's resting rate instead of its time-lapse rate.
    */
   function endStaging(finished: boolean): void {
+    skippedStaging = null;
     if (!director) return;
     const staging = director.staging;
     director = null;
@@ -503,8 +570,10 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     frame.stageProgress = finished ? 1 : frame.stageProgress;
     releaseStageFov();
     const st = getGame();
+    // On the Moon the sky is the landed place's own again once nothing holds it.
+    if (st.world === 'moon') seat = null;
     setGame({
-      stage: st.stage ? { ...st.stage, playing: false, index: finished ? staging.stages.length - 1 : st.stage.index } : null,
+      stage: st.stage ? (finished ? stageStatusOf(staging, staging.stages.length - 1, false) : { ...st.stage, playing: false }) : null,
       skyLocked: false,
     });
     setGame({ clock: { jdTT: finished ? stagingEndJd(staging) : st.clock.jdTT, rate: staging.endRate, paused: false } });
@@ -553,11 +622,13 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     return p.sub(player.camera.position).normalize();
   }
 
-  /** Keeps the staged event in frame: snaps on entry, then eases unless the player is looking around. */
-  function steerView(dt: number, snap: boolean): void {
-    if (!director || director.staging.where !== 'surface') return;
-    const stage = director.staging.stages[getGame().stage?.index ?? 0];
-    const named = stage.focusId ?? director.staging.focusId;
+  /**
+   * Turns the view to what `stage` of a surface sequence shows, framed for a field of view of `fovDeg`: at
+   * once when `snap`, otherwise eased, and not while the player is looking around.
+   */
+  function steerView(staging: StagingDef, stage: StageDef, fovDeg: number, dt: number, snap: boolean): void {
+    if (staging.where !== 'surface') return;
+    const named = stage.focusId ?? staging.focusId;
     if (!named || named === 'none') return;
     const id = focusFrom(getGame().world, named);
     if (!snap && frame.time - lastManualLookSec < 2.5) return;
@@ -565,10 +636,9 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     if (!d) return;
     const heading = (Math.atan2(d.x, -d.z) * RAD2DEG + 360) % 360;
     const el = Math.asin(Math.max(-1, Math.min(1, d.y))) * RAD2DEG;
-    const fov = player.camera.fov;
     // Narrow views centre the target; wider views lift it a little above the centre so low targets keep the
     // horizon in frame, without ever pushing it up under the stage panel.
-    const pitch = fov < 20 ? el : el - Math.min(Math.max(el, 0) * 0.6, fov * 0.15);
+    const pitch = fovDeg < 20 ? el : el - Math.min(Math.max(el, 0) * 0.6, fovDeg * 0.15);
     if (snap) {
       player.setLook(heading, pitch);
       return;
@@ -603,10 +673,52 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
   }
 
   /**
+   * Elevation of the skyline at an azimuth from where the astronaut stands: the terrain's on solid ground,
+   * the cloud tops a little below eye level over a giant.
+   */
+  function skylineDeg(azDeg: number): number {
+    return WORLDS[getGame().world].solidSurface ? horizonElevationAt(cachedHorizonProfile, azDeg) : -2;
+  }
+
+  /** The next rise or set of `body` after `jdTT` as seen from `here`; null when there is none within 15 days. */
+  function nextHorizonMoment(body: 'sun' | 'earth', jdTT: number, here: SiteCoord, world: WorldId): HorizonMoment | null {
+    const next = nextHorizonEvent(body, jdTT, here, cachedHorizonProfile, 15, world);
+    return next && { kind: next.kind, jdTT: jdTT + next.inHours / 24 };
+  }
+
+  /** What is left at `jdTT` until `moment`; null once the clock is no longer between its working-out and it. */
+  function timeUntil(moment: HorizonMoment | null, jdTT: number): HorizonEvent | null {
+    return moment && jdTT >= lastEventCalcJd && jdTT < moment.jdTT
+      ? { kind: moment.kind, inHours: (moment.jdTT - jdTT) * 24 }
+      : null;
+  }
+
+  /** A place on the Moon that is no named site, made up for watching an event from. */
+  function viewingSpot(at: SiteCoord): SiteDef {
+    return {
+      id: 'custom',
+      latDeg: at.latDeg,
+      lonDeg: at.lonDeg,
+      name: lf(tpl`Gözlem noktası (${at.latDeg}°, ${at.lonDeg}°)`, tpl`Viewing spot (${at.latDeg}°, ${at.lonDeg}°)`),
+      region: { tr: 'Bu olay için seçilen gözlem yeri', en: 'Viewing spot chosen for this event' },
+      blurb: {
+        tr: 'Olay boyunca gök cismi ufkun epey üzerinde kalır; başlangıçta gökyüzü karanlıktır.',
+        en: 'The object stays well above the horizon throughout the event, and the sky is dark at the start.',
+      },
+    };
+  }
+
+  /**
    * Best place to watch a staged sky event: the target stays well above the horizon for every moment of the
    * sequence, ideally in a dark sky at its start. Named sites win ties; otherwise an observing spot is made up.
+   * A sequence that is held under the same stars is seen as its first moment shows it: its place is chosen
+   * as a seat on another world is.
    */
   function pickVantage(staging: StagingDef, targetId: string): SiteDef | null {
+    if (staging.heldToStars) {
+      const seatAt = pickSeat('moon', momentJd(staging.stages[0].from), targetId);
+      return seatAt && viewingSpot(seatAt);
+    }
     const ref = SITES[0];
     const trDef = transientById(targetId);
     const valid: Array<{ target: THREE.Vector3; sun: THREE.Vector3; moonFixedFromIcrf: THREE.Matrix3 }> = [];
@@ -642,30 +754,17 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       for (let lon = -180; lon < 180; lon += 5) {
         const v = score({ latDeg: lat, lonDeg: lon }, false);
         if (best && v <= best.score) continue;
-        best = {
-          score: v,
-          site: {
-            id: 'custom',
-            latDeg: lat,
-            lonDeg: lon,
-            name: lf(tpl`Gözlem noktası (${lat}°, ${lon}°)`, tpl`Viewing spot (${lat}°, ${lon}°)`),
-            region: { tr: 'Bu olay için seçilen gözlem yeri', en: 'Viewing spot chosen for this event' },
-            blurb: {
-              tr: 'Olay boyunca gök cismi ufkun epey üzerinde kalır; başlangıçta gökyüzü karanlıktır.',
-              en: 'The object stays well above the horizon throughout the event, and the sky is dark at the start.',
-            },
-          },
-        };
+        best = { score: v, site: viewingSpot({ latDeg: lat, lonDeg: lon }) };
       }
     }
     return best?.site ?? null;
   }
 
   /**
-   * Seat on another world for watching a staged sky event: the target high in a dark sky as the sequence
+   * Seat for watching a staged sky event under held stars: the target high in a dark sky as the sequence
    * begins. The seat is then held under the same stars while the sequence plays (see `holdSeatToStars`).
    */
-  function pickSeat(world: Exclude<WorldId, 'moon' | 'orbit'>, jdTT: number, targetId: string): SiteCoord | null {
+  function pickSeat(world: Exclude<WorldId, 'orbit'>, jdTT: number, targetId: string): SiteCoord | null {
     const sky = computeSky(jdTT, SITES[0], world);
     const trDef = transientById(targetId);
     const local = targetId in sky.bodies ? sky.bodies[targetId as BodyId].dirLocal : trDef ? transientState(trDef, sky, world).dirLocal : null;
@@ -718,7 +817,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
   }
 
   /** Direction in space of the zenith of a place on `world` at `jdTT`. */
-  function zenithIcrf(world: Exclude<WorldId, 'moon' | 'orbit'>, jdTT: number, at: SiteCoord): THREE.Vector3 {
+  function zenithIcrf(world: Exclude<WorldId, 'orbit'>, jdTT: number, at: SiteCoord): THREE.Vector3 {
     const lat = at.latDeg * DEG2RAD;
     const lon = at.lonDeg * DEG2RAD;
     const icrfFromFixed = new THREE.Matrix3().fromArray(bodyOrientation(world, jdTT).fixedToIcrf).transpose();
@@ -730,7 +829,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
    * as in a time-lapse that takes one frame per rotation, instead of wheeling round many times a second.
    */
   function holdSeatToStars(world: WorldId, jdTT: number): void {
-    if (!seatZenithIcrf || world === 'moon' || world === 'orbit') return;
+    if (!seatZenithIcrf || world === 'orbit') return;
     const f = seatZenithIcrf.clone().applyMatrix3(new THREE.Matrix3().fromArray(bodyOrientation(world, jdTT).fixedToIcrf));
     seat = { latDeg: Math.asin(Math.max(-1, Math.min(1, f.z))) * RAD2DEG, lonDeg: Math.atan2(f.y, f.x) * RAD2DEG };
   }
@@ -795,6 +894,8 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
   let journey = 0;
   /** The loads of the landing begun last, finished or not: the next landing waits for them. */
   let landingLoads: Promise<unknown> = Promise.resolve();
+  /** The picture the galaxy view shows now (null until the first has arrived): a choice that fails goes back to it. */
+  let galaxyShownId: string | null = null;
 
   /**
    * What belonged to the page being left must not show on the next: the hardware card, the open panels (the
@@ -827,8 +928,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       color: s.id === selectedSite.id ? '#ffb454' : '#5fd4ff',
     }));
 
-    activeSpaceView.detach();
-    activeSpaceView = globeView;
+    showSpaceView(globeView);
     await globeView.enter({
       targetId: 'moon',
       jdTT,
@@ -842,7 +942,10 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
           id: 'custom',
           latDeg,
           lonDeg,
-          name: lf(tpl`Özel Nokta (${latDeg.toFixed(1)}°, ${lonDeg.toFixed(1)}°)`, tpl`Custom Site (${latDeg.toFixed(1)}°, ${lonDeg.toFixed(1)}°)`),
+          name: lf(
+            tpl`Özel Nokta (${(l: Lang) => fmt(latDeg, 1, l)}°, ${(l: Lang) => fmt(lonDeg, 1, l)}°)`,
+            tpl`Custom Site (${(l: Lang) => fmt(latDeg, 1, l)}°, ${(l: Lang) => fmt(lonDeg, 1, l)}°)`,
+          ),
           region: { tr: 'Serbest Seçim Koordinatı', en: 'Custom Selenographic Coordinate' },
           blurb: {
             tr: '3B Ay küresi üzerinden doğrudan seçtiğiniz özel iniş koordinatı.',
@@ -867,8 +970,11 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     globeView.attach(canvas);
   }
 
-  /** Makes `eventId` the active chapter (null = free exploration): its start time, rate and best site. */
-  function prepareEvent(eventId: string | null): SiteDef {
+  /**
+   * Makes `eventId` the active chapter (null = free exploration): its start time, rate and best site. Free
+   * exploration starts at `freeJd`: today, unless it follows from something that showed another date.
+   */
+  function prepareEvent(eventId: string | null, freeJd = jdTTNow()): SiteDef {
     endStaging(false);
     playedStagings.clear();
     // Any other chapter takes the lab's supernova out of the sky, and with it the way back to the lab.
@@ -881,9 +987,12 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     // A staged chapter opens on its "before" moment; the event itself is still the card's date.
     const jdTT = surfaceStaging
       ? momentJd(surfaceStaging.stages[0].from)
-      : ev ? jdTTFromCalendarUT(ev.date) : jdTTFromCalendarUT({ year: 2026, month: 8, day: 12, hour: 17, minute: 46 });
+      : ev ? jdTTFromCalendarUT(ev.date) : freeJd;
     let defaultSite = SITES.find((s) => s.id === (ev?.defaultSiteId ?? 'apollo11')) ?? SITES[0];
-    if (surfaceStaging?.autoSeat && surfaceStaging.focusId) {
+    if (!ev) {
+      // The first listed place where the Sun is up then, so that the visit does not open in the dark.
+      defaultSite = SITES.find((s) => computeSky(jdTT, s).bodies.sun.elDeg > 8) ?? defaultSite;
+    } else if (surfaceStaging?.autoSeat && surfaceStaging.focusId) {
       defaultSite = pickVantage(surfaceStaging, surfaceStaging.focusId) ?? defaultSite;
     } else if (ev?.primaryTargetId && !surfaceStaging) {
       // Unstaged chapters: the recommended site where the target stands highest.
@@ -936,6 +1045,8 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     tutorialTrack.doneAt = -1;
     const finished = index >= TUTORIAL_STEPS.length;
     setGame({ tutorial: { index: Math.min(index, TUTORIAL_STEPS.length - 1), progress: finished ? 1 : 0, finished } });
+    // The step before may have left the telescope up.
+    if (!finished && !TELESCOPE_CHECKS[TUTORIAL_STEPS[index].check.kind] && getGame().telescope.active) api.setTelescope(false);
     if (finished) audio.cue('complete');
   }
 
@@ -1035,6 +1146,9 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
 
   // ─────────────────────────── Explosion Lab ───────────────────────────
 
+  /** The lab as it stood when the class mode began: the scenario to put back when the mode ends. */
+  let labBeforeQuiz: LabState | null = null;
+
   /**
    * Works out what the explosion of `setup` does, to Earth and to the bodies that are on the map, and gives
    * it to the lab's view.
@@ -1106,16 +1220,100 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     return { ...quiz, phase: 'reveal', rounds: [...quiz.rounds, { question: quiz.question, picked: quiz.picked, answer }] };
   }
 
-  /** Opens the lab with the scenario of a link (see views/lab/link.ts). */
-  function openLabLink(link: LabLink): void {
-    api.openSpaceLab(link.kind);
-    if (link.date) {
-      const [year, month, day] = link.date.split('-').map(Number);
-      api.setLabDate(jdTTFromCalendarUT({ year, month, day, hour: 12 }));
+  /**
+   * Opens the lab with `preset` as its explosion and the map of the moment `at`; null: today when the lab is
+   * opened from the menu, otherwise the moment of the visit it is opened from.
+   */
+  function openLab(preset: LabExplosionKind, at: number | null): void {
+    audio.cue('teleport');
+    audio.setScene('space');
+    input.exitLock();
+    leaveModes();
+    endStaging(false);
+    clearPageState();
+    showSpaceView(labView);
+    const st = getGame();
+    // The map shows the solar system as it stands around Earth.
+    const jdTT = at ?? (st.phase === 'menu' ? jdTTNow() : st.clock.jdTT);
+    const bodies = labView.layoutFor(jdTT);
+    const sun = bodies.find((b) => b.id === 'sun');
+    // A solar eruption starts at the Sun. A supernova starts close enough to show its full effect, in the
+    // direction that is farthest from the Sun, the Moon and the inner planets, so that nothing hides it.
+    const near = bodies.filter((b) => b.distanceAU < 3);
+    let clearAngle = 0;
+    let clearGap = -1;
+    for (let i = 0; i < 36; i++) {
+      const a = (i / 36) * Math.PI * 2;
+      const gap = Math.min(...near.map((b) => Math.abs(Math.atan2(Math.sin(a - b.angleRad), Math.cos(a - b.angleRad)))));
+      if (gap > clearGap) {
+        clearGap = gap;
+        clearAngle = a;
+      }
     }
+    const angleRad = preset === 'cme' ? sun?.angleRad ?? 0 : clearAngle;
+    const distanceAU = preset === 'cme' ? sun?.distanceAU ?? 1 : 0.3;
+    const setup: LabSetup = { kind: preset, angleRad, distanceAU, cmeStrength: 'may2024' };
+    // Europa, Titan and Pluto are off the map until they are added.
+    const removed = [...LAB_EXTRA_IDS];
+    labView.configure(preset, angleRad, distanceAU, false);
+    labView.setRemoved(removed);
+    const results = labResults(setup, bodies, removed);
+    labView.resetExplosion();
+    labView.setPaused(false);
+    labView.setConcealed(false);
+    labView.setEvaMode(false);
+    labView.enter({
+      targetId: 'lab',
+      jdTT,
+      lang: st.settings.lang,
+      quality: QUALITY[st.settings.quality],
+      mode: 'explore',
+    }).catch(() => undefined);
+    labView.attach(canvas);
+    input.enabled = true;
+    // The lab is a page of its own: a watch of its supernova from the ground ends, and no event or sequence
+    // of the visit before follows into it.
+    leaveLabWatch();
+    setGame({
+      phase: 'space',
+      spaceView: { targetId: 'lab', selectedMarkerId: null, galaxyPictureId: null },
+      activeEventId: null,
+      stage: null,
+      labReturn: null,
+      lab: {
+        ...setup,
+        ...results,
+        anchorId: preset === 'cme' ? 'sun' : null,
+        playing: false,
+        paused: false,
+        elapsedSec: 0,
+        evaMode: false,
+        jdTT,
+        bodies,
+        removed,
+        focusId: 'earth',
+        quiz: null,
+      },
+    });
+  }
+
+  /**
+   * Opens the lab with the scenario of a link (see views/lab/link.ts). `at`: the exact moment of the map,
+   * for a scenario that is being returned to; a link itself names only the day, which is shown at noon.
+   */
+  function openLabLink(link: LabLink, at: number | null = null): void {
+    let jdTT = at;
+    if (jdTT === null && link.date) {
+      const [year, month, day] = link.date.split('-').map(Number);
+      jdTT = jdTTFromCalendarUT({ year, month, day, hour: 12 });
+    }
+    openLab(link.kind, jdTT);
+    for (const id of link.off) api.setLabBodyOnMap(id, false);
+    for (const id of link.add) api.setLabBodyOnMap(id, true);
     const lab = getGame().lab;
     if (!lab) return;
-    const anchor = lab.bodies.find((b) => b.id === link.anchorId);
+    // An anchor that is not on the map is ignored: the place is then the link's own direction and distance.
+    const anchor = lab.bodies.find((b) => b.id === link.anchorId && !lab.removed.includes(b.id));
     // A solar eruption stays in the Sun's direction: only how far the Sun is from Earth can be set.
     const sun = link.kind === 'cme' && link.anchorId === 'sun' ? anchor : undefined;
     // A link without a distance leaves the lab's own.
@@ -1126,8 +1324,6 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         ? { angleRad: anchor.spotRad, distanceAU: anchor.distanceAU, anchorId: anchor.id }
         : { angleRad: link.angleDeg * DEG2RAD, distanceAU: freeAU, anchorId: null };
     api.setLabConfig(place);
-    for (const id of link.off) api.setLabBodyOnMap(id, false);
-    for (const id of link.add) api.setLabBodyOnMap(id, true);
     if (link.focusId !== 'earth') api.setLabFocus(link.focusId);
     if (link.quiz) api.startLabQuiz();
   }
@@ -1138,7 +1334,8 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     start(): void {
       audio.unlock();
       audio.setScene('menu');
-      setGame({ phase: 'menu' });
+      // The clock is today from the first menu on: what is opened from it starts today.
+      setGame({ phase: 'menu', clock: { jdTT: jdTTNow(), rate: 1, paused: false } });
     },
 
     openMenu(): void {
@@ -1149,8 +1346,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       leaveModes();
       input.enabled = false;
       input.exitLock();
-      activeSpaceView.detach();
-      activeSpaceView = globeView;
+      showSpaceView(globeView);
       const st = getGame();
       // The menu ends what was being watched: whatever is opened from it starts on its own, today, and leads
       // back to the menu, not to the scene, the event or the date of the visit before.
@@ -1236,12 +1432,16 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       endStaging(false);
       const st = getGame();
       const q = QUALITY[st.settings.quality];
+      // The world chosen on the map; events that belong to the Moon are always watched from it.
+      const world: WorldId = eventById(st.activeEventId)?.seenFrom === 'moon' ? 'moon' : st.mapWorld;
+      // On another world the Moon site only lends its ground: what is being loaded is that world.
+      const placeName = world === 'moon' ? site.name : WORLDS[world].name;
 
       setGame({
         phase: 'loading',
         loading: {
           fraction: 0.05,
-          label: lf(tpl`${site.name} yükleniyor…`, tpl`Loading ${site.name}…`),
+          label: lf(tpl`${placeName} yükleniyor…`, tpl`Loading ${placeName}…`),
         },
       });
 
@@ -1252,16 +1452,21 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         await before.catch(() => undefined);
         if (mine !== journey) return null;
         if (!coreAssetsLoaded) {
-          await Promise.all([
+          // Both are waited for, also when one has failed: the next landing must not start the same loads
+          // while they are still under way.
+          const core = await Promise.allSettled([
             sky.load(q, (f) => {
-              if (mine === journey) setGame({ loading: { fraction: 0.05 + f * 0.25, label: site.name } });
+              if (mine === journey) setGame({ loading: { fraction: 0.05 + f * 0.25, label: placeName } });
             }),
             player.load(),
           ]);
+          for (const result of core) {
+            if (result.status === 'rejected') throw result.reason;
+          }
           coreAssetsLoaded = true;
         }
         const info = await terrain.load(site, q, (f, lbl) => {
-          if (mine === journey) setGame({ loading: { fraction: 0.3 + f * 0.55, label: lbl ? { tr: lbl, en: lbl } : site.name } });
+          if (mine === journey) setGame({ loading: { fraction: 0.3 + f * 0.55, label: lbl ? { tr: lbl, en: lbl } : placeName } });
         });
         await artifacts.load(ARTIFACT_PLACEMENTS.filter((p) => p.siteId === site.id), SURFACE_ASSETS, terrain);
         artifacts.removeBeacon();
@@ -1274,10 +1479,11 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       } catch (err) {
         if (mine !== journey) return;
         // The terrain, a model or a picture did not load: back to the menu, saying why, instead of a
-        // loading screen that never ends.
+        // loading screen that never ends. Nothing is being loaded any more.
         const reason = err instanceof Error ? err.message : String(err);
         api.openMenu();
-        showToast(lf(tpl`${site.name} yüklenemedi: ${reason}`, tpl`${site.name} could not be loaded: ${reason}`), 'warn');
+        setGame({ loading: { fraction: 1, label: null } });
+        showToast(lf(tpl`${placeName} yüklenemedi: ${reason}`, tpl`${placeName} could not be loaded: ${reason}`), 'warn');
         return;
       }
       if (terrainInfo === null || mine !== journey) return;
@@ -1332,8 +1538,6 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       player.teleport(spawnX, spawnZ, headingDeg, terrain, pitchDeg);
       lastHorizonPos.set(1e9, 0, 1e9);
 
-      // The world chosen on the map; events that belong to the Moon are always watched from it.
-      const world: WorldId = ev?.seenFrom === 'moon' ? 'moon' : st.mapWorld;
       applyWorld(world);
       setGame({
         world,
@@ -1365,7 +1569,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
 
     setTime(jdTT: number): void {
       endStaging(false);
-      setGame((s) => ({ clock: { ...s.clock, jdTT } }));
+      setGame((s) => ({ clock: { ...s.clock, jdTT: Math.max(CLOCK_FIRST_JD, Math.min(CLOCK_LAST_JD, jdTT)) } }));
     },
 
     setRate(rate: number): void {
@@ -1385,7 +1589,22 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     },
 
     skipStaging(): void {
+      if (!director) return;
+      const staging = director.staging;
+      const st = getGame();
+      // What the steps not played would have left: the seat under the same stars at the last moment, the
+      // astronaut where the last change of viewpoint puts it and, once that moment's sky is known, the view
+      // on what the sequence shows last.
+      holdSeatToStars(st.world, stagingEndJd(staging));
+      const stand = staging.where === 'surface'
+        ? staging.stages.slice((st.stage?.index ?? 0) + 1).findLast((s) => s.standAt)?.standAt
+        : undefined;
+      if (stand) {
+        player.teleport(stand.x, stand.z, stand.headingDeg, terrain, 0);
+        lastHorizonPos.set(1e9, 0, 1e9);
+      }
       endStaging(true);
+      skippedStaging = staging;
     },
 
     resetEventTime(): void {
@@ -1422,6 +1641,12 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     },
 
     enterSpaceView(targetId: string): void {
+      // Only what has a close-up view: the Sun, the remnant of a supernova, a galaxy, or a globe (the Moon,
+      // Earth, a planet). A comet has none.
+      const transient = TRANSIENTS.find((t) => t.id === targetId);
+      const supernova = transient?.kind === 'supernova' ? transient : undefined;
+      const galaxy = GALAXIES.find((g) => g.id === targetId);
+      if (targetId !== 'sun' && !supernova && !galaxy && targetId !== 'moon' && !(targetId in BODY_NAMES)) return;
       audio.cue('teleport');
       audio.setScene('space');
       clearPageState();
@@ -1430,10 +1655,9 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
 
       const st = getGame();
       const q = QUALITY[st.settings.quality];
-      activeSpaceView.detach();
 
       if (targetId === 'sun') {
-        activeSpaceView = sunView;
+        showSpaceView(sunView);
         sunView.enter({
           targetId: 'sun',
           jdTT: st.clock.jdTT,
@@ -1480,21 +1704,21 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
             }
           }).catch(() => undefined);
         }
-      } else if (targetId.startsWith('sn') || targetId === 'casA') {
-        activeSpaceView = remnantView;
-        const snDef = transientById(targetId);
+      } else if (supernova) {
+        showSpaceView(remnantView);
         remnantView.enter({
           targetId,
           jdTT: st.clock.jdTT,
           lang: st.settings.lang,
           quality: q,
           mode: 'explore',
-          supernova: snDef?.kind === 'supernova' ? snDef : undefined,
+          supernova,
         }).catch(() => undefined);
         remnantView.attach(canvas);
-      } else if (GALAXIES.some((g) => g.id === targetId)) {
-        activeSpaceView = galaxyView;
-        const galaxy = GALAXIES.find((g) => g.id === targetId);
+      } else if (galaxy) {
+        showSpaceView(galaxyView);
+        const mine = journey;
+        galaxyShownId = null;
         galaxyView.enter({
           targetId,
           jdTT: st.clock.jdTT,
@@ -1502,20 +1726,23 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
           quality: q,
           mode: 'explore',
           galaxy,
-        }).catch(() => {
-          // The view is empty without its picture: say why.
-          if (galaxy) showToast(lf(tpl`${galaxy.name} görüntüsü yüklenemedi.`, tpl`The picture of ${galaxy.name} could not be loaded.`), 'warn');
+        }).then(() => {
+          if (mine === journey && galaxy) galaxyShownId = galaxy.pictures[0].id;
+        }, () => {
+          // The view is empty without its picture: say why, unless the page has been left meanwhile.
+          if (mine === journey && galaxy) showToast(lf(tpl`${galaxy.name} görüntüsü yüklenemedi.`, tpl`The picture of ${galaxy.name} could not be loaded.`), 'warn');
         });
         galaxyView.attach(canvas);
       } else {
-        activeSpaceView = globeView;
+        showSpaceView(globeView);
+        // Hardware in orbit has no place on the ground: it gets no pin.
         const markers: GlobeMarker[] = targetId === 'mars'
-          ? SURFACE_ASSETS.filter((a) => a.body === 'mars').map((a) => ({
+          ? SURFACE_ASSETS.filter((a) => a.body === 'mars' && a.kind !== 'orbiter').map((a) => ({
             id: a.id,
             latDeg: a.latDeg,
             lonDeg: a.lonDeg,
             label: a.name,
-            kind: a.kind === 'helicopter' ? 'helicopter' : a.kind === 'rover' ? 'rover' : a.kind === 'orbiter' ? 'orbiter' : 'lander',
+            kind: a.kind === 'helicopter' ? 'helicopter' : a.kind === 'rover' ? 'rover' : 'lander',
             color: a.stillActive ? '#6ee7a8' : '#ffb454',
             modelFile: a.modelFile,
           }))
@@ -1538,7 +1765,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
 
       setGame({
         phase: 'space',
-        spaceView: { targetId, selectedMarkerId: null, galaxyPictureId: GALAXIES.find((g) => g.id === targetId)?.pictures[0].id ?? null },
+        spaceView: { targetId, selectedMarkerId: null, galaxyPictureId: galaxy?.pictures[0].id ?? null },
         lab: null,
       });
 
@@ -1555,7 +1782,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       const galaxy = GALAXIES.find((g) => g.id === st.spaceView?.targetId);
       if (!galaxy || !st.spaceView || st.spaceView.galaxyPictureId === pictureId) return;
       audio.cue('ui-click');
-      const previousId = st.spaceView.galaxyPictureId;
+      const mine = journey;
       galaxyView.enter({
         targetId: galaxy.id,
         jdTT: st.clock.jdTT,
@@ -1564,10 +1791,15 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         mode: 'explore',
         galaxy,
         galaxyPictureId: pictureId,
-      }).catch(() => {
-        // The picture before is still on show: the choice goes back to it, unless another was made meanwhile.
+      }).then(() => {
+        // A choice overtaken by a later one resolves too, without having been shown.
+        if (mine === journey && getGame().spaceView?.galaxyPictureId === pictureId) galaxyShownId = pictureId;
+      }, () => {
+        if (mine !== journey) return;
+        // The picture shown before is still on the screen: the choice goes back to it, unless another was
+        // made meanwhile.
         const now = getGame().spaceView;
-        if (now?.targetId === galaxy.id && now.galaxyPictureId === pictureId) setGame({ spaceView: { ...now, galaxyPictureId: previousId } });
+        if (now?.galaxyPictureId === pictureId) setGame({ spaceView: { ...now, galaxyPictureId: galaxyShownId ?? galaxy.pictures[0].id } });
         showToast({ tr: 'Bu görüntü yüklenemedi; önceki gösteriliyor.', en: 'This picture could not be loaded; the previous one is still shown.' }, 'warn');
       });
       setGame({ spaceView: { ...st.spaceView, galaxyPictureId: pictureId } });
@@ -1761,7 +1993,13 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     },
 
     lookAtTarget(targetId: string): void {
+      // A sequence steers the view itself: a click made while it plays must not turn the view once it ends.
+      if (director) return;
       lookTargetId = targetId;
+      const target = getGame().targets.find((t) => t.id === targetId);
+      if (target && target.elDeg < skylineDeg(target.azDeg)) {
+        showToast(lf(tpl`${target.name} şu anda ufkun altında.`, tpl`${target.name}: below the horizon right now.`));
+      }
     },
 
     toggleCleanMode(on?: boolean): void {
@@ -1771,8 +2009,12 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     },
 
     setWorld(world: WorldId): void {
-      audio.cue('teleport');
       const st = getGame();
+      if (eventById(st.activeEventId)?.seenFrom === 'moon' && world !== 'moon') {
+        showToast({ tr: 'Bu olay Ay’da geçer; yalnızca Ay’dan izlenir.', en: 'This event takes place on the Moon and can only be watched from there.' }, 'warn');
+        return;
+      }
+      audio.cue('teleport');
       const apply = (): void => {
         const prevZeroG = WORLDS[getGame().world]?.zeroG ?? false;
         // A sequence under way (on the old world, or in the close-up view being left) ends here, and so does
@@ -1802,88 +2044,19 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         }
       };
       if (!st.site) {
-        this.selectEvent(null);
-        this.landAt(SITES[0]).then(() => {
-          if (getGame().phase === 'surface') apply();
-        }).catch(() => undefined);
+        // From the menu, or from a close-up view opened from it: a free visit, loaded as this world from the
+        // start, at the moment the view showed.
+        leaveModes();
+        const site = prepareEvent(null, st.phase === 'space' ? st.clock.jdTT : jdTTNow());
+        setGame({ mapWorld: world });
+        this.landAt(site).catch(() => undefined);
       } else {
         apply();
       }
     },
 
     openSpaceLab(preset: LabExplosionKind = 'sn2'): void {
-      audio.cue('teleport');
-      audio.setScene('space');
-      input.exitLock();
-      leaveModes();
-      endStaging(false);
-      clearPageState();
-      activeSpaceView.detach();
-      activeSpaceView = labView;
-      const st = getGame();
-      // The map shows the solar system as it stands around Earth: today when the lab is opened from the menu,
-      // otherwise at the moment of the visit it is opened from.
-      const jdTT = st.phase === 'menu' ? jdTTNow() : st.clock.jdTT;
-      const bodies = labView.layoutFor(jdTT);
-      const sun = bodies.find((b) => b.id === 'sun');
-      // A solar eruption starts at the Sun. A supernova starts close enough to show its full effect, in the
-      // direction that is farthest from the Sun, the Moon and the inner planets, so that nothing hides it.
-      const near = bodies.filter((b) => b.distanceAU < 3);
-      let clearAngle = 0;
-      let clearGap = -1;
-      for (let i = 0; i < 36; i++) {
-        const a = (i / 36) * Math.PI * 2;
-        const gap = Math.min(...near.map((b) => Math.abs(Math.atan2(Math.sin(a - b.angleRad), Math.cos(a - b.angleRad)))));
-        if (gap > clearGap) {
-          clearGap = gap;
-          clearAngle = a;
-        }
-      }
-      const angleRad = preset === 'cme' ? sun?.angleRad ?? 0 : clearAngle;
-      const distanceAU = preset === 'cme' ? sun?.distanceAU ?? 1 : 0.3;
-      const setup: LabSetup = { kind: preset, angleRad, distanceAU, cmeStrength: 'may2024' };
-      // Europa, Titan and Pluto are off the map until they are added.
-      const removed = [...LAB_EXTRA_IDS];
-      labView.configure(preset, angleRad, distanceAU, false);
-      labView.setRemoved(removed);
-      const results = labResults(setup, bodies, removed);
-      labView.resetExplosion();
-      labView.setPaused(false);
-      labView.setConcealed(false);
-      labView.setEvaMode(false);
-      labView.enter({
-        targetId: 'lab',
-        jdTT,
-        lang: st.settings.lang,
-        quality: QUALITY[st.settings.quality],
-        mode: 'explore',
-      }).catch(() => undefined);
-      labView.attach(canvas);
-      input.enabled = true;
-      // The lab is a page of its own: a watch of its supernova from the ground ends, and no event or sequence
-      // of the visit before follows into it.
-      leaveLabWatch();
-      setGame({
-        phase: 'space',
-        spaceView: { targetId: 'lab', selectedMarkerId: null, galaxyPictureId: null },
-        activeEventId: null,
-        stage: null,
-        labReturn: null,
-        lab: {
-          ...setup,
-          ...results,
-          anchorId: preset === 'cme' ? 'sun' : null,
-          playing: false,
-          paused: false,
-          elapsedSec: 0,
-          evaMode: false,
-          jdTT,
-          bodies,
-          removed,
-          focusId: 'earth',
-          quiz: null,
-        },
-      });
+      openLab(preset, null);
     },
 
     setLabConfig(patch, keepView = false): void {
@@ -1893,18 +2066,20 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       const set: LabConfigPatch = prev.quiz ? { evaMode: patch.evaMode } : patch;
       const kind = set.kind ?? prev.kind;
       const cmeStrength = set.cmeStrength ?? prev.cmeStrength;
-      // A solar eruption comes from the Sun: switching to it goes to where the Sun is, and it has no meaning
-      // beyond the planets. Switching away from it steps aside, so that the star does not sit on the Sun.
+      // A solar eruption comes from the Sun and is always in the Sun's direction: only its distance can be
+      // set, and it has no meaning beyond the planets. Switching to it goes to where the Sun is; switching
+      // away from it steps aside, so that the star does not sit on the Sun.
       const toSun = kind === 'cme' && prev.kind !== 'cme';
       const fromSun = kind !== 'cme' && prev.kind === 'cme';
-      const sun = toSun ? prev.bodies.find((b) => b.id === 'sun') : undefined;
-      const angleRad = set.angleRad ?? sun?.angleRad ?? prev.angleRad + (fromSun ? 0.4 : 0);
-      const distanceAU = Math.min(kind === 'cme' ? 2 : LAB_MAX_AU, Math.max(LAB_MIN_AU, set.distanceAU ?? sun?.distanceAU ?? prev.distanceAU));
+      const sun = kind === 'cme' ? prev.bodies.find((b) => b.id === 'sun') : undefined;
+      const angleRad = sun ? sun.angleRad : set.angleRad ?? prev.angleRad + (fromSun ? 0.4 : 0);
+      const wantedAU = set.distanceAU ?? (toSun ? sun?.distanceAU : undefined) ?? prev.distanceAU;
+      const distanceAU = Math.min(kind === 'cme' ? 2 : LAB_MAX_AU, Math.max(LAB_MIN_AU, wantedAU));
       const placed = angleRad !== prev.angleRad || distanceAU !== prev.distanceAU;
-      // The body the place was taken from: a place set by hand belongs to none, and a solar eruption is at a
-      // body only when that body is the Sun.
+      // The body the place was taken from: a place set by hand belongs to none, a solar eruption is at a
+      // body only when that body is the Sun, and a body that is off the map holds nothing.
       const named = toSun ? 'sun' : fromSun ? null : set.anchorId !== undefined ? set.anchorId : placed ? null : prev.anchorId;
-      const anchorId = kind === 'cme' && named !== 'sun' ? null : named;
+      const anchorId = named === null || (kind === 'cme' && named !== 'sun') || prev.removed.includes(named) ? null : named;
       const evaMode = set.evaMode ?? prev.evaMode;
       const moved = placed || kind !== prev.kind || cmeStrength !== prev.cmeStrength;
       const setup: LabSetup = { kind, angleRad, distanceAU, cmeStrength };
@@ -1942,13 +2117,18 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       // In the class mode the map is the question's.
       if (!prev || prev.quiz || !Number.isFinite(jdTT)) return;
       const at = Math.min(LAB_LAST_JD, Math.max(LAB_FIRST_JD, jdTT));
+      // The map is set by the day: a moment of the day it already shows changes nothing, and a run is not
+      // started over for it ("Today", pressed today).
+      const day = calendarUTFromJdTT(at);
+      const shown = calendarUTFromJdTT(prev.jdTT);
+      if (day.year === shown.year && day.month === shown.month && day.day === shown.day) return;
       const bodies = labView.layoutFor(at);
-      // An explosion set at a body goes with it. A solar eruption stays in the Sun's direction, and at the
-      // Sun's distance if it was there.
+      // An explosion set at a body goes with it, as far as the map's nearest and farthest places allow. A
+      // solar eruption stays in the Sun's direction, and at the Sun's distance if it was there.
       const sun = bodies.find((b) => b.id === 'sun');
       const anchor = bodies.find((b) => b.id === prev.anchorId);
       const angleRad = (prev.kind === 'cme' ? sun?.angleRad : anchor?.spotRad) ?? prev.angleRad;
-      const distanceAU = anchor?.distanceAU ?? prev.distanceAU;
+      const distanceAU = Math.min(prev.kind === 'cme' ? 2 : LAB_MAX_AU, Math.max(LAB_MIN_AU, anchor?.distanceAU ?? prev.distanceAU));
       labView.configure(prev.kind, angleRad, distanceAU, true);
       labView.setRemoved(prev.removed);
       const results = labResults({ kind: prev.kind, angleRad, distanceAU, cmeStrength: prev.cmeStrength }, bodies, prev.removed);
@@ -1991,11 +2171,13 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       const others = prev.removed.filter((id) => id !== bodyId);
       const removed = onMap ? others : [...others, bodyId];
       const focusId = prev.focusId === bodyId && !onMap ? 'earth' : prev.focusId;
+      // An explosion set at the body that goes stays where it is, tied to nothing.
+      const anchorId = prev.anchorId === bodyId && !onMap ? null : prev.anchorId;
       audio.cue('ui-click');
       labView.setRemoved(removed);
       const results = labResults(prev, prev.bodies, removed);
       if (focusId !== prev.focusId) labView.setFocus(focusId, false);
-      setGame({ lab: { ...prev, ...results, removed, focusId } });
+      setGame({ lab: { ...prev, ...results, removed, focusId, anchorId } });
     },
 
     detonateLab(): void {
@@ -2028,7 +2210,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
 
     seekLab(elapsedSec: number): void {
       const prev = getGame().lab;
-      if (!prev?.playing) return;
+      if (!prev?.playing || !Number.isFinite(elapsedSec)) return;
       const at = Math.min(prev.runSec, Math.max(0, elapsedSec));
       labView.seek(at);
       labView.setPaused(true);
@@ -2051,8 +2233,10 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     },
 
     startLabQuiz(): void {
-      if (!getGame().lab) return;
+      const lab = getGame().lab;
+      if (!lab || lab.quiz) return;
       audio.cue('ui-click');
+      labBeforeQuiz = lab;
       askLabQuestion(0, []);
     },
 
@@ -2060,8 +2244,32 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       const prev = getGame().lab;
       if (!prev?.quiz) return;
       audio.cue('ui-click');
+      // The scenario the class mode replaced comes back as it was set; nothing of a question stays, a run of
+      // its explosion included.
+      const kept = labBeforeQuiz ?? prev;
+      labBeforeQuiz = null;
+      const setup: LabSetup = { kind: kept.kind, angleRad: kept.angleRad, distanceAU: kept.distanceAU, cmeStrength: kept.cmeStrength };
+      labView.configure(setup.kind, setup.angleRad, setup.distanceAU, false);
+      labView.setRemoved(kept.removed);
+      const results = labResults(setup, prev.bodies, kept.removed);
+      labView.resetExplosion();
+      labView.setPaused(false);
+      labView.setFocus(kept.focusId, false);
       labView.setConcealed(false);
-      setGame({ lab: { ...prev, quiz: null } });
+      setGame({
+        lab: {
+          ...prev,
+          ...setup,
+          ...results,
+          anchorId: kept.anchorId,
+          removed: kept.removed,
+          focusId: kept.focusId,
+          playing: false,
+          paused: false,
+          elapsedSec: 0,
+          quiz: null,
+        },
+      });
     },
 
     answerLabQuiz(level: LabImpactLevel): void {
@@ -2097,6 +2305,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         kind: lab.kind,
         distanceAU: lab.distanceAU,
         angleRad: lab.angleRad,
+        anchorId: lab.anchorId,
         jdTT: lab.jdTT,
         earthSummary: lab.impact.summary,
         fates: lab.fates,
@@ -2109,11 +2318,21 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     },
 
     returnToLab(): void {
-      const query = getGame().labReturn;
-      const link = query === null ? null : parseLabLink(`?${query}`);
+      const st = getGame();
+      const link = st.labReturn === null ? null : parseLabLink(`?${st.labReturn}`);
       if (!link) return;
-      setGame({ activeEventId: null, labReturn: null, stage: null });
-      openLabLink(link);
+      // The lab comes back as it was left: at the exact moment of its map, and as a page opened from the
+      // menu. The visit made for the watch ends here: nothing of it (its place, its date, its running
+      // clock) is left to go back to.
+      const jdTT = labWatchSource?.jdTT ?? null;
+      setGame({
+        activeEventId: null,
+        labReturn: null,
+        stage: null,
+        site: null,
+        clock: { jdTT: jdTT ?? st.clock.jdTT, rate: 1, paused: false },
+      });
+      openLabLink(link, jdTT);
     },
   };
 
@@ -2143,8 +2362,9 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
   });
 
   window.addEventListener('keydown', (e) => {
+    // Escape closes what is open from any control; the other keys belong to a field or a list in use.
+    if (e.code !== 'Escape' && keyBelongsToControl(e)) return;
     const tag = (e.target as HTMLElement | null)?.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     // Space and Enter on a button, a link or a fold belong to that control.
     if ((tag === 'BUTTON' || tag === 'A' || tag === 'SUMMARY') && (e.code === 'Space' || e.code === 'Enter')) return;
     const st = getGame();
@@ -2189,7 +2409,13 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         }
       }
       if (st.phase === 'space') {
-        api.exitSpaceView();
+        // A selected marker goes first; the view is left only with nothing selected in it.
+        if (st.spaceView?.selectedMarkerId) api.selectMarker(null);
+        else api.exitSpaceView();
+        return;
+      }
+      if (st.phase === 'map') {
+        api.closeMap();
         return;
       }
       if (st.phase === 'surface') {
@@ -2201,6 +2427,9 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       // The archive, as the bar of the close-up views says; on the ground the surface hotkeys handle it.
       if (st.panels.info) api.togglePanel('info', false);
       else api.openArchive();
+    } else if (e.code === 'KeyR' && st.phase === 'space' && !st.spectator && !covered && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      // Replays the event from its start, as on the ground (there the surface hotkeys handle it).
+      api.resetEventTime();
     } else if (e.code === 'Tab' && st.phase === 'surface' && !covered) {
       e.preventDefault();
       if (input.locked) input.exitLock();
@@ -2287,8 +2516,10 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         jdTT = getGame().clock.jdTT;
       }
     } else if (!st.clock.paused && st.clock.rate !== 0 && live) {
-      jdTT += (dt * st.clock.rate) / SECONDS_PER_DAY;
-      setGame({ clock: { ...st.clock, jdTT } });
+      const next = jdTT + (dt * st.clock.rate) / SECONDS_PER_DAY;
+      jdTT = Math.max(CLOCK_FIRST_JD, Math.min(CLOCK_LAST_JD, next));
+      // At either end of its range the clock stops.
+      setGame({ clock: { ...st.clock, jdTT, paused: jdTT !== next } });
     }
     if (live) {
       fireClockCues(lastClockJd, jdTT);
@@ -2359,10 +2590,11 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         ), 'success');
       }
 
-      // Telescope zoom: wheel, or +/- and PageUp/PageDown held down (about ×3 per second).
+      // Telescope zoom: wheel, or the plus and minus characters (see core/input) and PageUp/PageDown held
+      // down (about ×3 per second).
       const wheel = input.consumeWheel();
-      const zoomKeys = (input.isDown('Equal') || input.isDown('NumpadAdd') || input.isDown('PageUp') ? -1 : 0)
-        + (input.isDown('Minus') || input.isDown('NumpadSubtract') || input.isDown('PageDown') ? 1 : 0);
+      const zoomKeys = (input.isDown('ZoomIn') || input.isDown('PageUp') ? -1 : 0)
+        + (input.isDown('ZoomOut') || input.isDown('PageDown') ? 1 : 0);
       if (st.telescope.active && (wheel !== 0 || zoomKeys !== 0)) {
         // Exponential, so a burst of wheel events (trackpads) never flips the factor's sign.
         const factor = Math.exp(wheel * 0.0012 + zoomKeys * dt * 1.1);
@@ -2401,7 +2633,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
 
       // 2. Astronomy & horizon profile
       holdSeatToStars(st.world, jdTT);
-      const here: SiteCoord = st.world !== 'moon' && seat ? seat : st.site;
+      const here: SiteCoord = seat ?? st.site;
       currentSky = computeSky(jdTT, here, st.world);
       currentTransients = (labTransient ? [...TRANSIENTS, labTransient] : TRANSIENTS).map((d) => transientState(d, currentSky!, st.world));
 
@@ -2413,8 +2645,8 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       const isSolid = WORLDS[st.world].solidSurface;
       const sunBody = currentSky.bodies.sun;
       const earthBody = currentSky.bodies.earth;
-      const sunHorizonDeg = isSolid ? horizonElevationAt(cachedHorizonProfile, sunBody.azDeg) : -2;
-      const earthHorizonDeg = isSolid ? horizonElevationAt(cachedHorizonProfile, earthBody.azDeg) : -2;
+      const sunHorizonDeg = skylineDeg(sunBody.azDeg);
+      const earthHorizonDeg = skylineDeg(earthBody.azDeg);
       const sunVis = (isSolid
         ? discVisibleFraction(cachedHorizonProfile, sunBody.azDeg, sunBody.elDeg, sunBody.angularDiameterDeg * 0.5)
         : (sunBody.elDeg > -2 ? 1 : 0))
@@ -2486,13 +2718,22 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         lastManualLookSec = frame.time;
         lookTargetId = null;
       }
-      steerView(dt, pendingSnap);
+      if (director) {
+        steerView(director.staging, director.staging.stages[getGame().stage?.index ?? 0], player.camera.fov, dt, pendingSnap);
+      } else if (skippedStaging) {
+        // The last step that steers the view, framed for the field of view that step has.
+        const staging = skippedStaging;
+        const last = staging.stages.findLast((s) => (s.focusId ?? staging.focusId ?? 'none') !== 'none');
+        if (last) steerView(staging, last, last.telescopeFovDeg ?? last.zoomFovDeg ?? player.camera.fov, dt, true);
+      }
       pendingSnap = false;
-      if (lookTargetId && !director) {
+      skippedStaging = null;
+      if (lookTargetId) {
         const dir = focusDirection(lookTargetId, false);
         if (dir) {
           const heading = (Math.atan2(dir.x, -dir.z) * RAD2DEG + 360) % 360;
-          const pitch = Math.asin(Math.max(-1, Math.min(1, dir.y))) * RAD2DEG;
+          // A body under the skyline is faced along the skyline, not followed into the ground.
+          const pitch = Math.max(Math.asin(Math.max(-1, Math.min(1, dir.y))) * RAD2DEG, skylineDeg(heading));
           const k = 1 - Math.exp(-dt * 6);
           const dh = ((heading - player.state.headingDeg + 540) % 360) - 180;
           const dp = pitch - player.state.pitchDeg;
@@ -2556,6 +2797,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
           highlightId: st.reticleId,
           year: calYear,
           reducedFlash: st.settings.reducedFlash,
+          clockRate: frame.rate,
         },
         player.camera,
         dt,
@@ -2587,9 +2829,9 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       for (const art of (st.world === 'moon' ? artifacts.list() : [])) {
         if (!art.present) continue;
         tmpV.copy(art.position).add(new THREE.Vector3(0, 0.8, 0));
-        const toArt = tmpV.clone().sub(player.camera.position);
-        const distM = toArt.length();
-        const dirToArt = toArt.clone().normalize();
+        const dirToArt = tmpV.clone().sub(player.camera.position).normalize();
+        // The astronaut's distance, not the camera's: in third person the camera stands some metres behind.
+        const distM = art.position.distanceTo(player.state.position);
         // Aim test along the object's height (ground to 1.6 m), so low hardware such as the
         // laser reflector is picked when the crosshair sits on it, not only on a point above it.
         let offDeg = 180;
@@ -2619,14 +2861,15 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         }
       }
 
-      // Sky targets (bodies + Moon when on another world + active transients + galaxies)
-      const isVenus = st.world === 'venus';
+      // Sky targets (bodies + Moon when on another world + active transients + galaxies). Under an overcast
+      // sky only the Sun can be made out.
+      const overcast = OVERCAST_WORLDS[st.world] === true;
       const skyTargetsList: SkyTarget[] = [];
       for (const bid of ['sun', 'earth', 'mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune'] as const) {
         if (bid === st.world) continue;
         const b = currentSky.bodies[bid];
-        const hDeg = isSolid ? horizonElevationAt(cachedHorizonProfile, b.azDeg) : -2;
-        const vis = isVenus ? (bid === 'sun' && b.elDeg > hDeg - 0.3) : b.elDeg > hDeg - 0.3;
+        const hDeg = skylineDeg(b.azDeg);
+        const vis = (bid === 'sun' || !overcast) && b.elDeg > hDeg - 0.3;
         skyTargetsList.push({
           id: bid,
           kind: bid === 'sun' ? 'sun' : bid === 'earth' ? 'earth' : 'planet',
@@ -2642,7 +2885,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       }
       if (currentSky.moon && st.world !== 'moon') {
         const mb = currentSky.moon;
-        const hDeg = isSolid ? horizonElevationAt(cachedHorizonProfile, mb.azDeg) : -2;
+        const hDeg = skylineDeg(mb.azDeg);
         skyTargetsList.push({
           id: 'moon',
           kind: 'planet',
@@ -2651,7 +2894,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
           elDeg: mb.elDeg,
           magnitude: mb.magnitude,
           angularDiameterDeg: mb.angularDiameterDeg,
-          visible: !isVenus && mb.elDeg > hDeg - 0.3,
+          visible: !overcast && mb.elDeg > hDeg - 0.3,
           hasSpaceView: true,
           lightTimeSec: mb.lightTimeSec,
         });
@@ -2659,8 +2902,8 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       for (const tr of currentTransients) {
         if (tr.magnitude > 9 && tr.kind === 'comet') continue;
         if (tr.ageDays < -1 && tr.kind === 'supernova') continue;
-        const hDeg = isSolid ? horizonElevationAt(cachedHorizonProfile, tr.azDeg) : -2;
-        const vis = !isVenus && tr.elDeg > hDeg - 0.3;
+        const hDeg = skylineDeg(tr.azDeg);
+        const vis = !overcast && tr.elDeg > hDeg - 0.3;
         skyTargetsList.push({
           id: tr.id,
           kind: tr.kind,
@@ -2677,8 +2920,8 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       for (const g of GALAXIES) {
         const dir = dirLocalFromRaDec(currentSky, g.raDeg, g.decDeg);
         const alt = azElFromDir(dir);
-        const hDeg = isSolid ? horizonElevationAt(cachedHorizonProfile, alt.azDeg) : -2;
-        const vis = !isVenus && alt.elDeg > hDeg - 0.5;
+        const hDeg = skylineDeg(alt.azDeg);
+        const vis = !overcast && alt.elDeg > hDeg - 0.5;
         skyTargetsList.push({
           id: g.id,
           kind: 'galaxy',
@@ -2737,7 +2980,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
 
       // Bright star labels for Sky Guide [C]
       frame.starLabels.length = 0;
-      if (st.settings.showConstellations && !isVenus) {
+      if (st.settings.showConstellations && !overcast) {
         for (const bs of BRIGHT_STARS) {
           const dir = dirLocalFromRaDec(currentSky, bs.raDeg, bs.decDeg);
           const alt = azElFromDir(dir);
@@ -2780,10 +3023,19 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       // 7. Throttled Telemetry & Store update (~5 Hz)
       if (nowMs - lastTelemClockMs > 200) {
         lastTelemClockMs = nowMs;
-        if (nowMs - lastEventCalcMs > 6000) {
+        // The moments hold while the clock runs towards them. They are worked out again every few seconds
+        // (the astronaut walks and the skyline changes) and, at most once a second, when the clock has left
+        // the stretch they hold for: a jump in time, or a clock fast enough to pass them. "None within 15
+        // days" holds for a day.
+        const sinceCalcMs = nowMs - lastEventCalcMs;
+        const sinceCalcDays = jdTT - lastEventCalcJd;
+        const outdated = sinceCalcDays < 0
+          || [sunEventAt, earthEventAt].some((moment) => (moment ? jdTT >= moment.jdTT : sinceCalcDays > 1));
+        if (sinceCalcMs > 6000 || (outdated && sinceCalcMs > 1000)) {
           lastEventCalcMs = nowMs;
-          lastSunEvent = nextHorizonEvent('sun', jdTT, here, cachedHorizonProfile, 15, st.world);
-          lastEarthEvent = st.world === 'earth' ? null : nextHorizonEvent('earth', jdTT, here, cachedHorizonProfile, 15, st.world);
+          lastEventCalcJd = jdTT;
+          sunEventAt = nextHorizonMoment('sun', jdTT, here, st.world);
+          earthEventAt = st.world === 'earth' ? null : nextHorizonMoment('earth', jdTT, here, st.world);
         }
 
         const nVec = terrain.normalAt(player.state.position.x, player.state.position.z);
@@ -2791,9 +3043,6 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         const flux = solarFluxWm2(sunBody.distanceAU);
         const panelPowerW = flux * 0.30 * sunVis;
         const tempK = worldTemperatureK(st.world, sunBody.elDeg, sunVis, sunBody.distanceAU, st.terrainInfo?.albedo ?? 0.12);
-        // Galactic-cosmic-ray background measured on the lunar surface by Chang'e-4 LND (Zhang et al. 2020):
-        // ≈ 60 µSv/h ≈ 1.44 mSv/day. Solar particle events are not modelled, so no storm value is invented.
-        const radMsvDay = 1.44;
 
         const telem: Telemetry = {
           latDeg: st.site.latDeg - (player.state.position.z / 1_737_400) * RAD2DEG,
@@ -2807,19 +3056,19 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
           sunElDeg: sunBody.elDeg,
           sunHorizonDeg,
           sunVisibleFraction: sunVis,
-          sunEvent: lastSunEvent,
+          sunEvent: timeUntil(sunEventAt, jdTT),
           solarFluxWm2: flux,
           panelPowerW,
           earthAzDeg: earthBody.azDeg,
           earthElDeg: earthBody.elDeg,
           earthHorizonDeg,
           earthVisible: earthVis,
-          earthEvent: lastEarthEvent,
+          earthEvent: timeUntil(earthEventAt, jdTT),
           earthPhase: earthBody.illuminatedFraction,
           dteLink: earthVis && earthBody.elDeg > earthHorizonDeg + 0.5,
           lightTimeSec: earthBody.lightTimeSec,
           surfaceTempK: tempK,
-          radiationMsvDay: radMsvDay,
+          radiationMsvDay: SURFACE_RADIATION_MSV_DAY[st.world] ?? null,
           accuracy: currentSky.accuracy,
           terrainSource: st.terrainInfo?.sourceLabel ?? { tr: 'LOLA DEM', en: 'LOLA DEM' },
           terrainResolutionM: st.terrainInfo?.dataResolutionM ?? 240,
@@ -2842,12 +3091,15 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         labView.setEvaKeys(mx, mz, my, input.isDown('ShiftLeft') || input.isDown('ShiftRight'));
       }
       activeSpaceView.update(dt, jdTT);
-      // The lab's timeline in the panel follows the time-lapse, and the class mode with it.
-      if (st.lab?.playing && nowMs - lastLabSyncMs > 120) {
+      // The lab's timeline in the panel follows the time-lapse, and the class mode with it. At the end of the
+      // run the time-lapse is paused there, and nothing more is written until something changes.
+      if (st.lab?.playing && !st.lab.paused && nowMs - lastLabSyncMs > 120) {
         lastLabSyncMs = nowMs;
         const elapsedSec = labView.elapsedSec();
+        const ended = elapsedSec >= st.lab.runSec;
+        if (ended) labView.setPaused(true);
         const quiz = labQuizAfter(st.lab, elapsedSec);
-        if (elapsedSec !== st.lab.elapsedSec || quiz !== st.lab.quiz) setGame({ lab: { ...st.lab, elapsedSec, quiz } });
+        if (ended || elapsedSec !== st.lab.elapsedSec || quiz !== st.lab.quiz) setGame({ lab: { ...st.lab, elapsedSec, paused: ended, quiz } });
       }
     }
 

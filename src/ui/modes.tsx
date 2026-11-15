@@ -3,10 +3,19 @@
  *   - TutorialPanel: the current tutorial step with its key caps and progress.
  *   - SpectatorBar: chapter title card and remote (previous / pause / next / exit) for the auto tour.
  */
+import type { L10n } from '../core/types';
 import { loc, tx, useLang } from '../core/i18n';
 import { useGame } from '../core/store';
 import { EVENTS, TUTORIAL_STEPS } from '../content';
 import { game } from '../game/api';
+
+/**
+ * Keys whose cap in the tutorial carries a word of the user's language. The others (letters, digits, Tab,
+ * Shift, Enter, Esc) are printed the same on every keyboard.
+ */
+const KEY_NAMES: Partial<Record<string, L10n>> = {
+  Space: { tr: 'Boşluk', en: 'Space' },
+};
 
 export function TutorialPanel() {
   const lang = useLang();
@@ -56,7 +65,8 @@ export function TutorialPanel() {
       <div className="md-tutorial-body">
         <div className="md-keys">
           {step.keys.map((k) => {
-            const label = typeof k === 'string' ? k : loc(k, lang);
+            const name = typeof k === 'string' ? KEY_NAMES[k] ?? k : k;
+            const label = typeof name === 'string' ? name : loc(name, lang);
             return <kbd key={label} className="md-kbd">{label}</kbd>;
           })}
         </div>

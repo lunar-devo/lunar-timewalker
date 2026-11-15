@@ -12,20 +12,21 @@ import type {
 } from '../../core/types';
 import { getManifest } from '../../core/assets';
 import { frame } from '../../core/frame';
-import { dictRevision, fmt, loc, tpl, tx, useLang } from '../../core/i18n';
+import { LOCALE, dictRevision, fmt, loc, tpl, tx, useLang } from '../../core/i18n';
 import { setGame, useGame } from '../../core/store';
 import { downloadBlob } from '../../core/download';
 import {
   decimalYear, formatDate, formatDuration, jdTTFromDecimalYear, jdTTNow, yearLabel,
 } from '../../core/time';
 import {
-  BODY_NAMES, EVENTS, GALAXIES, INFO_TOPICS, SURFACE_ASSETS, TRANSIENTS,
+  BODY_NAMES, EVENTS, GALAXIES, GLOBE_CAPTIONS, INFO_TOPICS, SURFACE_ASSETS, TRANSIENTS,
   WORLD_ORDER, WORLDS, archiveTopicAt, earthImageryFor,
 } from '../../content';
 import { game } from '../../game/api';
 import { createNasa } from '../../nasa';
 import { parseLabLink } from '../../views/lab/link';
 import { LAB_WATCH_EVENT_ID, LAB_WATCH_NAME, LAB_WATCH_TARGET_ID } from '../../views/lab/watch';
+import { sunViewLabels } from '../../views/special';
 import { LangPicker } from '../LangPicker';
 import { LabDrawer } from './LabDrawer';
 import { useFit } from '../useFit';
@@ -122,9 +123,10 @@ function GalaxyScale({ galaxy, shot, lang }: { galaxy: GalaxyDef; shot: GalaxyPi
             shown = lightYears;
             lengthRef.current.textContent = tx(lang, tpl`${fmt(lightYears, 0, lang)} ışık yılı`, tpl`${fmt(lightYears, 0, lang)} light years`);
           }
-          // The Moon is drawn where it is neither a speck nor so large that it would lie over the galaxy.
+          // The Moon is drawn where it is neither a speck nor so large that it would lie over the galaxy: no
+          // wider than a third of the window's height, nor than three tenths of the picture.
           const moonPx = FULL_MOON_DEG * pxPerDeg;
-          moonRef.current.style.display = moonPx >= 14 && FULL_MOON_DEG <= shot.fieldDeg * 0.3 ? '' : 'none';
+          moonRef.current.style.display = moonPx >= 14 && moonPx <= window.innerHeight / 3 && FULL_MOON_DEG <= shot.fieldDeg * 0.3 ? '' : 'none';
           discRef.current.style.width = `${moonPx}px`;
           discRef.current.style.height = `${moonPx}px`;
         }
@@ -149,9 +151,41 @@ function GalaxyScale({ galaxy, shot, lang }: { galaxy: GalaxyDef; shot: GalaxyPi
   );
 }
 
+/**
+ * A share from 0 to 1 as a whole percentage, written the way the language writes it: "%50" in Turkish,
+ * "50%" in English, "50 %" in German.
+ */
+function percent(share: number, lang: Lang): string {
+  return share.toLocaleString(LOCALE[lang], { style: 'percent', maximumFractionDigits: 0 });
+}
+
+/** Worlds with no air above the astronaut: the sunlight that reaches a panel there is the full flux. */
+const AIRLESS: Record<WorldId, boolean> = {
+  moon: true,
+  mercury: true,
+  venus: false,
+  earth: false,
+  mars: false,
+  jupiter: false,
+  saturn: false,
+  uranus: false,
+  neptune: false,
+  orbit: true,
+};
+
+/** The telescope's mask leaves the view clear out to this share of the window's half-diagonal (.hud-scope-mask). */
+const SCOPE_CLEAR = 0.34;
+/** A label on an object in the scene comes no closer than this to a side of the window, px. */
+const LABEL_EDGE_PX = 6;
+
+/**
+ * A name short enough for the compass: its designation, which is the first word and any of the next two
+ * that carry a number or are a single letter ("SN 1054", "Cassiopeia A", "C/-43 K1", "Comet 1P/Halley").
+ */
 function compassShortName(name: string): string {
-  const words = name.split(' ');
-  return words[0] === 'SN' && words[1] ? `${words[0]} ${words[1]}` : words[0];
+  const words = name.split(' (')[0].split(' ').slice(0, 3);
+  const last = words.findLastIndex((w) => /\d/.test(w) || w.length === 1);
+  return words.slice(0, Math.max(1, last + 1)).join(' ');
 }
 
 /**
@@ -164,13 +198,17 @@ function Compass({ targets, primaryId, lang }: { targets: SkyTarget[]; primaryId
   const itemRefs = useRef(new Map<string, HTMLButtonElement>());
   const widths = useRef(new Map<string, { text: string; width: number }>());
 
+  // What is above the horizon comes before what is below it, so that a set Sun does not take the place of a
+  // planet that can be seen; within each, the Sun, then Earth or the Moon, then the event's kinds of object.
   const ordered = useMemo(() => {
     const rank = (t: SkyTarget): number => (
       t.id === primaryId ? -1
-        : t.kind === 'sun' ? 0
-          : t.kind === 'earth' || t.id === 'moon' ? 1
-            : t.kind === 'supernova' || t.kind === 'comet' ? 2
-              : 3
+        : (t.visible ? 0 : 4) + (
+          t.kind === 'sun' ? 0
+            : t.kind === 'earth' || t.id === 'moon' ? 1
+              : t.kind === 'supernova' || t.kind === 'comet' ? 2
+                : 3
+        )
     );
     return targets
       .filter((t) => t.kind !== 'galaxy')
@@ -259,6 +297,8 @@ function overlapsBox(a: Box2D, list: Box2D[]): boolean {
 // ─────────────────────────── Staging ("before → event → after") ───────────────────────────
 
 const STAGE_KIND_ORDER = ['before', 'event', 'after'] as const;
+/** An object brighter than the full Moon (this magnitude) is not lost in the Sun's glare, however close it stands. */
+const GLARE_HIDES_FAINTER_THAN_MAG = -12;
 
 function StagePanel() {
   const lang = useLang();
@@ -338,22 +378,25 @@ function StagePanel() {
           <div className="hud-stage-caption">{loc(stage.caption, lang)}</div>
           {skyLocked && (
             <div className="hud-stage-note">
-              {/* The lab's supernova is narrated for the world it is watched from; the archive's events, for the Moon. */}
-              {activeEventId === LAB_WATCH_EVENT_ID
+              {/* The lab's supernova is narrated for the world it is watched from; the archive's events, for the Moon.
+                  On the Moon the ground is the measured one, and what turns under the sky is the Moon. */}
+              {activeEventId !== LAB_WATCH_EVENT_ID
                 ? tx(
-                  lang,
-                  tpl`${WORLDS[world].name} üzerinden izliyorsunuz. Gökyüzü yıldızlara sabitlendi: gezegenin her dönüşünde tek kare gösterilir. Zemin modeldir.`,
-                  tpl`Watching from ${WORLDS[world].name}. The sky is held to the stars: one frame is shown per rotation of the planet. The ground is a model.`,
-                )
-                : tx(
                   lang,
                   tpl`${WORLDS[world].name} üzerinden izliyorsunuz; anlatım Ay’dan görünen hâle göre yazılmıştır. Gökyüzü yıldızlara sabitlendi: gezegenin her dönüşünde tek kare gösterilir. Zemin modeldir.`,
                   tpl`Watching from ${WORLDS[world].name}; the narration was written for the view from the Moon. The sky is held to the stars: one frame is shown per rotation of the planet. The ground is a model.`,
-                )}
+                )
+                : world === 'moon'
+                  ? tx(lang, 'Ay üzerinden izliyorsunuz. Gökyüzü yıldızlara sabitlendi: Ay’ın her dönüşünde tek kare gösterilir.', 'Watching from the Moon. The sky is held to the stars: one frame is shown per rotation of the Moon.')
+                  : tx(
+                    lang,
+                    tpl`${WORLDS[world].name} üzerinden izliyorsunuz. Gökyüzü yıldızlara sabitlendi: gezegenin her dönüşünde tek kare gösterilir. Zemin modeldir.`,
+                    tpl`Watching from ${WORLDS[world].name}. The sky is held to the stars: one frame is shown per rotation of the planet. The ground is a model.`,
+                  )}
               {EVENTS.find((e) => e.id === activeEventId)?.seenFrom === 'earthMoon' && (
                 <> {tx(lang, 'Bu dizilim Dünya ve Ay’a özgüdür; buradan açılar farklıdır.', 'This alignment is specific to Earth and the Moon; the angles are different from here.')}</>
               )}
-              {focus && sunGapDeg !== null && sunGapDeg < 20 && (
+              {focus && focus.magnitude >= GLARE_HIDES_FAINTER_THAN_MAG && sunGapDeg !== null && sunGapDeg < 20 && (
                 <> {tx(
                   lang,
                   tpl`Buradan bakınca ${focus.name} Güneş’e yalnızca ${Math.round(sunGapDeg)}° uzakta; gündüz göğünde, Güneş’in parıltısı içinde kalır.`,
@@ -375,19 +418,24 @@ function TimeMachineBar() {
   const lang = useLang();
   const clock = useGame((s) => s.clock);
   const activeEventId = useGame((s) => s.activeEventId);
+  const phase = useGame((s) => s.phase);
   const decY = Math.round(decimalYear(clock.jdTT));
   // In a narrow window the bar gives up, in turn: the year labels, the month step, the hour steps.
-  const [barRef, tight] = useFit(3, `${lang}|${dictRevision()}|${activeEventId}`);
+  const [barRef, tight] = useFit(3, `${lang}|${dictRevision()}|${activeEventId}|${clock.paused}`);
   const day = tx(lang, 'g', 'd');
   const hour = tx(lang, 'sa', 'h');
 
-  const rates: Array<{ label: string; rate: number }> = [
-    { label: tx(lang, 'Durdur', 'Pause'), rate: 0 },
-    { label: '1×', rate: 1 },
-    { label: tx(lang, '1dk', '1m'), rate: 60 },
-    { label: tx(lang, '1sa', '1h'), rate: 3600 },
-    { label: tx(lang, '1g', '1d'), rate: 86400 },
-    { label: tx(lang, '10g', '10d'), rate: 864000 },
+  // The first button stops the clock and starts it again at the rate it had; the others set a rate. On the
+  // ground the keys 1 to 6 do the same, in this order.
+  const rates: Array<{ label: string; title: string; rate: number }> = [
+    clock.paused
+      ? { label: tx(lang, 'Devam', 'Resume'), title: tx(lang, 'Saati aynı hızda yeniden çalıştırır', 'Starts the clock again at the same rate'), rate: 0 }
+      : { label: tx(lang, 'Durdur', 'Pause'), title: tx(lang, 'Saati durdurur', 'Stops the clock'), rate: 0 },
+    { label: '1×', title: tx(lang, 'Gerçek hız: saniyede 1 saniye', 'Real speed: 1 second each second'), rate: 1 },
+    { label: tx(lang, '1dk', '1m'), title: tx(lang, 'Saniyede 1 dakika', '1 minute each second'), rate: 60 },
+    { label: tx(lang, '1sa', '1h'), title: tx(lang, 'Saniyede 1 saat', '1 hour each second'), rate: 3600 },
+    { label: tx(lang, '1g', '1d'), title: tx(lang, 'Saniyede 1 gün', '1 day each second'), rate: 86400 },
+    { label: tx(lang, '10g', '10d'), title: tx(lang, 'Saniyede 10 gün', '10 days each second'), rate: 864000 },
   ];
 
   const stepDays = (days: number): void => game.setTime(clock.jdTT + days);
@@ -440,16 +488,18 @@ function TimeMachineBar() {
       </div>
 
       <div className="mn-seg hud-bar-fixed" style={{ padding: 2 }}>
-        {rates.map((r) => {
-          const isAct = (r.rate === 0 && clock.paused) || (!clock.paused && clock.rate === r.rate);
+        {rates.map((r, i) => {
+          const isAct = r.rate === 0 ? clock.paused : !clock.paused && clock.rate === r.rate;
           return (
             <button
-              key={r.label}
+              key={r.rate}
               type="button"
               className={`mn-seg-btn ${isAct ? 'is-active' : ''}`}
               style={{ padding: '4px 9px', fontSize: '0.73rem' }}
+              title={phase === 'surface' ? `${r.title} [${i + 1}]` : r.title}
               onClick={() => {
-                if (r.rate === 0) game.setPaused(true);
+                // Resuming leaves the rate alone: setting a rate ends a sequence that is playing.
+                if (r.rate === 0) game.setPaused(!clock.paused);
                 else {
                   game.setPaused(false);
                   game.setRate(r.rate);
@@ -490,7 +540,10 @@ function AssetCardModal() {
       <div className="mn-modal" ref={dialog} role="dialog" aria-modal="true" aria-label={loc(asset.name, lang)} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
         <div className="mn-modal-head">
           <div>
-            <div className="mn-brand-tag">{loc(asset.mission, lang)} · {asset.agency}</div>
+            <div className="mn-brand-tag">
+              {/* Most mission labels already name the agency ("Apollo 11 (NASA)"). */}
+              {loc(asset.mission, lang).includes(asset.agency) ? loc(asset.mission, lang) : `${loc(asset.mission, lang)} · ${asset.agency}`}
+            </div>
             <h2 className="mn-modal-title">{loc(asset.name, lang)}</h2>
           </div>
           <button type="button" className="mn-btn" onClick={() => setGame({ focusAssetId: null })}>
@@ -500,7 +553,12 @@ function AssetCardModal() {
 
         <div className="mn-badge-row">
           <span className={`mn-badge ${asset.stillActive ? 'ok' : 'warn'}`}>{loc(asset.status, lang)}</span>
-          <span className="mn-badge">{fmt(asset.latDeg, 2, lang)}°, {fmt(asset.lonDeg, 2, lang)}°</span>
+          <span className="mn-badge">
+            {/* An orbiter has no place on the ground to give the latitude and longitude of. */}
+            {asset.kind === 'orbiter'
+              ? tx(lang, 'Yörünge aracı · yüzeye inmedi', 'Orbiter · did not land')
+              : `${fmt(asset.latDeg, 2, lang)}°, ${fmt(asset.lonDeg, 2, lang)}°`}
+          </span>
         </div>
 
         {asset.history.map((p) => (
@@ -865,7 +923,7 @@ function InfoCentreModal() {
 const PAD_ARROWS: Array<{ code: string; glyph: string; cell: string; label: L10n }> = [
   { code: 'KeyW', glyph: '▲', cell: 'up', label: { tr: 'İleri', en: 'Forward' } },
   { code: 'KeyA', glyph: '◀', cell: 'left', label: { tr: 'Sola', en: 'Left' } },
-  { code: 'KeyS', glyph: '▼', cell: 'down', label: { tr: 'Geri', en: 'Back' } },
+  { code: 'KeyS', glyph: '▼', cell: 'down', label: { tr: 'Geri', en: 'Backward' } },
   { code: 'KeyD', glyph: '▶', cell: 'right', label: { tr: 'Sağa', en: 'Right' } },
 ];
 
@@ -934,6 +992,26 @@ export function SurfaceHud() {
   const touchInput = useGame((s) => s.touchInput);
 
   const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement | null>(null);
+  // The ⋯ menu closes on a press outside it and on Escape. Escape is taken on its way down to the page and
+  // stopped there: the engine's key handler does not see it and so does not open the pause menu as well.
+  useEffect(() => {
+    if (!moreOpen) return undefined;
+    const onPress = (e: PointerEvent): void => {
+      if (!moreRef.current?.contains(e.target as Node | null)) setMoreOpen(false);
+    };
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.code !== 'Escape') return;
+      e.stopPropagation();
+      setMoreOpen(false);
+    };
+    window.addEventListener('pointerdown', onPress, true);
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('pointerdown', onPress, true);
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, [moreOpen]);
   const worldInfo = WORLDS[world];
   // The top bar, left to right: where you are (menu, world, place), the compass, what you look with
   // (telescope, sky guide), what you read (data, archive), and ⋯ for the rest. Buttons that do not fit move
@@ -965,7 +1043,16 @@ export function SurfaceHud() {
   if (panels.telemetry && telemetry) occupied.push({ x1: vw - Math.min(310, vw * 0.25), y1: 52, x2: vw, y2: Math.min(vh - 70, 560) });
   if (stage?.playing) occupied.push({ x1: vw * 0.5 - 265, y1: 52, x2: vw * 0.5 + 265, y2: 190 });
   else if (stage) occupied.push({ x1: vw * 0.5 - 150, y1: 52, x2: vw * 0.5 + 150, y2: 94 });
-  if (reticleId) occupied.push({ x1: vw * 0.5 - 150, y1: vh * 0.5 - 24, x2: vw * 0.5 + 150, y2: vh * 0.5 + 95 });
+  // The name of what is under the crosshair hangs just below it. Under the telescope the object fills the
+  // middle of the view, so the name moves down to the rim of the clear field, or as far as it can go and
+  // still stay above the strip where subtitles and messages appear.
+  const reticleTop = telescope.active
+    ? Math.max(vh / 2 + 26, Math.min(vh / 2 + SCOPE_CLEAR * Math.hypot(vw, vh) / 2, vh - 206))
+    : vh / 2 + 26;
+  if (reticleId) {
+    occupied.push({ x1: vw * 0.5 - 150, y1: vh * 0.5 - 24, x2: vw * 0.5 + 150, y2: vh * 0.5 + 26 });
+    occupied.push({ x1: vw * 0.5 - 150, y1: reticleTop, x2: vw * 0.5 + 150, y2: reticleTop + 69 });
+  }
 
   const targetRank = new Map<string, number>();
   for (const t of targets) {
@@ -992,8 +1079,10 @@ export function SurfaceHud() {
       const px = p.x * vw;
       const py = p.y * vh;
       const halfW = Math.max(32, labelText.length * 3.8 + 10);
+      // A name that would cross a side of the window slides inward; its pin stays on the object.
+      const cx = px + Math.max(LABEL_EDGE_PX + halfW - px, Math.min(0, vw - LABEL_EDGE_PX - halfW - px));
       for (const dy of [0, -22, 22, -42, 42]) {
-        const box: Box2D = { x1: px - halfW, y1: py + dy - 4, x2: px + halfW, y2: py + dy + 22 };
+        const box: Box2D = { x1: cx - halfW, y1: py + dy - 4, x2: cx + halfW, y2: py + dy + 22 };
         if (!overlapsBox(box, occupied)) {
           occupied.push(box);
           offsetY = dy;
@@ -1039,6 +1128,12 @@ export function SurfaceHud() {
             className="hud-bar-select"
             value={world}
             aria-label={tx(lang, 'Ortam / Çekim', 'World / Gravity')}
+            // On the Moon during an event that happens there no other world can be chosen; from another
+            // world the list stays open, since it is the way back to the Moon.
+            disabled={activeEvent?.seenFrom === 'moon' && world === 'moon'}
+            title={activeEvent?.seenFrom === 'moon'
+              ? tx(lang, 'Bu olay Ay’da geçer; yalnızca Ay’dan izlenir.', 'This event takes place on the Moon and can only be watched from there.')
+              : undefined}
             onChange={(e) => game.setWorld(e.target.value as WorldId)}
           >
             {WORLD_ORDER.map((wid) => {
@@ -1051,7 +1146,8 @@ export function SurfaceHud() {
             })}
           </select>
           <button type="button" className="hud-bar-btn" onClick={() => game.openMap()}>
-            {site ? loc(site.name, lang).split(' (')[0] : (tx(lang, 'Harita', 'Map'))} [M]
+            {/* The place is a place on the Moon; on the other worlds the button only opens the map. */}
+            {world === 'moon' && site ? loc(site.name, lang).split(' (')[0] : tx(lang, 'Harita', 'Map')} [M]
           </button>
         </div>
 
@@ -1063,7 +1159,9 @@ export function SurfaceHud() {
             className={`hud-bar-btn ${telescope.active ? 'is-on' : ''}`}
             onClick={() => game.setTelescope(!telescope.active)}
           >
-            {telescope.active ? `${telescope.fovDeg.toFixed(1)}°` : (tx(lang, 'Teleskop [T]', 'Telescope [T]'))}
+            {telescope.active
+              ? tx(lang, tpl`Teleskop ${fmt(telescope.fovDeg, 1, lang)}° [T]`, tpl`Telescope ${fmt(telescope.fovDeg, 1, lang)}° [T]`)
+              : tx(lang, 'Teleskop [T]', 'Telescope [T]')}
           </button>
           {shownActions.filter((a) => a.group === 'look').map((a) => (
             <button key={a.id} type="button" className={`hud-bar-btn ${a.on ? 'is-on' : ''}`} onClick={a.run}>
@@ -1078,7 +1176,7 @@ export function SurfaceHud() {
           ))}
           <span className="hud-divider" />
 
-          <div className="hud-more-wrap">
+          <div className="hud-more-wrap" ref={moreRef}>
             <button type="button" className="hud-bar-btn" aria-label={tx(lang, 'Diğer seçenekler', 'More options')} onClick={() => setMoreOpen((v) => !v)}>
               ⋯
             </button>
@@ -1094,7 +1192,7 @@ export function SurfaceHud() {
                   <span>{viewMode === 'first' ? (tx(lang, 'Dışarıdan bak', '3rd person')) : (tx(lang, 'Kask içinden bak', '1st person'))}</span>
                   <span>V</span>
                 </button>
-                <button type="button" className="hud-bar-btn" onClick={() => setGame({ headlamp: !headlamp })}>
+                <button type="button" className={`hud-bar-btn ${headlamp ? 'is-on' : ''}`} onClick={() => setGame({ headlamp: !headlamp })}>
                   <span>{tx(lang, 'Kask lambası', 'Helmet lamp')}</span>
                   <span>G</span>
                 </button>
@@ -1108,7 +1206,7 @@ export function SurfaceHud() {
                 </button>
                 <button type="button" className="hud-bar-btn" onClick={() => { handleTakePhoto('4k').catch(() => undefined); }}>
                   <span>{tx(lang, '4K fotoğraf', '4K photo')}</span>
-                  <span>3840p</span>
+                  <span>3840×2160</span>
                 </button>
                 <button type="button" className="hud-bar-btn" onClick={() => { handleTakePhoto('8k').catch(() => undefined); }}>
                   <span>{tx(lang, '8K fotoğraf', '8K photo')}</span>
@@ -1145,7 +1243,7 @@ export function SurfaceHud() {
       </div>
 
       {reticleId && (
-        <div className="hud-reticle-label">
+        <div className="hud-reticle-label" style={telescope.active ? { top: reticleTop } : undefined}>
           <div style={{ fontSize: '0.88rem', fontWeight: 700 }}>{resolveTargetName(reticleId, lang)}</div>
           <div style={{ fontSize: '0.72rem', color: 'var(--c-accent)' }}>
             {tx(lang, '[E] Bilgi', '[E] Info')}
@@ -1170,7 +1268,11 @@ export function SurfaceHud() {
         >
           <div className="hud-sky-dot" />
           {labelBox && (
-            <span className="hud-sky-name" style={offsetY !== 0 ? { transform: `translateY(${offsetY}px)` } : undefined}>
+            <span
+              className="hud-sky-name"
+              // The same slide as the label's box above, from the name's real width (50% is half of it).
+              style={{ transform: `translate(clamp(calc(50% + ${LABEL_EDGE_PX - p.x * vw}px), 0px, calc(${vw - LABEL_EDGE_PX - p.x * vw}px - 50%)), ${offsetY}px)` }}
+            >
               {labelText}
             </span>
           )}
@@ -1261,11 +1363,14 @@ export function SurfaceHud() {
               </div>
               <div className="hud-telem-row">
                 <span>{tx(lang, 'Ufuk / Görünen disk', 'Horizon / Disc')}</span>
-                <span className="hud-telem-val">{fmt(telemetry.sunHorizonDeg, 2, lang)}° ({Math.round(telemetry.sunVisibleFraction * 100)}%)</span>
+                <span className="hud-telem-val">{fmt(telemetry.sunHorizonDeg, 2, lang)}° ({percent(telemetry.sunVisibleFraction, lang)})</span>
               </div>
+              {/* The flux is worked out for the top of the atmosphere; what reaches a panel under air is not modelled. */}
               <div className="hud-telem-row">
-                <span>{tx(lang, 'Işınım / 1 m² panel', 'Flux / 1 m² panel')}</span>
-                <span className="hud-telem-val">{Math.round(telemetry.solarFluxWm2)} W/m² · {Math.round(telemetry.panelPowerW)} W</span>
+                <span>{AIRLESS[world] ? tx(lang, 'Işınım / 1 m² panel', 'Flux / 1 m² panel') : tx(lang, 'Işınım (atmosfer üstü)', 'Flux (above the air)')}</span>
+                <span className="hud-telem-val">
+                  {Math.round(telemetry.solarFluxWm2)} W/m²{AIRLESS[world] && ` · ${Math.round(telemetry.panelPowerW)} W`}
+                </span>
               </div>
               {telemetry.sunEvent && (
                 <div className="hud-telem-row">
@@ -1305,8 +1410,8 @@ export function SurfaceHud() {
                     <span className="hud-telem-val">{fmt(moonT.azDeg, 1, lang)}° / {fmt(moonT.elDeg, 2, lang)}°</span>
                   </div>
                   <div className="hud-telem-row">
-                    <span>{tx(lang, 'Kadir / Durum', 'Magnitude / State')}</span>
-                    <span className="hud-telem-val">{fmt(moonT.magnitude, 1, lang)} · {moonT.visible ? (tx(lang, 'Ufuk üstü', 'Visible')) : (tx(lang, 'Ufuk altı', 'Below'))}</span>
+                    <span>{tx(lang, 'Parlaklık / Durum', 'Magnitude / State')}</span>
+                    <span className="hud-telem-val">{fmt(moonT.magnitude, 1, lang)} {tx(lang, 'kadir', 'mag')} · {moonT.visible ? (tx(lang, 'Ufuk üstü', 'Visible')) : (tx(lang, 'Ufuk altı', 'Below'))}</span>
                   </div>
                 </div>
               ) : null;
@@ -1319,13 +1424,18 @@ export function SurfaceHud() {
                 <span>{tx(lang, 'Sıcaklık', 'Temperature')}</span>
                 <span className="hud-telem-val">{Math.round(telemetry.surfaceTempK)} K ({Math.round(telemetry.surfaceTempK - 273.15)} °C)</span>
               </div>
+              {telemetry.radiationMsvDay !== null && (
+                <div className="hud-telem-row">
+                  <span>{tx(lang, 'Radyasyon (arka plan)', 'Radiation (bg)')}</span>
+                  <span className="hud-telem-val">{fmt(telemetry.radiationMsvDay, 2, lang)} {tx(lang, 'mSv/gün', 'mSv/day')}</span>
+                </div>
+              )}
+              {/* Floating in zero g there is no ground and so no slope to read. */}
               <div className="hud-telem-row">
-                <span>{tx(lang, 'Radyasyon (arka plan)', 'Radiation (bg)')}</span>
-                <span className="hud-telem-val">{fmt(telemetry.radiationMsvDay, 2, lang)} mSv/d</span>
-              </div>
-              <div className="hud-telem-row">
-                <span>{tx(lang, 'Eğim / Lamba [G]', 'Slope / Lamp [G]')}</span>
-                <span className="hud-telem-val">{fmt(telemetry.slopeDeg, 1, lang)}° · {headlamp ? (tx(lang, 'Açık', 'On')) : (tx(lang, 'Kapalı', 'Off'))}</span>
+                <span>{worldInfo.zeroG ? tx(lang, 'Lamba [G]', 'Lamp [G]') : tx(lang, 'Eğim / Lamba [G]', 'Slope / Lamp [G]')}</span>
+                <span className="hud-telem-val">
+                  {!worldInfo.zeroG && `${fmt(telemetry.slopeDeg, 1, lang)}° · `}{headlamp ? (tx(lang, 'Açık', 'On')) : (tx(lang, 'Kapalı', 'Off'))}
+                </span>
               </div>
             </div>
 
@@ -1336,7 +1446,7 @@ export function SurfaceHud() {
                 </div>
                 <div className="hud-telem-row">
                   <span>{tx(lang, 'Güneş / Dünya', 'Sun / Earth')}</span>
-                  <span className="hud-telem-val">{Math.round(lightReading.sunFraction * 100)}% / {Math.round(lightReading.earthFraction * 100)}%</span>
+                  <span className="hud-telem-val">{percent(lightReading.sunFraction, lang)} / {percent(lightReading.earthFraction, lang)}</span>
                 </div>
                 <div className="hud-telem-row">
                   <span>{tx(lang, 'En uzun karanlık', 'Longest dark')}</span>
@@ -1372,28 +1482,77 @@ export function SurfaceHud() {
 
 // ─────────────────────────── SpaceHud (Galaxies, Planets, Sun, Remnants, Explosion Lab) ───────────────────────────
 
+/**
+ * Names on the dots of Mercury, Venus and Earth in the Sun view. The view writes where each dot is on the
+ * screen every frame; the names follow in a frame loop of their own. A name stands on the side of its dot
+ * away from the Sun, which is in the middle of the view, and far enough out to clear Earth's ball and the
+ * Moon's dot beside it at the distance the view opens at.
+ */
+function SunDotNames({ lang }: { lang: Lang }) {
+  const itemRefs = useRef(new Map<string, HTMLSpanElement>());
+
+  useEffect(() => {
+    let raf = 0;
+    const loop = (): void => {
+      for (const label of sunViewLabels) {
+        const el = itemRefs.current.get(label.id);
+        if (!el) continue;
+        el.style.visibility = label.shown ? 'visible' : 'hidden';
+        el.style.left = `${label.x * 100}%`;
+        el.style.top = `${label.y * 100}%`;
+        el.style.transform = label.y < 0.5 ? 'translate(-50%, calc(-100% - 26px))' : 'translate(-50%, 26px)';
+      }
+      raf = window.requestAnimationFrame(loop);
+    };
+    raf = window.requestAnimationFrame(loop);
+    return () => window.cancelAnimationFrame(raf);
+  }, []);
+
+  return (
+    <>
+      {sunViewLabels.map((label) => (
+        <span
+          key={label.id}
+          className="hud-star-label"
+          style={{ visibility: 'hidden' }}
+          ref={(el) => {
+            if (el) itemRefs.current.set(label.id, el);
+            else itemRefs.current.delete(label.id);
+          }}
+        >
+          {loc(label.name, lang)}
+        </span>
+      ))}
+    </>
+  );
+}
+
 export function SpaceHud() {
   const lang = useLang();
   const spaceView = useGame((s) => s.spaceView);
   const clock = useGame((s) => s.clock);
-  const targets = useGame((s) => s.targets);
   const spectator = useGame((s) => s.spectator);
   const cleanMode = useGame((s) => s.cleanMode);
   const site = useGame((s) => s.site);
   const soundOn = useGame((s) => s.settings.soundOn);
   const toast = useGame((s) => s.toast);
-  // In a narrow window the bar gives up, in turn: the sound button, the magnitude, the language list, the
-  // clean-view button.
-  const [topRef, tight] = useFit(4, `${lang}|${dictRevision()}|${spaceView?.targetId}`);
+  // In a narrow window the bar gives up, in turn: the sound button, the language list, the clean-view button.
+  const [topRef, tight] = useFit(3, `${lang}|${dictRevision()}|${spaceView?.targetId}`);
 
   if (!spaceView) return null;
   const tid = spaceView.targetId;
-  const tInfo = targets.find((t) => t.id === tid);
   const marsAssets = SURFACE_ASSETS.filter((a) => a.body === 'mars');
   const galDef = GALAXIES.find((g) => g.id === tid);
   const galShot = galDef?.pictures.find((p) => p.id === spaceView.galaxyPictureId) ?? galDef?.pictures[0];
+  const remnant = TRANSIENTS.find((t) => t.id === tid);
   const isLab = tid === 'lab';
   const canWalkHere = WORLD_ORDER.includes(tid as WorldId);
+  // The line under a globe that says what its picture is. Earth's names the month of its picture, and the
+  // view keeps the picture it has while the clock runs at a day each second or faster: the line would then
+  // name a month that is not on show, so it is left out.
+  const globeCaption = tid === 'earth'
+    ? (!clock.paused && clock.rate >= 86400 ? null : earthImageryFor(clock.jdTT).label)
+    : tid in GLOBE_CAPTIONS ? GLOBE_CAPTIONS[tid] : null;
 
   return (
     <div className={`hud-root hud-space ${spectator ? 'is-spectator' : ''} ${cleanMode ? 'is-clean' : ''}`}>
@@ -1401,13 +1560,11 @@ export function SpaceHud() {
       <div className="hud-topbar hud-space-top" ref={topRef}>
         <div className="hud-bar-group">
           <button type="button" className="hud-bar-btn" onClick={() => game.exitSpaceView()}>
-            ← {site ? (tx(lang, 'Yüzeye dön [Esc]', 'Back [Esc]')) : (tx(lang, 'Ana menü [Esc]', 'Home menu [Esc]'))}
+            ← {site ? (tx(lang, 'Yüzeye dön [Esc]', 'Back to surface [Esc]')) : (tx(lang, 'Ana menü [Esc]', 'Home menu [Esc]'))}
           </button>
           <span className="hud-divider" />
-          <strong style={{ fontSize: '0.92rem' }}>
-            {isLab ? tx(lang, 'Patlama Laboratuvarı', 'Explosion Lab') : resolveTargetName(tid, lang)}
-          </strong>
-          {galDef && (
+          {/* A galaxy's name is what its list shows. */}
+          {galDef ? (
             <select
               className="hud-bar-select"
               value={galDef.id}
@@ -1418,11 +1575,10 @@ export function SpaceHud() {
                 <option key={g.id} value={g.id}>{loc(g.name, lang)}</option>
               ))}
             </select>
-          )}
-          {tInfo && tInfo.magnitude < 20 && !isLab && !galDef && tight < 2 && (
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--c-dim)' }}>
-              {fmt(tInfo.magnitude, 2, lang)} {tx(lang, 'kadir', 'mag')}
-            </span>
+          ) : (
+            <strong style={{ fontSize: '0.92rem' }}>
+              {isLab ? tx(lang, 'Patlama Laboratuvarı', 'Explosion Lab') : resolveTargetName(tid, lang)}
+            </strong>
           )}
         </div>
 
@@ -1440,27 +1596,27 @@ export function SpaceHud() {
               {tx(lang, 'Ses [K]', 'Sound [K]')}
             </button>
           )}
-          {tight < 4 && (
+          {tight < 3 && (
             <button type="button" className="hud-bar-btn" onClick={() => game.toggleCleanMode(true)}>
               {tx(lang, 'Temiz ekran [U]', 'Clean view [U]')}
             </button>
           )}
-          {tight < 3 && <LangPicker />}
+          {tight < 2 && <LangPicker />}
         </div>
       </div>
 
-      {tid === 'earth' && (
+      {globeCaption && (
         <div
           className="hud-card hud-space-side"
-          style={{ position: 'fixed', bottom: 66, left: 16, padding: '6px 12px', fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--c-accent-2)', pointerEvents: 'none' }}
+          style={{ position: 'fixed', bottom: 66, left: 16, maxWidth: 'min(480px, calc(100vw - 32px))', padding: '6px 12px', fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--c-accent-2)', pointerEvents: 'none' }}
         >
-          {loc(earthImageryFor(clock.jdTT).label, lang)}
+          {loc(globeCaption, lang)}
         </div>
       )}
       {isLab && <LabDrawer />}
 
       {tid === 'mars' && (
-        <div className="hud-card hud-space-side" style={{ position: 'fixed', top: 58, left: 16, width: 'min(320px, 27vw)', maxHeight: 'calc(100vh - 132px)', overflowY: 'auto' }}>
+        <div className="hud-card hud-space-side" style={{ position: 'fixed', top: 58, left: 16, width: 'min(320px, 27vw)', maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' }}>
           <div className="hud-card-title">
             <span>{tx(lang, 'Mars’taki Araçlar', 'Spacecraft on Mars')}</span>
           </div>
@@ -1544,14 +1700,53 @@ export function SpaceHud() {
 
       {galDef && galShot && <GalaxyScale galaxy={galDef} shot={galShot} lang={lang} />}
 
-      {tid.startsWith('sn') && (
-        <div className="hud-card hud-space-side" style={{ position: 'fixed', top: 58, left: 16, width: 'min(320px, 30vw)' }}>
-          <div className="hud-card-title">
-            <span>{tx(lang, 'Süpernova Kalıntısı', 'Supernova Remnant')}</span>
+      {remnant?.kind === 'supernova' && (
+        <div className="hud-card hud-space-side" style={{ position: 'fixed', top: 58, left: 16, width: 'min(300px, 26vw)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div>
+            <div className="mn-brand-tag">{tx(lang, 'Süpernova Kalıntısı', 'Supernova Remnant')}</div>
+            <h3 style={{ margin: '4px 0 0', fontSize: '1.05rem' }}>{loc(remnant.remnantName, lang)}</h3>
           </div>
+          <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.78rem', lineHeight: 1.45, color: 'var(--c-text)' }}>
+            <li>
+              {tx(
+                lang,
+                tpl`Uzaklığı: yaklaşık ${fmt(remnant.distanceLy, 0, lang)} ışık yılı`,
+                tpl`Distance: about ${fmt(remnant.distanceLy, 0, lang)} light years`,
+              )}
+            </li>
+            <li>
+              {tx(
+                lang,
+                tpl`Gökyüzündeki genişliği: bugün yaklaşık ${fmt(remnant.remnantDiameterArcmin, 0, lang)} yay dakikası (dolunay ${fmt(FULL_MOON_DEG * 60, 0, lang)} yay dakikasıdır)`,
+                tpl`Width on the sky: about ${fmt(remnant.remnantDiameterArcmin, 0, lang)} arcminutes today (the full Moon is ${fmt(FULL_MOON_DEG * 60, 0, lang)})`,
+              )}
+            </li>
+          </ul>
+          <p style={{ margin: 0, fontSize: '0.8rem', lineHeight: 1.45, color: 'var(--c-dim)' }}>
+            {tx(
+              lang,
+              'Bulutun biçimi bir modeldir, fotoğraf değildir: bu türden bir kalıntının genel görünüşünü çizer. Büyümesi de modeldir: bugünkü boyutuna sabit hızla ulaşacak biçimde genişler.',
+              'The shape of the cloud is a model, not a picture: it draws the general look of a remnant of this kind. Its growth is a model too: it expands at a steady speed that brings it to its size today.',
+            )}
+          </p>
           <p style={{ margin: 0, fontSize: '0.8rem', lineHeight: 1.45, color: 'var(--c-dim)' }}>
             {tx(lang, 'Alttaki zaman çubuğunu patlama yılından 2026’ya doğru kaydırarak gaz bulutunun yüzyıllar içinde nasıl genişlediğini izleyin.', 'Drag the year slider at the bottom from the year of the explosion toward 2026 to see the gas cloud expand over centuries.')}
           </p>
+        </div>
+      )}
+
+      {tid === 'sun' && <SunDotNames lang={lang} />}
+      {tid === 'sun' && (
+        <div className="hud-card hud-space-side" style={{ position: 'fixed', top: 58, left: 16, width: 'min(320px, 30vw)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="hud-card-title">
+            <span>{tx(lang, 'Güneş ve İç Gezegenler', 'The Sun and the Inner Planets')}</span>
+          </div>
+          <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.8rem', lineHeight: 1.45, color: 'var(--c-dim)' }}>
+            <li>{tx(lang, 'Üç nokta Merkür, Venüs ve Dünya’dır; her biri gösterilen tarihte yörüngesinde bulunduğu yerdedir.', 'The three dots are Mercury, Venus and Earth, each where it is on its orbit on the date shown.')}</li>
+            <li>{tx(lang, 'Ölçekli değildir: Güneş de gezegenler de aralarındaki uzaklıklara göre olduklarından çok büyük çizilmiştir.', 'Not to scale: the Sun and the planets are drawn far larger than they are against the distances between them.')}</li>
+            <li>{tx(lang, 'Püskürmeler NASA DONKI’nin Mayıs 2024 kayıtlarından çizilir; uzaydaki ilerleyişleri bir modeldir.', 'The eruptions are drawn from NASA DONKI records of May 2024; their travel through space is a model.')}</li>
+            <li>{tx(lang, 'Başka tarihlerde Güneş sakin gösterilir.', 'On other dates the Sun is shown quiet.')}</li>
+          </ul>
         </div>
       )}
 

@@ -1,16 +1,20 @@
 /**
  * Telescope close-up views that are not globes:
- *   1. createSunView: the Sun and the inner heliosphere (Mercury, Venus and Earth orbits) with coronal mass
- *      ejections expanding at their NASA DONKI launch times, speeds, widths and directions. Not to scale:
- *      the Sun is drawn ~25× larger than its true size at this distance scale.
+ *   1. createSunView: the Sun and the inner heliosphere with coronal mass ejections expanding at their NASA
+ *      DONKI launch times, speeds, widths and directions. Mercury, Venus and Earth stand where they are on
+ *      the date shown, in a frame turned so that Earth is on +X (Stonyhurst longitude 0, which the eruptions'
+ *      directions are given from). Not to scale: the Sun is drawn ~25× larger than its true size at this
+ *      distance scale, and the planets far larger still.
  *   2. createRemnantView: a supernova remnant growing from the explosion to the present day. The shape is
- *      schematic (type-dependent: filamentary Crab-like pulsar wind nebula, or thin Type Ia shock shell); the
- *      growth follows free expansion, scaled to the remnant's present-day size.
+ *      schematic (a Crab-like pulsar wind nebula in its filaments, a shell of ejecta knots like Cassiopeia A,
+ *      or a thin Type Ia shock shell); the growth follows free expansion, scaled to the remnant's present-day
+ *      size.
  */
 import * as THREE from 'three';
-import type { CmeVisual, ISpaceView, SpaceViewOptions, SupernovaDef } from '../../core/types';
+import * as A from 'astronomy-engine';
+import type { CmeVisual, ISpaceView, L10n, SpaceViewOptions, SupernovaDef } from '../../core/types';
 import { supernovaMagnitude } from '../../astro';
-import { jdTTFromCalendarUT, SECONDS_PER_DAY } from '../../core/time';
+import { astroTime, jdTTFromCalendarUT, SECONDS_PER_DAY } from '../../core/time';
 
 const DEG2RAD = Math.PI / 180;
 const AU_KM = 149_597_870.7;
@@ -63,6 +67,12 @@ function attachOrbitControls(
   };
 
   return {
+    /** Sets the closest distance the wheel can reach, and moves the view out to it when it is closer. */
+    setMinDist(d: number): void {
+      minDist = d;
+      targetDist = Math.max(targetDist, d);
+      dist = Math.max(dist, d);
+    },
     reset(l0: number, p0: number, d0: number): void {
       lon = l0; lat = p0; dist = d0 * 1.45;
       targetLon = l0; targetLat = p0; targetDist = d0;
@@ -133,16 +143,16 @@ float noise3(vec3 x) {
 }
 `;
 
-function orbitLine(radius: number, color: number, opacity: number): THREE.LineLoop {
-  const pts: THREE.Vector3[] = [];
-  for (let i = 0; i < 256; i++) {
-    const a = (i / 256) * Math.PI * 2;
-    pts.push(new THREE.Vector3(Math.cos(a) * radius, 0, -Math.sin(a) * radius));
-  }
-  return new THREE.LineLoop(
-    new THREE.BufferGeometry().setFromPoints(pts),
-    new THREE.LineBasicMaterial({ color, transparent: true, opacity }),
-  );
+/** Points along each orbit line of the Sun view. */
+const ORBIT_POINTS = 256;
+
+/** A closed line for a planet's orbit; the Sun view fills in its points (see `drawOrbits` there). */
+function orbitLine(color: number, opacity: number): THREE.LineLoop {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ORBIT_POINTS * 3), 3));
+  const line = new THREE.LineLoop(g, new THREE.LineBasicMaterial({ color, transparent: true, opacity }));
+  line.frustumCulled = false;
+  return line;
 }
 
 function addBackgroundStars(scene: THREE.Scene, count = 1400, radius = 420): THREE.Points {
@@ -174,6 +184,48 @@ function addBackgroundStars(scene: THREE.Scene, count = 1400, radius = 420): THR
 
 // ─────────────────────────── 1. SUN & CME HELIOSPHERE VIEW ───────────────────────────
 
+/** The planets drawn in the Sun view. */
+export type SunViewBodyId = 'mercury' | 'venus' | 'earth';
+
+/**
+ * A planet's dot in the Sun view, for the HUD to name. The view writes the place every frame while it is on
+ * show; the HUD reads it in its own frame loop.
+ */
+export interface SunViewLabel {
+  id: SunViewBodyId;
+  name: L10n;
+  /** Where the dot is on the screen, as shares of the viewport's width and height from its top-left corner. */
+  x: number;
+  y: number;
+  /** False while the dot is off the screen or behind the Sun, and while the view is not on show. */
+  shown: boolean;
+}
+
+export const sunViewLabels: SunViewLabel[] = [
+  { id: 'mercury', name: { tr: 'Merkür', en: 'Mercury' }, x: 0, y: 0, shown: false },
+  { id: 'venus', name: { tr: 'Venüs', en: 'Venus' }, x: 0, y: 0, shown: false },
+  { id: 'earth', name: { tr: 'Dünya', en: 'Earth' }, x: 0, y: 0, shown: false },
+];
+
+const SUN_VIEW_BODY: Record<SunViewBodyId, A.Body> = {
+  mercury: A.Body.Mercury,
+  venus: A.Body.Venus,
+  earth: A.Body.Earth,
+};
+
+/** Days the clock may move before the planets are placed anew (Mercury moves about 0.1° in that time). */
+const PLACE_EVERY_DAYS = 0.02;
+/** Days the clock may move before the orbit lines are drawn anew: the orbits turn slowly over the centuries. */
+const ORBITS_EVERY_DAYS = 36525 / 2;
+/**
+ * Active region AR 3664, the source of the May 2024 storm: the moment it crossed the middle of the disc as
+ * seen from Earth (from the positions of its flares: S20W22 on 9 May, S17W44 on 11 May, S18W89 on 14 May),
+ * its latitude, and how fast the Sun's turning carries a spot across the disc as seen from Earth.
+ */
+const AR3664_MERIDIAN_JD = jdTTFromCalendarUT({ year: 2024, month: 5, day: 7, hour: 17 });
+const AR3664_LAT_DEG = -17;
+const SPOT_DEG_PER_DAY = 13.2;
+
 export function createSunView(_renderer: THREE.WebGLRenderer): ISpaceView {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, window.innerWidth / Math.max(1, window.innerHeight), 0.1, 1000);
@@ -181,7 +233,8 @@ export function createSunView(_renderer: THREE.WebGLRenderer): ISpaceView {
   const softSprite = createSoftSprite();
 
   // Photosphere: granulation and limb darkening, kept just above the bloom threshold at disc centre.
-  const sunUniforms = { uTime: { value: 0 } };
+  // The spot's direction is in the view's frame (Earth on +X); uSpot is 0 while it is not on the near side.
+  const sunUniforms = { uTime: { value: 0 }, uSpot: { value: 0 }, uSpotDir: { value: new THREE.Vector3(1, 0, 0) } };
   const sunMat = new THREE.ShaderMaterial({
     uniforms: sunUniforms,
     vertexShader: /* glsl */ `
@@ -196,14 +249,15 @@ export function createSunView(_renderer: THREE.WebGLRenderer): ISpaceView {
     fragmentShader: /* glsl */ `
       ${NOISE_GLSL}
       uniform float uTime;
+      uniform float uSpot;
+      uniform vec3 uSpotDir;
       varying vec3 vPos;
       varying vec3 vNormalV;
       void main() {
         float mu = max(vNormalV.z, 0.0);
         float limb = 0.35 + 0.65 * pow(mu, 0.6);
         float gran = noise3(vPos * 38.0 + uTime * 0.05) * 0.6 + noise3(vPos * 90.0 - uTime * 0.08) * 0.4;
-        // Active region AR 3664 sat south of the equator on the Earth-facing side (+X) in May 2024.
-        float spot = smoothstep(0.985, 0.995, dot(vPos, normalize(vec3(0.95, -0.3, 0.0))));
+        float spot = uSpot * smoothstep(0.985, 0.995, dot(vPos, uSpotDir));
         vec3 col = vec3(1.9, 1.25, 0.6) * limb * (0.85 + 0.3 * gran) * (1.0 - 0.75 * spot);
         gl_FragColor = vec4(col, 1.0);
       }
@@ -248,18 +302,15 @@ export function createSunView(_renderer: THREE.WebGLRenderer): ISpaceView {
   rayDisc2.rotation.set(0.35, 0.4, 0);
   scene.add(rayDisc, rayDisc2);
 
-  scene.add(orbitLine(0.387 * HELIO_AU_UNITS, 0x64748b, 0.45));
-  scene.add(orbitLine(0.723 * HELIO_AU_UNITS, 0x64748b, 0.45));
-  scene.add(orbitLine(HELIO_AU_UNITS, 0x38bdf8, 0.65));
-
-  // Inner planets (Mercury, Venus, Earth + Moon) lit from the central Sun
+  // Everything in the plane of the planets (J2000 ecliptic: x to the equinox, scene y to its north pole), turned
+  // as a whole about the pole so that Earth is on +X.
+  const ecliptic = new THREE.Group();
+  scene.add(ecliptic);
+  const eqjToEcl = A.Rotation_EQJ_ECL();
   const mercury = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 12), new THREE.MeshBasicMaterial({ color: 0x9ca3af }));
-  mercury.position.set(0.387 * HELIO_AU_UNITS * Math.cos(0.9), 0, 0.387 * HELIO_AU_UNITS * Math.sin(0.9));
   const venus = new THREE.Mesh(new THREE.SphereGeometry(0.38, 20, 14), new THREE.MeshBasicMaterial({ color: 0xfde68a }));
-  venus.position.set(0.723 * HELIO_AU_UNITS * Math.cos(-1.1), 0, 0.723 * HELIO_AU_UNITS * Math.sin(-1.1));
-  scene.add(mercury, venus);
 
-  // Earth (and the Moon with it) at 1 AU on +X: Stonyhurst longitude 0 points at Earth.
+  // Earth, lit from the Sun's side, with the Moon beside it.
   const earthMarker = new THREE.Mesh(
     new THREE.SphereGeometry(0.52, 24, 16),
     new THREE.ShaderMaterial({
@@ -267,17 +318,59 @@ export function createSunView(_renderer: THREE.WebGLRenderer): ISpaceView {
       fragmentShader: /* glsl */ `varying vec3 vN; void main() { float lit = smoothstep(-0.2, 0.6, -vN.x); gl_FragColor = vec4(mix(vec3(0.05, 0.1, 0.2), vec3(0.24, 0.64, 1.0), lit), 1.0); }`,
     }),
   );
-  earthMarker.position.set(HELIO_AU_UNITS, 0, 0);
   const moonDot = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 10), new THREE.MeshBasicMaterial({ color: 0xcbd5e1 }));
-  moonDot.position.set(0.5, 0.15, 0.9);
-  earthMarker.add(moonDot);
   const earthHalo = new THREE.Sprite(new THREE.SpriteMaterial({
     map: softSprite, color: new THREE.Color(0.35, 0.95, 0.65), transparent: true, opacity: 0,
     blending: THREE.AdditiveBlending, depthWrite: false,
   }));
   earthHalo.scale.setScalar(5);
-  earthMarker.add(earthHalo);
-  scene.add(earthMarker);
+  earthMarker.add(moonDot, earthHalo);
+
+  const planetMesh: Record<SunViewBodyId, THREE.Mesh> = { mercury, venus, earth: earthMarker };
+  const planets = sunViewLabels.map((label) => {
+    const body = SUN_VIEW_BODY[label.id];
+    const line = label.id === 'earth' ? orbitLine(0x38bdf8, 0.65) : orbitLine(0x64748b, 0.45);
+    const mesh = planetMesh[label.id];
+    ecliptic.add(line, mesh);
+    return { label, body, periodDays: A.PlanetOrbitalPeriod(body), line, mesh };
+  });
+  const earth = planets[2];
+
+  /** The clock's value the orbit lines were drawn for and the planets placed for. */
+  let orbitsJd = Infinity;
+  let placedJd = Infinity;
+  /** Earth's distance from the Sun on the date shown, AU. */
+  let earthAU = 1;
+
+  /** Draws each orbit as the path the planet follows over one turn about the date given. */
+  function drawOrbits(jdTT: number): void {
+    orbitsJd = jdTT;
+    for (const p of planets) {
+      const at = p.line.geometry.getAttribute('position');
+      for (let i = 0; i < ORBIT_POINTS; i++) {
+        const v = A.RotateVector(eqjToEcl, A.HelioVector(p.body, astroTime(jdTT + (i / ORBIT_POINTS - 0.5) * p.periodDays)));
+        at.setXYZ(i, v.x * HELIO_AU_UNITS, v.z * HELIO_AU_UNITS, -v.y * HELIO_AU_UNITS);
+      }
+      at.needsUpdate = true;
+    }
+  }
+
+  /** Puts the planets and the Moon where they are on the date given, and turns the plane to bring Earth to +X. */
+  function place(jdTT: number): void {
+    placedJd = jdTT;
+    if (Math.abs(jdTT - orbitsJd) > ORBITS_EVERY_DAYS) drawOrbits(jdTT);
+    const t = astroTime(jdTT);
+    for (const p of planets) {
+      const v = A.RotateVector(eqjToEcl, A.HelioVector(p.body, t));
+      p.mesh.position.set(v.x * HELIO_AU_UNITS, v.z * HELIO_AU_UNITS, -v.y * HELIO_AU_UNITS);
+    }
+    earthAU = earth.mesh.position.length() / HELIO_AU_UNITS;
+    ecliptic.rotation.y = Math.atan2(earth.mesh.position.z, earth.mesh.position.x);
+    // The Moon's direction from Earth is the real one; its distance is drawn some 150 times too large.
+    const moon = A.RotateVector(eqjToEcl, A.GeoMoon(t));
+    moonDot.position.set(moon.x, moon.z, -moon.y).setLength(1.05);
+    ecliptic.updateMatrixWorld(true);
+  }
 
   // CME shock waves: turbulent plasma arc with softened cone walls so stacked CMEs read as storms, not solid domes.
   const capGeo = new THREE.SphereGeometry(1, 56, 28, 0, Math.PI * 2, 0, Math.PI / 2);
@@ -330,6 +423,8 @@ export function createSunView(_renderer: THREE.WebGLRenderer): ISpaceView {
 
   let cmes: CmeVisual[] = [];
   const tmpDir = new THREE.Vector3();
+  const tmpPos = new THREE.Vector3();
+  const toPlanet = new THREE.Vector3();
 
   return {
     scene,
@@ -343,6 +438,15 @@ export function createSunView(_renderer: THREE.WebGLRenderer): ISpaceView {
     update(dt: number, jdTT: number): void {
       sunUniforms.uTime.value += dt;
       orbit.step(dt, 0.02);
+      if (Math.abs(jdTT - placedJd) > PLACE_EVERY_DAYS) place(jdTT);
+
+      // AR 3664 is carried across the near side by the Sun's turning, and is drawn for that one crossing only.
+      const spotLon = (jdTT - AR3664_MERIDIAN_JD) * SPOT_DEG_PER_DAY * DEG2RAD;
+      sunUniforms.uSpot.value = 1 - THREE.MathUtils.smoothstep(Math.abs(spotLon), 80 * DEG2RAD, 100 * DEG2RAD);
+      if (sunUniforms.uSpot.value > 0) {
+        const spotLat = AR3664_LAT_DEG * DEG2RAD;
+        sunUniforms.uSpotDir.value.set(Math.cos(spotLat) * Math.cos(spotLon), Math.sin(spotLat), -Math.cos(spotLat) * Math.sin(spotLon));
+      }
 
       let slot = 0;
       let earthHit = 0;
@@ -363,25 +467,42 @@ export function createSunView(_renderer: THREE.WebGLRenderer): ISpaceView {
         mesh.material.uniforms.uWidth.value = Math.cos(half);
         mesh.material.uniforms.uTime.value = sunUniforms.uTime.value;
         mesh.material.uniforms.uFade.value = Math.min(1, elapsedSec / 7200) * (1 - Math.max(0, (distAU - 1) / 0.3));
-        // Earth sits on +X: a front within the event's half-width of the Sun–Earth line reaches it near 1 AU.
+        // Earth sits on +X: a front within the event's half-width of the Sun–Earth line reaches it at Earth's distance.
         const offAxis = Math.acos(Math.max(-1, Math.min(1, tmpDir.x)));
-        if (Math.abs(distAU - 1) < 0.08 && offAxis < half) earthHit = 1;
+        if (Math.abs(distAU - earthAU) < 0.08 && offAxis < half) earthHit = 1;
       }
-      for (let i = slot; i < cmeMeshes.length; i++) cmeMeshes[i].visible = false;
       (earthHalo.material as THREE.SpriteMaterial).opacity = earthHit * (0.6 + 0.3 * Math.sin(sunUniforms.uTime.value * 8));
+
+      // Where each planet's dot is on the screen, for the HUD's names.
+      camera.updateMatrixWorld();
+      for (const p of planets) {
+        tmpPos.setFromMatrixPosition(p.mesh.matrixWorld);
+        // Behind the Sun when the line of sight to the planet passes through the Sun's ball on the way.
+        toPlanet.subVectors(tmpPos, camera.position);
+        const along = -camera.position.dot(toPlanet) / toPlanet.lengthSq();
+        const behindSun = along > 0 && along < 1 && tmpDir.copy(camera.position).addScaledVector(toPlanet, along).length() < SUN_RADIUS_UNITS;
+        tmpPos.project(camera);
+        p.label.x = (tmpPos.x + 1) / 2;
+        p.label.y = (1 - tmpPos.y) / 2;
+        p.label.shown = !behindSun && Math.abs(tmpPos.x) < 1 && Math.abs(tmpPos.y) < 1 && tmpPos.z < 1;
+      }
     },
 
     setMarkers(): void { /* this view has no markers */ },
     setSelection(): void { /* this view has no selection */ },
     setSelectedMarker(): void { /* this view has no markers */ },
     attach(el: HTMLElement): void { orbit.attach(el); },
-    detach(): void { orbit.detach(); },
+    detach(): void {
+      orbit.detach();
+      for (const label of sunViewLabels) label.shown = false;
+    },
     resize(w: number, h: number): void {
       camera.aspect = w / Math.max(1, h);
       camera.updateProjectionMatrix();
     },
     dispose(): void {
       orbit.detach();
+      for (const p of planets) p.line.geometry.dispose();
       sunMesh.geometry.dispose();
       sunMat.dispose();
       capGeo.dispose();
@@ -396,25 +517,50 @@ export function createSunView(_renderer: THREE.WebGLRenderer): ISpaceView {
 const REMNANT_PARTICLES = 16000;
 /** Scene radius of the remnant at its present-day size. */
 const REMNANT_RADIUS_NOW = 9;
+/** Closest the camera comes to the centre: this many times the cloud's farthest reach, and never less than the distance below. */
+const CLOSEST_OVER_REACH = 1.9;
+const CLOSEST_DISTANCE = 5;
+
+/**
+ * The schematic shapes a remnant is drawn in:
+ *   - pulsarWind: filaments around a blue synchrotron nebula with jets, which a pulsar powers (the Crab);
+ *   - ejectaShell: a shell of bright knots of ejecta inside a faint outer shock front, with nothing to see at
+ *     its centre (Cassiopeia A, whose neutron star has no wind nebula);
+ *   - shockShell: a thin shock front, bright at its limb, with no central object (Type Ia).
+ */
+type RemnantKind = 'pulsarWind' | 'ejectaShell' | 'shockShell';
 
 interface RemnantLook {
-  /** Filament particles (Crab-like) or a thin limb-brightened shell (Type Ia). */
-  filamentary: boolean;
   outer: THREE.Color;
   inner: THREE.Color;
+  /** Strength of the thin shock front drawn round the cloud (0: none is drawn). */
+  shockGain: number;
+  /** Whether a pulsar keeps shining at the centre after the supernova has faded. */
+  pulsar: boolean;
+  /** How far the cloud is drawn out along x and along y. */
+  stretch: readonly [number, number];
 }
 
-const REMNANT_LOOKS: Record<SupernovaDef['snType'], RemnantLook> = {
+const REMNANT_LOOKS: Record<RemnantKind, RemnantLook> = {
   // Crab: red/orange hydrogen filaments around a blue-white synchrotron nebula powered by the pulsar.
-  II: { filamentary: true, outer: new THREE.Color(1.0, 0.36, 0.18), inner: new THREE.Color(0.45, 0.6, 1.0) },
+  pulsarWind: { outer: new THREE.Color(1.0, 0.36, 0.18), inner: new THREE.Color(0.45, 0.6, 1.0), shockGain: 0, pulsar: true, stretch: [1.25, 0.85] },
+  // Cassiopeia A: the faint blue outer front of the blast wave, around knots of ejecta (see EJECTA_TINTS).
+  ejectaShell: { outer: new THREE.Color(0.4, 0.55, 1.0), inner: new THREE.Color(0.6, 0.5, 1.0), shockGain: 0.4, pulsar: false, stretch: [1, 1] },
   // SN 1006 / Tycho: thin X-ray-bright shock shell, faint red H-alpha rims, no central object.
-  Ia: { filamentary: false, outer: new THREE.Color(0.55, 0.75, 1.0), inner: new THREE.Color(1.0, 0.4, 0.3) },
+  shockShell: { outer: new THREE.Color(0.55, 0.75, 1.0), inner: new THREE.Color(1.0, 0.4, 0.3), shockGain: 1, pulsar: false, stretch: [1, 1] },
 };
+
+/** Of the core-collapse supernovae only SN 1054 left a pulsar wind nebula to see; the others are drawn as shells. */
+const REMNANT_KIND_BY_ID: Record<string, RemnantKind> = { sn1054: 'pulsarWind' };
+const REMNANT_KIND_BY_TYPE: Record<SupernovaDef['snType'], RemnantKind> = { II: 'ejectaShell', Ia: 'shockShell' };
+
+/** Colours of the knots of an ejecta shell: the orange-red, green-yellow and pale pink of its glowing elements. */
+const EJECTA_TINTS = [new THREE.Color(1.0, 0.42, 0.2), new THREE.Color(0.72, 0.9, 0.36), new THREE.Color(1.0, 0.7, 0.78)];
 
 export function createRemnantView(_renderer: THREE.WebGLRenderer): ISpaceView {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, window.innerWidth / Math.max(1, window.innerHeight), 0.1, 1000);
-  const orbit = attachOrbitControls(camera, 0.25, 0.2, 30, 8, 70);
+  const orbit = attachOrbitControls(camera, 0.25, 0.2, 30, CLOSEST_DISTANCE, 70);
   const softSprite = createSoftSprite();
   addBackgroundStars(scene);
 
@@ -478,11 +624,14 @@ export function createRemnantView(_renderer: THREE.WebGLRenderer): ISpaceView {
 
   let currentOpts: SpaceViewOptions | null = null;
   let builtFor = '';
+  let look = REMNANT_LOOKS.shockShell;
 
-  /** Deterministic layout: filaments as wandering arcs on a thick shell, or a thin shell bright at its limb. */
+  /** Deterministic layout: filaments as wandering arcs on a thick shell, knots on a shell, or a thin shell bright at its limb. */
   function build(sn: SupernovaDef): void {
     builtFor = sn.id;
-    const look = REMNANT_LOOKS[sn.snType];
+    const kind = REMNANT_KIND_BY_ID[sn.id] ?? REMNANT_KIND_BY_TYPE[sn.snType];
+    look = REMNANT_LOOKS[kind];
+    const [stretchX, stretchY] = look.stretch;
     let seed = 1;
     for (const ch of sn.id) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
     const rand = (): number => {
@@ -491,9 +640,10 @@ export function createRemnantView(_renderer: THREE.WebGLRenderer): ISpaceView {
     };
     const p = new THREE.Vector3();
     const step = new THREE.Vector3();
+    const tint = new THREE.Color();
     let i = 0;
     while (i < REMNANT_PARTICLES) {
-      if (look.filamentary && rand() < 0.72) {
+      if (kind === 'pulsarWind' && rand() < 0.72) {
         // Filament loop: a turbulent walk around the shell with Hubble-like orange/amber and teal variations.
         p.set(rand() * 2 - 1, rand() * 2 - 1, rand() * 2 - 1).normalize();
         step.set(rand() * 2 - 1, rand() * 2 - 1, rand() * 2 - 1).normalize();
@@ -504,18 +654,32 @@ export function createRemnantView(_renderer: THREE.WebGLRenderer): ISpaceView {
           step.add(new THREE.Vector3(rand() - 0.5, rand() - 0.5, rand() - 0.5).multiplyScalar(0.65)).normalize();
           p.addScaledVector(step, 0.011).normalize();
           const rr = r * (1 + (rand() - 0.5) * 0.05);
-          unitPos.set([p.x * rr * 1.25, p.y * rr * 0.85, p.z * rr], i * 3);
+          unitPos.set([p.x * rr * stretchX, p.y * rr * stretchY, p.z * rr], i * 3);
           const c = teal
             ? new THREE.Color(0.32, 0.82, 0.85).lerp(new THREE.Color(0.5, 0.9, 1.0), rand() * 0.4)
             : look.outer.clone().lerp(new THREE.Color(1.0, 0.82, 0.42), rand() * 0.55);
           colors.set([c.r, c.g, c.b], i * 3);
+        }
+      } else if (kind === 'ejectaShell' && rand() < 0.8) {
+        // A knot of ejecta: a small clump on the bright shell, about two thirds of the way out to the shock front.
+        p.set(rand() * 2 - 1, rand() * 2 - 1, rand() * 2 - 1).normalize().multiplyScalar(0.56 + 0.2 * rand());
+        const spread = 0.02 + 0.06 * rand() ** 2;
+        const len = 20 + Math.floor(rand() * 70);
+        tint.copy(EJECTA_TINTS[Math.floor(rand() * EJECTA_TINTS.length)]).multiplyScalar(0.14 + 0.26 * rand());
+        for (let k = 0; k < len && i < REMNANT_PARTICLES; k++, i++) {
+          unitPos.set([
+            p.x + (rand() + rand() + rand() - 1.5) * spread,
+            p.y + (rand() + rand() + rand() - 1.5) * spread,
+            p.z + (rand() + rand() + rand() - 1.5) * spread,
+          ], i * 3);
+          colors.set([tint.r, tint.g, tint.b], i * 3);
         }
       } else {
         p.set(rand() * 2 - 1, rand() * 2 - 1, rand() * 2 - 1);
         if (p.lengthSq() > 1 || p.lengthSq() < 1e-4) continue;
         let r: number;
         let c: THREE.Color;
-        if (look.filamentary) {
+        if (kind === 'pulsarWind') {
           // Pulsar-wind synchrotron core + faint equatorial torus + polar jets.
           if (rand() < 0.22) {
             const sign = rand() < 0.5 ? 1 : -1;
@@ -533,7 +697,7 @@ export function createRemnantView(_renderer: THREE.WebGLRenderer): ISpaceView {
           p.normalize().multiplyScalar(r);
           c = (rand() < 0.2 ? look.inner : look.outer).clone().multiplyScalar(0.24);
         }
-        unitPos.set([p.x * (look.filamentary ? 1.25 : 1), p.y * (look.filamentary ? 0.85 : 1), p.z], i * 3);
+        unitPos.set([p.x * stretchX, p.y * stretchY, p.z], i * 3);
         colors.set([c.r, c.g, c.b], i * 3);
         i++;
       }
@@ -550,29 +714,38 @@ export function createRemnantView(_renderer: THREE.WebGLRenderer): ISpaceView {
     async enter(opts: SpaceViewOptions): Promise<void> {
       currentOpts = opts;
       if (opts.supernova && opts.supernova.id !== builtFor) build(opts.supernova);
+      orbit.setMinDist(CLOSEST_DISTANCE);
       orbit.reset(0.25, 0.2, 30);
     },
 
     update(dt: number, jdTT: number): void {
-      orbit.step(dt, 0.05);
       const sn = currentOpts?.supernova;
-      if (!sn) return;
+      if (!sn) {
+        orbit.step(dt, 0.05);
+        return;
+      }
       const t0 = jdTTFromCalendarUT(sn.firstLight);
       const ageDays = jdTT - t0;
       const nowDays = Math.max(1, jdTTFromCalendarUT({ year: 2026, month: 1, day: 1 }) - t0);
       // Free expansion slows as the ejecta sweep up gas: radius ∝ age^0.8, matched to today's size.
       const radius = ageDays > 0 ? REMNANT_RADIUS_NOW * Math.pow(Math.min(1.2, ageDays / nowDays), 0.8) : 0;
+      // The camera stays outside the cloud however large it has grown.
+      orbit.setMinDist(Math.max(CLOSEST_DISTANCE, radius * Math.max(1, look.stretch[0], look.stretch[1]) * 1.03 * CLOSEST_OVER_REACH));
+      orbit.step(dt, 0.05);
+      // The cloud starts small and faint and grows into its present look: its particles keep their size as a
+      // share of the cloud, and its glow rises with its size. In its first years it is a few pixels across,
+      // where a particle cannot be drawn smaller than a pixel: there the glow is held down further.
+      const grown = radius / REMNANT_RADIUS_NOW;
+      const glow = Math.min(1, 0.15 + 0.85 * Math.sqrt(grown)) * Math.min(1, (grown / 0.05) ** 2);
       cloud.visible = radius > 0.05;
-      // Core-collapse remnants like the Crab show filaments, not a bright shock shell.
-      shell.visible = cloud.visible && !REMNANT_LOOKS[sn.snType].filamentary;
+      shell.visible = cloud.visible && look.shockGain > 0;
       shell.scale.setScalar(radius);
-      shellMat.uniforms.uGain.value = 1.1 + 1.5 * Math.exp(-ageDays / 3650);
+      shellMat.uniforms.uGain.value = 1.1 * look.shockGain * glow;
       if (cloud.visible) {
         for (let k = 0; k < positions.length; k++) positions[k] = unitPos[k] * radius;
         (geo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
-        // Young remnants are hot and bright; the glow settles within the first decades.
-        mat.opacity = 0.45 + 0.4 * Math.exp(-ageDays / 3650);
-        mat.size = 0.25 + radius * 0.05;
+        mat.opacity = 0.45 * glow;
+        mat.size = 0.7 * grown;
       }
       const smat = star.material as THREE.SpriteMaterial;
       if (ageDays < 0) {
@@ -582,8 +755,7 @@ export function createRemnantView(_renderer: THREE.WebGLRenderer): ISpaceView {
       } else {
         const mag = supernovaMagnitude(sn, jdTT);
         const flash = mag < 20 ? Math.min(6, Math.pow(10, -0.2 * (mag + 2))) : 0;
-        const pulsar = REMNANT_LOOKS[sn.snType].filamentary ? 0.6 : 0;
-        const k = 0.5 * flash + pulsar;
+        const k = 0.5 * flash + (look.pulsar ? 0.6 : 0);
         smat.color.setRGB(0.8 * k, 0.9 * k, k);
         star.scale.setScalar(1.2 + flash * 0.6);
       }

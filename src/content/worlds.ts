@@ -85,8 +85,8 @@ export const WORLDS: Record<WorldId, WorldPhysics> = {
     zeroG: true,
     solidSurface: false,
     note: {
-      tr: 'Jüpiter bir gaz devidir, basacak katı yüzeyi yoktur. Fırtına kuşaklarının üzerinde 0g jetpack ile süzülüyorsunuz (bulut tepesi ≈ 24,8 m/s²).',
-      en: 'Jupiter is a gas giant with no solid ground. Float in 0g jetpack EVA above the swirling cloud belts (cloud-top gravity ≈ 24.8 m/s²).',
+      tr: 'Jüpiter bir gaz devidir; basılacak katı bir yüzeyi yoktur. Fırtına kuşaklarının üzerinde manevra ünitesiyle süzülürsünüz. Süzülme bir modeldir: bulut tepesindeki gerçek çekim ≈ 24,8 m/s²’dir.',
+      en: 'Jupiter is a gas giant with no solid ground. You float above the swirling cloud belts with a manoeuvring unit. The floating is a model: real gravity at the cloud tops is ≈ 24.8 m/s².',
     },
   },
   saturn: {
@@ -99,8 +99,8 @@ export const WORLDS: Record<WorldId, WorldPhysics> = {
     zeroG: true,
     solidSurface: false,
     note: {
-      tr: 'Satürn bir gaz devidir, katı yüzeyi yoktur. Altın bulutların üzerinde ve görkemli buz halkalarının altında 0g jetpack ile uçuyorsunuz.',
-      en: 'Saturn is a gas giant with no solid ground. Fly in 0g jetpack EVA above golden clouds beneath the sweeping ice rings.',
+      tr: 'Satürn bir gaz devidir; katı yüzeyi yoktur. Altın rengi bulutların üzerinde, buz halkalarının altında manevra ünitesiyle süzülürsünüz (süzülme bir modeldir).',
+      en: 'Saturn is a gas giant with no solid ground. You float with a manoeuvring unit above golden clouds, beneath the ice rings (the floating is a model).',
     },
   },
   uranus: {
@@ -113,8 +113,8 @@ export const WORLDS: Record<WorldId, WorldPhysics> = {
     zeroG: true,
     solidSurface: false,
     note: {
-      tr: 'Uranüs yan yatmış (~98°) bir buz devidir; katı yüzeyi yoktur. Turkuaz metan bulutlarının üzerinde ve ince dik halkaların yanında 0g uçuş.',
-      en: 'Uranus is a sideways-tilted (~98°) ice giant with no solid ground. Float in 0g above cyan methane clouds beside its thin rings.',
+      tr: 'Uranüs yan yatmış (~98°) bir buz devidir; katı yüzeyi yoktur. Turkuaz metan bulutlarının üzerinde, ince halkalarının yanında süzülürsünüz (süzülme bir modeldir).',
+      en: 'Uranus is an ice giant tilted on its side (~98°), with no solid ground. You float above cyan methane clouds beside its thin rings (the floating is a model).',
     },
   },
   neptune: {
@@ -127,8 +127,8 @@ export const WORLDS: Record<WorldId, WorldPhysics> = {
     zeroG: true,
     solidSurface: false,
     note: {
-      tr: 'Neptün Güneş’ten ~30 AU uzakta bir buz devidir. Lacivert fırtına kuşaklarının ve beyaz metan bulutlarının üzerinde 0g jetpack uçuşu.',
-      en: 'Neptune orbits ~30 AU from the Sun. Fly in 0g EVA above deep cobalt storm bands and bright white methane wisps.',
+      tr: 'Neptün, Güneş’ten yaklaşık 30 AU uzakta bir buz devidir; katı yüzeyi yoktur. Lacivert fırtına kuşaklarının ve beyaz metan bulutlarının üzerinde süzülürsünüz (süzülme bir modeldir).',
+      en: 'Neptune is an ice giant about 30 AU from the Sun, with no solid ground. You float above deep-blue storm bands and white methane clouds (the floating is a model).',
     },
   },
   orbit: {

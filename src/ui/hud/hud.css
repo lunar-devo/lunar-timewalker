@@ -76,7 +76,17 @@
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
-  outline: none;
+}
+
+/* A list that cannot be changed now (the world list during an event that belongs to the Moon). */
+.hud-bar-select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Controls inside a strip that clips its content draw their keyboard focus ring inwards, where it stays whole. */
+:is(.hud-compass-marker, .hud-lab-body button):focus-visible {
+  outline-offset: -2px;
 }
 
 .hud-bar-select option {
@@ -210,6 +220,24 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* The column shows a thin bar at all times when its cards do not fit, so that the lower ones are not taken
+   for missing. */
+.hud-right-col::-webkit-scrollbar {
+  width: 6px;
+}
+
+.hud-right-col::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .hud-right-col {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  }
 }
 
 .hud-card {
@@ -458,6 +486,24 @@
 .is-clean .hud-stage.is-idle,
 .is-spectator .hud-stage.is-idle {
   display: none;
+}
+
+/* In the close-up views the middle of the window belongs to the globe: the sequence panel and, once it has
+   played, the row of its parts sit in the free column on the right. */
+.hud-space .hud-stage {
+  left: auto;
+  right: 16px;
+  transform: none;
+  width: min(340px, max(280px, 26vw));
+}
+
+.hud-space .hud-stage.is-idle {
+  width: auto;
+}
+
+/* The column is narrow: the Skip button goes under the parts when they do not fit beside it. */
+.hud-space .hud-stage-row {
+  flex-wrap: wrap;
 }
 
 .hud-stage-caption {

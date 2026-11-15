@@ -700,8 +700,8 @@ export const EVENTS: EventDef[] = [
           from: { date: { year: 2018, month: 6, day: 20 } },
           to: { date: { year: 2018, month: 7, day: 10 } },
           caption: {
-            tr: '20 Haziran: gezegen tozla kaplı. Opportunity 10 Haziran’dan beri sessiz; nükleer güçle çalışan Curiosity çalışmayı sürdürüyor.',
-            en: '20 June: the planet is covered in dust. Opportunity has been silent since 10 June; nuclear-powered Curiosity carries on.',
+            tr: '20 Haziran – 10 Temmuz: gezegen tozla kaplı kalıyor. Opportunity 10 Haziran’dan beri sessiz; nükleer güçle çalışan Curiosity çalışmayı sürdürüyor.',
+            en: '20 June – 10 July: the planet stays covered in dust. Opportunity has been silent since 10 June; nuclear-powered Curiosity carries on.',
           },
         },
       ],
@@ -816,8 +816,8 @@ export const EVENTS: EventDef[] = [
     },
     about: [
       {
-        tr: 'Güneş tutulmasında Ay, Güneş ile Dünya’nın arasına girer ve gölgesi Dünya’ya düşer. 12 Ağustos 2026’da Ay’ın tam gölgesi, yani tam tutulmanın görüldüğü dar şerit, Grönland, İzlanda ve İspanya üzerinden geçecek. En büyük tutulma 17:46 UT’de.',
-        en: 'In a solar eclipse the Moon passes between the Sun and Earth and its shadow falls on Earth. On 12 August 2026 the Moon’s full shadow, the narrow strip where the eclipse is total, will cross Greenland, Iceland and Spain. Greatest eclipse is at 17:46 UT.',
+        tr: 'Güneş tutulmasında Ay, Güneş ile Dünya’nın arasına girer ve gölgesi Dünya’ya düşer. 12 Ağustos 2026’da Ay’ın tam gölgesi, yani tam tutulmanın görüldüğü dar şerit, Grönland, İzlanda ve İspanya üzerinden geçer. En büyük tutulma 17:46 UT’de.',
+        en: 'In a solar eclipse the Moon passes between the Sun and Earth and its shadow falls on Earth. On 12 August 2026 the Moon’s full shadow, the narrow strip where the eclipse is total, crosses Greenland, Iceland and Spain. Greatest eclipse is at 17:46 UT.',
       },
       {
         tr: 'Tutulma sırasında Ay’ın Dünya’ya bakan yüzünde gecedir, çünkü Güneş Ay’ın arkasında kalır. Bu yüzden Ay’dan bakan biri tamamen aydınlık bir Dünya ve üzerinde ilerleyen koyu bir gölge görür.',

@@ -33,6 +33,73 @@ const GLOBE_RADIUS = 10;
 const EARTH_PICTURE_SETTLE_SEC = 0.4;
 /** How long to wait before asking again for a picture of Earth that failed to load. */
 const EARTH_PICTURE_RETRY_SEC = 5;
+/** The camera's vertical field of view, and the tangent of half of it. */
+const FOV_DEG = 42;
+const TAN_HALF_FOV = Math.tan((FOV_DEG / 2) * DEG2RAD);
+/** Heights of the HUD's top bar and time bar, CSS pixels: a close-up keeps its subject clear of both. */
+const TOP_BAR_PX = 56;
+const BOTTOM_BAR_PX = 68;
+/** The share of the free part of the window that a close-up's subject fills. */
+const FIT_FILL = 0.95;
+/** The picker shows the Moon larger than a close-up does, from this distance, and lets the wheel go this far. */
+const PICKER_DIST = 26;
+const PICKER_FARTHEST = 62;
+/** How many times the distance it opens at the wheel may take a close-up away. */
+const FARTHEST_FACTOR = 1.8;
+/** The wheel never brings the camera nearer to the globe's centre than this, however fine the map. */
+const NEAREST_DIST = 13.5;
+/** The most CSS pixels one pixel of the map may cover in the middle of the globe: nearer than that the map
+ * shows blur and blocks, not detail. */
+const MAX_TEXEL_PX = 4;
+/**
+ * Maps that hold less detail than their file has pixels across, with the width their detail amounts to. The
+ * Hubble maps of Jupiter and Saturn are enlarged (reduced to these widths they lose about 3% of their
+ * contrast); Neptune's 720-pixel map is itself built of square blocks, about 208 across its width.
+ */
+const MAP_DETAIL_PX: Partial<Record<string, number>> = { jupiter: 1400, saturn: 1000, neptune: 208 };
+/** Outer edge of Uranus's ε ring as drawn, planet radii. */
+const URANUS_RING_OUTER = 2.06;
+/** Outer radius of the rings of the planets shown with them, planet radii. */
+const RING_OUTER: Partial<Record<string, number>> = { saturn: SATURN_RING_OUTER, uranus: URANUS_RING_OUTER };
+/** A clock running faster than this many times real time is a time-lapse; a jump of the date counts as one too. */
+const FAST_CLOCK_RATE = 3000;
+/** How long the clock must run slowly again before a close-up turns to the day side: a date being dragged or
+ * stepped does not swing the globe at every step. */
+const CLOCK_SETTLE_SEC = 0.3;
+/** How far east of the Sun's meridian the camera of a close-up stands: most of the disc is in daylight, and
+ * the terminator with its long shadows is in view. */
+const DAY_SIDE_LEAD_RAD = 0.6;
+/** Radius of a marker's pin and of the outer edge of the selection ring, scene units. */
+const PIN_RADIUS = 0.19;
+const SEL_RING_OUTER = 0.46;
+/** Room kept between a label and its own pin or ring (scene units), and round everything else it must not
+ * touch (CSS pixels). */
+const LABEL_GAP = 0.1;
+const LABEL_PAD_PX = 3;
+/** Pixels of a label's picture per scene unit at scale 1. */
+const LABEL_PX_PER_UNIT = 160;
+/** Where a label may sit round its pin, in order of preference: above, below, right, left. */
+const LABEL_SLOTS: readonly (readonly [number, number])[] = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+/** The showcased model floats this far in front of the camera, nearer than the globe ever comes. */
+const SHOWCASE_DEPTH = 2;
+/** Room between the showcased model and the window's edge, the time bar and the globe, CSS pixels. */
+const SHOWCASE_MARGIN_PX = 12;
+/** The least and the most the showcased model's half size may be, CSS pixels. */
+const SHOWCASE_MIN_PX = 56;
+const SHOWCASE_MAX_PX = 180;
+
+/** A rectangle on the screen: centre and half size, CSS pixels from the middle of the window, y upwards. */
+interface ScreenBox {
+  x: number;
+  y: number;
+  hw: number;
+  hh: number;
+}
+
+/** True when two rectangles come nearer to each other than `pad` pixels. */
+function boxesOverlap(a: ScreenBox, b: ScreenBox, pad: number): boolean {
+  return Math.abs(a.x - b.x) < a.hw + b.hw + pad && Math.abs(a.y - b.y) < a.hh + b.hh + pad;
+}
 
 /** The globe view, with what the engine tells it beyond the common close-up view. */
 export interface GlobeController extends ISpaceView {
@@ -58,30 +125,30 @@ function localVecToLatLon(p: THREE.Vector3): SiteCoord {
   return { latDeg, lonDeg };
 }
 
+/** Draws a marker's label. The picture is no larger than the label's box, so the sprite's size is the label's. */
 function makeMarkerLabelTexture(text: string, colorHex: string, dimmed: boolean): THREE.CanvasTexture {
+  const font = '600 28px "Exo 2 Variable", system-ui, sans-serif';
   const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 96;
   const c = canvas.getContext('2d')!;
-  c.clearRect(0, 0, 512, 96);
-
-  c.font = '600 28px "Exo 2 Variable", system-ui, sans-serif';
-  const metrics = c.measureText(text);
-  const boxW = Math.min(496, Math.max(120, metrics.width + 44));
-  const x0 = (512 - boxW) * 0.5;
+  c.font = font;
+  const boxW = Math.min(496, Math.max(120, Math.ceil(c.measureText(text).width) + 44));
+  // Sizing the canvas clears its settings, the font among them.
+  canvas.width = boxW + 6;
+  canvas.height = 62;
+  c.font = font;
 
   c.fillStyle = dimmed ? 'rgba(8, 12, 20, 0.65)' : 'rgba(8, 14, 24, 0.86)';
   c.strokeStyle = dimmed ? 'rgba(142, 163, 189, 0.4)' : colorHex;
   c.lineWidth = 3;
   c.beginPath();
-  c.roundRect(x0, 16, boxW, 56, 14);
+  c.roundRect(3, 3, boxW, 56, 14);
   c.fill();
   c.stroke();
 
   c.fillStyle = dimmed ? '#94a3b8' : '#f1f5f9';
   c.textAlign = 'center';
   c.textBaseline = 'middle';
-  c.fillText(text, 256, 45, boxW - 24);
+  c.fillText(text, canvas.width / 2, 32, boxW - 24);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.needsUpdate = true;
@@ -90,15 +157,15 @@ function makeMarkerLabelTexture(text: string, colorHex: string, dimmed: boolean)
 
 export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController {
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(42, window.innerWidth / Math.max(1, window.innerHeight), 0.1, 2000);
+  const camera = new THREE.PerspectiveCamera(FOV_DEG, window.innerWidth / Math.max(1, window.innerHeight), 0.1, 2000);
   const texLoader = new THREE.TextureLoader();
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
   /** Most recently used last. 8K maps are ~170 MB of GPU memory each, so only a few stay resident. */
-  const textureCache = new Map<string, Promise<THREE.Texture>>();
+  const textureCache = new Map<string, Promise<THREE.Texture<HTMLImageElement>>>();
   const MAX_CACHED_TEXTURES = 5;
 
-  function cachedTexture(url: string, srgb: boolean): Promise<THREE.Texture> {
+  function cachedTexture(url: string, srgb: boolean): Promise<THREE.Texture<HTMLImageElement>> {
     let pending = textureCache.get(url);
     if (pending) {
       textureCache.delete(url);
@@ -152,6 +219,8 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
     /** City lights for Earth's night side, and their strength for the shown year. */
     uNight: { value: new THREE.Texture() },
     uCity: { value: 0.0 },
+    /** The smallest step of the map's u that holds detail of its own; 0 when the file's pixels do. */
+    uMapGrain: { value: 0.0 },
   };
 
   const globeMat = new THREE.ShaderMaterial({
@@ -186,6 +255,7 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
       uniform float uHasRelief;
       uniform sampler2D uNight;
       uniform float uCity;
+      uniform float uMapGrain;
 
       varying vec3 vLocalPos;
       varying vec3 vWorldNormal;
@@ -203,13 +273,17 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
         return fract(p.x * p.y);
       }
 
-      float vnoise(vec2 p) {
+      // Value noise that repeats after a whole number of cells in x: laid along the longitude, with that many
+      // cells round the globe, it has no seam on the 180° meridian.
+      float vnoise(vec2 p, float cellsRound) {
         vec2 i = floor(p);
         vec2 f = fract(p);
         vec2 u = f * f * (3.0 - 2.0 * f);
+        float x0 = mod(i.x, cellsRound);
+        float x1 = mod(i.x + 1.0, cellsRound);
         return mix(
-          mix(hash21(i), hash21(i + vec2(1.0, 0.0)), u.x),
-          mix(hash21(i + vec2(0.0, 1.0)), hash21(i + vec2(1.0, 1.0)), u.x),
+          mix(hash21(vec2(x0, i.y)), hash21(vec2(x1, i.y)), u.x),
+          mix(hash21(vec2(x0, i.y + 1.0)), hash21(vec2(x1, i.y + 1.0)), u.x),
           u.y
         );
       }
@@ -251,20 +325,38 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
         float lat = asin(clamp(n.y, -1.0, 1.0));
         float lon = atan(-n.z, n.x);
         vec2 uv = vec2(fract((lon + PI) / (2.0 * PI)), 0.5 + lat / PI);
+        // The maps are read with the slope of the longitude itself, which runs smoothly round the globe. The
+        // slope of uv.x jumps on the 180° meridian, and would pick the coarsest copy of a map along it.
+        vec3 nDx = dFdx(n);
+        vec3 nDy = dFdy(n);
+        float lonSlope = 1.0 / (2.0 * PI * max(dot(n.xz, n.xz), 1e-6));
+        vec2 uvDx = vec2((n.z * nDx.x - n.x * nDx.z) * lonSlope, dFdx(uv.y));
+        vec2 uvDy = vec2((n.z * nDy.x - n.x * nDy.z) * lonSlope, dFdy(uv.y));
         vec3 albedo = vec3(0.25);
         if (uHasMap > 0.5) {
-          // sRGB textures are decoded to linear by the GPU.
-          albedo = texture2D(uMap, uv).rgb;
+          // sRGB textures are decoded to linear by the GPU. A map enlarged from a coarser picture is read no
+          // finer than that picture, so that the edges of its blocks blend instead of showing as steps.
+          float reach = max(length(vec2(uvDx.x, 0.5 * uvDx.y)), length(vec2(uvDy.x, 0.5 * uvDy.y)));
+          float widen = max(1.0, uMapGrain / max(reach, 1e-7));
+          albedo = textureGrad(uMap, uv, uvDx * widen, uvDy * widen).rgb;
         } else if (uTargetKind > 5.5 && uTargetKind < 6.5) {
           // Venus: creamy golden-ochre sulfuric-acid cloud chevrons
           float chev = sin(lat * 8.0 + abs(lat) * 2.2 + sin(lon * 2.0 - uTime * 0.12) * 0.8);
           float swirl = fbm3(n * 4.5 - vec3(uTime * 0.03, 0.0, 0.0));
           albedo = mix(vec3(0.68, 0.50, 0.24), vec3(0.94, 0.82, 0.54), 0.5 + 0.34 * chev + 0.22 * (swirl - 0.5));
         }
+        // Earth's seas. On the map open water is nearly black and far bluer than land, ice or cloud, which
+        // is how it is told from them. Seen from space the sunlit sea is a dark blue, with the light of the
+        // sky on it: that light is a model added here, it is not in the map.
+        float water = 0.0;
+        if (uTargetKind > 1.5 && uTargetKind < 2.5 && uHasMap > 0.5) {
+          water = smoothstep(0.42, 0.58, albedo.b / (albedo.r + albedo.g + albedo.b + 1e-4));
+          albedo += vec3(0.007, 0.021, 0.050) * water;
+        }
         // Mars 2018 dust storm: a veil spreading from Acidalia Planitia, with a brighter churning front.
         if (uTargetKind > 0.5 && uTargetKind < 1.5 && uDustStorm > 0.001) {
-          float band = vnoise(vec2(lon * 2.5 + uTime * 0.05 + sin(lat * 4.0) * 0.8, lat * 9.0));
-          float eddy = vnoise(vec2(lon * 7.5 - uTime * 0.11, lat * 15.0));
+          float band = vnoise(vec2(lon * 16.0 / (2.0 * PI) + uTime * 0.05 + sin(lat * 4.0) * 0.8, lat * 9.0), 16.0);
+          float eddy = vnoise(vec2(lon * 47.0 / (2.0 * PI) - uTime * 0.11, lat * 15.0), 47.0);
           float swirl = band * 0.62 + eddy * 0.38;
           float dist = acos(clamp(dot(n, uDustOrigin), -1.0, 1.0)) + (swirl - 0.5) * 0.32;
           float cover = 1.0 - smoothstep(uDustRadius - 0.35, uDustRadius + 0.08, dist);
@@ -280,14 +372,20 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
         // Surface normal: the LOLA relief map on the Moon, the plain sphere elsewhere.
         vec3 N = n;
         if (uHasRelief > 0.5) {
-          vec3 t = texture2D(uRelief, uv).rgb * 2.0 - 1.0;
+          vec3 t = textureGrad(uRelief, uv, uvDx, uvDy).rgb * 2.0 - 1.0;
+          // The map's relief is four times the Moon's, so its steepest walls would turn their backs on a
+          // high Sun and show as black blots on sunlit ground: the tilt is held below 50°.
+          vec2 slope = t.xy / max(t.z, 0.05);
+          slope /= sqrt(1.0 + dot(slope, slope) / 1.44);
           vec3 east = vec3(-sin(lon), 0.0, -cos(lon));
           vec3 north = vec3(-sin(lat) * cos(lon), cos(lat), sin(lat) * sin(lon));
-          N = normalize(east * t.x + north * t.y + n * t.z);
+          N = normalize(east * slope.x + north * slope.y + n);
         }
         // The globe is not rotated, so local normals are world normals; V is in world space.
         float ndl = dot(n, L);
-        float mu0 = max(dot(N, L), 0.0);
+        // A slope that faces away from a Sun standing high over it still gets the light of the ground round
+        // it: it is dim, not black. Near the terminator this light fades and shadows stay crisp.
+        float mu0 = max(dot(N, L), 0.15 * max(ndl, 0.0));
         float mu = max(dot(N, V), 0.05);
         // Moon: Lommel–Seeliger (flat-looking full Moon, crisp relief at the terminator); others: soft Lambert.
         float diff = uTargetKind < 0.5
@@ -350,11 +448,14 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
         float lightTerm = 0.5 * (viewLight + sunLight + sqrt((viewLight - sunLight) * (viewLight - sunLight) + 0.0009));
         vec3 col = albedo * lightTerm + atmo + gridCol;
         if (uTargetKind > 1.5 && uTargetKind < 2.5) {
-          // Ocean glint and city lights.
+          // The Sun's glint on the sea: the light thrown back by waves tilted the right way, which grow
+          // rarer the more tilt it takes (a bright core and a wide faint skirt). Then the city lights.
           vec3 H = normalize(L + V + vec3(0.0, 1e-5, 0.0));
-          float ocean = step(albedo.r + 0.01, albedo.b) * (1.0 - smoothstep(0.08, 0.2, albedo.g));
-          col += vec3(1.0, 0.95, 0.85) * pow(max(dot(n, H), 0.0), 80.0) * ocean * 0.6 * eclipseFactor;
-          col += texture2D(uNight, uv).rgb * vec3(1.0, 0.8, 0.55) * 0.7 * uCity * (1.0 - smoothstep(-0.12, 0.04, ndl));
+          float nh = max(dot(n, H), 1e-3);
+          float tilt2 = (1.0 - nh * nh) / (nh * nh);
+          float glint = (0.42 * exp(-tilt2 / 0.009) + 0.07 * exp(-tilt2 / 0.06)) * smoothstep(0.0, 0.15, ndl);
+          col += vec3(1.0, 0.95, 0.85) * glint * water * eclipseFactor;
+          col += textureGrad(uNight, uv, uvDx, uvDy).rgb * vec3(1.0, 0.8, 0.55) * 0.7 * uCity * (1.0 - smoothstep(-0.12, 0.04, ndl));
         }
         gl_FragColor = vec4(col, 1.0);
       }
@@ -408,7 +509,7 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
 
   // Uranus's rings, also equatorial: narrow and dark. Radii in planet radii: 6, 5 and 4, α, β, η, γ, δ, and
   // the brightest and widest, ε. They are drawn wider and brighter than they are, or they would not show.
-  const uranusRingGeo = new THREE.RingGeometry(GLOBE_RADIUS * 1.6, GLOBE_RADIUS * 2.06, 160, 1);
+  const uranusRingGeo = new THREE.RingGeometry(GLOBE_RADIUS * 1.6, GLOBE_RADIUS * URANUS_RING_OUTER, 160, 1);
   uranusRingGeo.rotateX(Math.PI / 2);
   const uranusRingMat = new THREE.ShaderMaterial({
     transparent: true,
@@ -437,7 +538,7 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
 
   // Selection reticle ring on the globe
   const selGroup = new THREE.Group();
-  const selRingGeo = new THREE.RingGeometry(0.32, 0.46, 32);
+  const selRingGeo = new THREE.RingGeometry(0.32, SEL_RING_OUTER, 32);
   const selRingMat = new THREE.MeshBasicMaterial({
     color: 0xffb454,
     side: THREE.DoubleSide,
@@ -458,23 +559,45 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
   const markersGroup = new THREE.Group();
   scene.add(markersGroup);
 
-  // 3D hardware showcase (floating in bottom-left when a Mars/Moon hardware marker with modelFile is selected)
+  // The model of the selected marker's hardware, floating in the free lower right corner of the window.
   const showcaseGroup = new THREE.Group();
   const showcaseLight1 = new THREE.DirectionalLight(0xffffff, 2.6);
   showcaseLight1.position.set(5, 8, 6);
   const showcaseLight2 = new THREE.AmbientLight(0x8bb8ff, 0.75);
   scene.add(showcaseGroup, showcaseLight1, showcaseLight2);
   let showcaseModel: THREE.Object3D | null = null;
+  /** Radius of the ball round the showcased model that it stays inside as it turns, in its group's units. */
+  let showcaseRadius = 1;
+  /** The square of the window the showcased model takes this frame. */
+  const showcaseBox: ScreenBox = { x: 0, y: 0, hw: 0, hh: 0 };
 
   interface MarkerVisual {
     data: GlobeMarker;
     pin: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
     label: THREE.Sprite;
     surfaceNormal: THREE.Vector3;
+    /** Size of the label at scale 1, scene units. */
+    labelW: number;
+    labelH: number;
+    /** CSS pixels per scene unit at the pin's distance from the camera this frame. */
+    pxPerUnit: number;
+    /** Where the pin and the label are on the screen this frame. */
+    pinBox: ScreenBox;
+    labelBox: ScreenBox;
   }
   const markerVisuals: MarkerVisual[] = [];
+  /** The markers in the order their labels are given room: the selected one, then the others as listed, greyed ones last. */
+  const labelOrder: MarkerVisual[] = [];
   /** One sphere serves every marker pin. */
-  const pinGeo = new THREE.SphereGeometry(0.19, 14, 14);
+  const pinGeo = new THREE.SphereGeometry(PIN_RADIUS, 14, 14);
+  /** Where the selection ring is on the screen this frame. */
+  const ringBox: ScreenBox = { x: 0, y: 0, hw: 0, hh: 0 };
+  /** True while a place is selected; the ring itself is hidden when that place is behind the globe. */
+  let hasSelection = false;
+  /** Scratch vectors of the frame loop. */
+  const scratchA = new THREE.Vector3();
+  const scratchB = new THREE.Vector3();
+  const scratchC = new THREE.Vector3();
 
   let currentOpts: SpaceViewOptions | null = null;
   /** The language the marker labels are written in. */
@@ -494,8 +617,18 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
   let targetLatRad = 0.15;
   let camDist = 28;
   let targetDist = 28;
-  /** The farthest the wheel may take the view. */
+  /** The size of the canvas, CSS pixels. */
+  let viewWidthPx = window.innerWidth;
+  let viewHeightPx = Math.max(1, window.innerHeight);
+  /** The distance and the latitude the view opens at, and the nearest and farthest the wheel may take it. */
+  let homeDist = 28;
+  let homeLatRad = 0.15;
+  let nearest = NEAREST_DIST;
   let farthest = 62;
+  /** True once the wheel has been used: a window that changes size then keeps the user's distance. */
+  let zoomedByUser = false;
+  /** Width of the map on the globe, pixels; 0 while there is none. */
+  let mapWidthPx = 0;
   let attachedEl: HTMLElement | null = null;
   let dragging = false;
   let dragStartX = 0;
@@ -505,6 +638,57 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
   let lastJd = 0;
   /** 0 at real-time rates, 1 when the clock runs many rotations per second (time-lapse). */
   let fastness = 0;
+  /** Longitude of the meridian under the true Sun, and whether the Sun stands north of the equator. */
+  let sunLonRad = 0;
+  let sunNorth = true;
+  /** True from the clock running fast, or jumping, until it has run slowly for CLOCK_SETTLE_SEC. */
+  let clockUnsettled = false;
+  let calmSec = 0;
+  /** The turn in longitude still owed to bring the day side in front of the camera; 0 when none is. */
+  let aimLeftRad = 0;
+  /** True once the user has chosen what to look at under the true Sun, by turning the globe or by going to a
+   * place: the view then no longer turns itself to the day side. A turn made in a time-lapse does not count,
+   * its light follows the camera and says nothing of day and night. */
+  let aimedByUser = false;
+
+  /**
+   * The distance from which the whole subject fits the part of the window the bars leave free: the globe, and
+   * for a ringed planet its rings as they open when seen from the given latitude.
+   */
+  function fitDistance(tid: string, latRad: number): number {
+    // The subject stays in the middle of the window, so the taller bar counts above and below.
+    const freeY = Math.max(0.25, 1 - (2 * Math.max(TOP_BAR_PX, BOTTOM_BAR_PX)) / viewHeightPx);
+    const tanY = TAN_HALF_FOV * freeY * FIT_FILL;
+    const tanX = TAN_HALF_FOV * camera.aspect * FIT_FILL;
+    const tanGlobe = Math.min(tanX, tanY);
+    let dist = GLOBE_RADIUS * Math.sqrt(1 + 1 / (tanGlobe * tanGlobe));
+    const ringOuter = RING_OUTER[tid];
+    if (ringOuter !== undefined) {
+      // The rings reach farthest sideways a little in front of the planet, and farthest up or down at
+      // their near edge, which the perspective enlarges.
+      const r = GLOBE_RADIUS * ringOuter;
+      const c = Math.cos(latRad);
+      dist = Math.max(dist, r * Math.sqrt(1 / (tanX * tanX) + c * c), r * (Math.abs(Math.sin(latRad)) / tanY + c));
+    }
+    return dist;
+  }
+
+  /**
+   * Sets the distance the view opens at and the limits of the wheel for the window and the map in use, and
+   * moves the camera to the opening distance unless the user has chosen another.
+   */
+  function fitToWindow(): void {
+    if (!currentOpts || currentOpts.mode === 'backdrop') return;
+    const explore = currentOpts.mode === 'explore';
+    homeDist = explore ? fitDistance(currentOpts.targetId, homeLatRad) : PICKER_DIST;
+    farthest = explore ? homeDist * FARTHEST_FACTOR : PICKER_FARTHEST;
+    const detailPx = Math.min(mapWidthPx, MAP_DETAIL_PX[currentOpts.targetId] ?? mapWidthPx);
+    const texelDist = detailPx > 0
+      ? GLOBE_RADIUS + ((2 * Math.PI * GLOBE_RADIUS) / detailPx) * (viewHeightPx / (2 * TAN_HALF_FOV)) / MAX_TEXEL_PX
+      : 0;
+    nearest = Math.min(homeDist, Math.max(NEAREST_DIST, texelDist));
+    targetDist = zoomedByUser ? Math.max(nearest, Math.min(farthest, targetDist)) : homeDist;
+  }
 
   function syncLightingFromAstro(jdTT: number): void {
     if (!currentOpts) return;
@@ -512,16 +696,18 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
     if (tid === 'moon' || tid === 'mercury' || tid === 'venus' || tid === 'earth' || tid === 'mars' || tid === 'jupiter' || tid === 'saturn' || tid === 'uranus' || tid === 'neptune') {
       const ori = bodyOrientation(tid, jdTT);
       // Convert body-fixed (x=lon0, y=lon90E, z=north) to globe local (x=lon0, y=north, z=-lon90E)
-      const sun = new THREE.Vector3(ori.sunDirFixed[0], ori.sunDirFixed[2], -ori.sunDirFixed[1]).normalize();
+      const sun = globeUniforms.uSunDir.value.set(ori.sunDirFixed[0], ori.sunDirFixed[2], -ori.sunDirFixed[1]).normalize();
+      sunLonRad = Math.atan2(-sun.z, sun.x);
+      sunNorth = sun.y >= 0;
       if (fastness > 0) {
         // In a time-lapse the true terminator would spin several times a second; light the side facing the
         // camera from the upper left instead, so the change being shown (e.g. dust spreading) stays readable.
-        const camDir = camera.position.clone().normalize();
-        const side = new THREE.Vector3(0, 1, 0).cross(camDir).normalize();
-        const steady = camDir.multiplyScalar(0.75).addScaledVector(side, -0.55).add(new THREE.Vector3(0, 0.3, 0)).normalize();
-        sun.lerp(steady, fastness).normalize();
+        const steady = scratchA.copy(camera.position).normalize();
+        const side = scratchB.set(0, 1, 0).cross(steady).normalize();
+        steady.multiplyScalar(0.75).addScaledVector(side, -0.55);
+        steady.y += 0.3;
+        sun.lerp(steady.normalize(), fastness).normalize();
       }
-      globeUniforms.uSunDir.value.copy(sun);
     }
     if (tid === 'mars') {
       const dust = marsDustState(jdTT);
@@ -553,6 +739,7 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
     }
     markersGroup.clear();
     markerVisuals.length = 0;
+    labelOrder.length = 0;
   }
 
   function rebuildMarkers(markers: GlobeMarker[]): void {
@@ -581,14 +768,126 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
         depthTest: false,
         depthWrite: false,
       });
+      // The label is given its place and size each frame (see layoutMarkers).
       const label = new THREE.Sprite(spriteMat);
-      label.position.copy(pos).addScaledVector(normal, 0.72);
-      label.scale.set(3.2, 0.6, 1);
+      label.visible = false;
       label.userData = { markerId: m.id };
       markersGroup.add(label);
 
-      markerVisuals.push({ data: m, pin, label, surfaceNormal: normal });
+      markerVisuals.push({
+        data: m,
+        pin,
+        label,
+        surfaceNormal: normal,
+        labelW: tex.image.width / LABEL_PX_PER_UNIT,
+        labelH: tex.image.height / LABEL_PX_PER_UNIT,
+        pxPerUnit: 0,
+        pinBox: { x: 0, y: 0, hw: 0, hh: 0 },
+        labelBox: { x: 0, y: 0, hw: 0, hh: 0 },
+      });
     }
+    for (const mv of markerVisuals) if (mv.data.id === selectedMarkerId) labelOrder.push(mv);
+    for (const mv of markerVisuals) if (mv.data.id !== selectedMarkerId && !mv.data.dimmed) labelOrder.push(mv);
+    for (const mv of markerVisuals) if (mv.data.id !== selectedMarkerId && mv.data.dimmed) labelOrder.push(mv);
+  }
+
+  /**
+   * Shows the pins on the side of the globe that faces the camera and gives their labels places on the
+   * screen. A label sits above its pin, or below or beside it when that place is taken; one that finds no
+   * free place stays hidden until its marker is selected (the selected label is placed first). Labels keep
+   * clear of each other, of other pins, of the selection ring and of the showcased model.
+   */
+  function layoutMarkers(): void {
+    const focalPx = viewHeightPx / (2 * TAN_HALF_FOV);
+    const labelScale = Math.max(0.45, Math.min(1.3, camDist / 26));
+    const camRight = scratchA.setFromMatrixColumn(camera.matrixWorld, 0);
+    const camUp = scratchB.setFromMatrixColumn(camera.matrixWorld, 1);
+
+    // A point of the globe is in view when the camera is above the plane that touches the globe there.
+    selGroup.visible = hasSelection && camera.position.dot(selGroup.position) > GLOBE_RADIUS * selGroup.position.length() * 1.02;
+    if (selGroup.visible) {
+      const p = scratchC.copy(selGroup.position).applyMatrix4(camera.matrixWorldInverse);
+      const px = focalPx / -p.z;
+      ringBox.x = p.x * px;
+      ringBox.y = p.y * px;
+      ringBox.hw = SEL_RING_OUTER * px;
+      ringBox.hh = SEL_RING_OUTER * px;
+      // The ring is drawn over everything, so it is not drawn where the model is.
+      if (showcaseModel && boxesOverlap(ringBox, showcaseBox, 0)) selGroup.visible = false;
+    }
+
+    for (const mv of markerVisuals) {
+      mv.pin.visible = camera.position.dot(mv.surfaceNormal) > GLOBE_RADIUS * 1.02;
+      mv.label.visible = false;
+      if (!mv.pin.visible) continue;
+      const p = scratchC.copy(mv.pin.position).applyMatrix4(camera.matrixWorldInverse);
+      mv.pxPerUnit = focalPx / -p.z;
+      mv.pinBox.x = p.x * mv.pxPerUnit;
+      mv.pinBox.y = p.y * mv.pxPerUnit;
+      mv.pinBox.hw = PIN_RADIUS * mv.pxPerUnit;
+      mv.pinBox.hh = PIN_RADIUS * mv.pxPerUnit;
+    }
+
+    for (const mv of labelOrder) {
+      if (!mv.pin.visible) continue;
+      const px = mv.pxPerUnit;
+      const box = mv.labelBox;
+      box.hw = (mv.labelW * labelScale * px) / 2;
+      box.hh = (mv.labelH * labelScale * px) / 2;
+      // The label of the pin inside the selection ring starts outside the ring.
+      const ringed = selGroup.visible && mv.pin.position.distanceToSquared(selGroup.position) < SEL_RING_OUTER * SEL_RING_OUTER;
+      const clear = ((ringed ? SEL_RING_OUTER : PIN_RADIUS) + LABEL_GAP) * px;
+      for (const slot of LABEL_SLOTS) {
+        box.x = mv.pinBox.x + slot[0] * (clear + box.hw);
+        box.y = mv.pinBox.y + slot[1] * (clear + box.hh);
+        let free = !(showcaseModel && boxesOverlap(box, showcaseBox, LABEL_PAD_PX))
+          && !(selGroup.visible && !ringed && boxesOverlap(box, ringBox, LABEL_PAD_PX));
+        for (let i = 0; free && i < markerVisuals.length; i++) {
+          const other = markerVisuals[i];
+          if (other === mv || !other.pin.visible) continue;
+          free = !boxesOverlap(box, other.pinBox, LABEL_PAD_PX) && !(other.label.visible && boxesOverlap(box, other.labelBox, LABEL_PAD_PX));
+        }
+        if (!free) continue;
+        mv.label.visible = true;
+        mv.label.scale.set(mv.labelW * labelScale, mv.labelH * labelScale, 1);
+        mv.label.position.copy(mv.pin.position)
+          .addScaledVector(camRight, (box.x - mv.pinBox.x) / px)
+          .addScaledVector(camUp, (box.y - mv.pinBox.y) / px);
+        break;
+      }
+    }
+  }
+
+  /**
+   * Puts the showcased model in the lower right corner of the window, as large as the corner left free by the
+   * time bar, the top bar and the globe at its opening distance allows, and turns it.
+   */
+  function placeShowcase(dt: number): void {
+    if (!showcaseModel) return;
+    const focalPx = viewHeightPx / (2 * TAN_HALF_FOV);
+    // The corner the model's square is pushed into, and the globe's radius on the screen with room round it.
+    const cornerX = viewWidthPx / 2 - SHOWCASE_MARGIN_PX;
+    const cornerY = viewHeightPx / 2 - BOTTOM_BAR_PX - SHOWCASE_MARGIN_PX;
+    const globePx = (focalPx * GLOBE_RADIUS) / Math.sqrt(homeDist * homeDist - GLOBE_RADIUS * GLOBE_RADIUS) + SHOWCASE_MARGIN_PX;
+    // The largest circle that touches both sides of the corner and the globe's disc.
+    const reach = cornerX + cornerY + globePx;
+    const freePx = reach - Math.sqrt(reach * reach - (cornerX * cornerX + cornerY * cornerY - globePx * globePx));
+    const betweenBarsPx = (viewHeightPx - TOP_BAR_PX - BOTTOM_BAR_PX) / 2 - SHOWCASE_MARGIN_PX;
+    const halfPx = Math.max(SHOWCASE_MIN_PX, Math.min(SHOWCASE_MAX_PX, betweenBarsPx, freePx));
+    showcaseBox.x = cornerX - halfPx;
+    showcaseBox.y = halfPx - cornerY;
+    showcaseBox.hw = halfPx;
+    showcaseBox.hh = halfPx;
+
+    const unitsPerPx = SHOWCASE_DEPTH / focalPx;
+    showcaseGroup.position.copy(camera.position)
+      .addScaledVector(scratchA.setFromMatrixColumn(camera.matrixWorld, 2), -SHOWCASE_DEPTH)
+      .addScaledVector(scratchA.setFromMatrixColumn(camera.matrixWorld, 0), showcaseBox.x * unitsPerPx)
+      .addScaledVector(scratchA.setFromMatrixColumn(camera.matrixWorld, 1), showcaseBox.y * unitsPerPx);
+    // Away from the middle of the picture a ball is drawn stretched; the model is made smaller by as much.
+    const offAxis = focalPx / Math.hypot(focalPx, showcaseBox.x, showcaseBox.y);
+    showcaseGroup.scale.setScalar((halfPx * unitsPerPx * offAxis) / showcaseRadius);
+    showcaseModel.rotation.y += dt * 0.55;
   }
 
   /** Counts the changes of the showcased model: one that finishes loading for an older choice is dropped. */
@@ -611,7 +910,12 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
     try {
       const glb = await loadGlb(modelFile);
       if (seq !== showcaseSeq) return;
-      fitModelToHeight(glb, 2.6);
+      // The model turns about the middle of its box, which is put at the group's origin; its size on the
+      // screen is set each frame (see placeShowcase).
+      fitModelToHeight(glb, 1);
+      const size = new THREE.Box3().setFromObject(glb).getSize(new THREE.Vector3());
+      glb.position.y -= size.y / 2;
+      showcaseRadius = size.length() / 2;
       showcaseGroup.add(glb);
       showcaseModel = glb;
     } catch {
@@ -643,6 +947,8 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
       if (key !== earthAskedKey) return;
       globeUniforms.uMap.value = tex;
       globeUniforms.uHasMap.value = 1.0;
+      mapWidthPx = tex.image.width;
+      fitToWindow();
       earthMapKey = key;
     }, () => {
       if (seq !== enterSeq) return;
@@ -671,6 +977,10 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
     const sens = 0.0045 * (camDist / 28);
     targetLonRad -= dx * sens;
     targetLatRad = Math.max(-1.48, Math.min(1.48, targetLatRad + dy * sens));
+    // A press that hardly moves is a click (see onPointerUp), not a turn of the globe.
+    if (dragMoved <= (e.pointerType === 'touch' ? 12 : 6)) return;
+    aimLeftRad = 0;
+    if (fastness < 0.5) aimedByUser = true;
   }
 
   function onPointerUp(e: PointerEvent): void {
@@ -689,9 +999,8 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
     // 1. Check marker pins/labels first
     const visibleMarkerObjs: THREE.Object3D[] = [];
     for (const mv of markerVisuals) {
-      if (mv.pin.visible) {
-        visibleMarkerObjs.push(mv.pin, mv.label);
-      }
+      if (mv.pin.visible) visibleMarkerObjs.push(mv.pin);
+      if (mv.label.visible) visibleMarkerObjs.push(mv.label);
     }
     const markerHits = raycaster.intersectObjects(visibleMarkerObjs, false);
     if (markerHits.length > 0) {
@@ -716,7 +1025,8 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
   function onWheel(e: WheelEvent): void {
     if (currentOpts?.mode === 'backdrop') return;
     e.preventDefault();
-    targetDist = Math.max(13.5, Math.min(farthest, targetDist * (1 + e.deltaY * 0.001)));
+    targetDist = Math.max(nearest, Math.min(farthest, targetDist * (1 + e.deltaY * 0.001)));
+    zoomedByUser = true;
   }
 
   return {
@@ -729,6 +1039,15 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
       currentOpts = opts;
       labelLang = opts.lang;
       selectedMarkerId = null;
+      lastJd = opts.jdTT;
+      fastness = 0;
+      clockUnsettled = false;
+      calmSec = 0;
+      aimLeftRad = 0;
+      aimedByUser = false;
+      mapWidthPx = 0;
+      const mapDetailPx = MAP_DETAIL_PX[opts.targetId];
+      globeUniforms.uMapGrain.value = mapDetailPx === undefined ? 0 : 1 / mapDetailPx;
       // The model of a marker chosen on the globe shown before does not follow into this one.
       updateShowcaseForSelectedMarker().catch(() => undefined);
       const tid = opts.targetId;
@@ -750,6 +1069,7 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
       globeUniforms.uDustStorm.value = 0;
       saturnRing.visible = tid === 'saturn';
       uranusRing.visible = tid === 'uranus';
+      hasSelection = false;
       selGroup.visible = false;
 
       // Textures are cached: the menu, map and telescope views reopen the same 8K images often.
@@ -770,6 +1090,7 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
         if (tex) {
           globeUniforms.uMap.value = tex;
           globeUniforms.uHasMap.value = 1.0;
+          mapWidthPx = tex.image.width;
           if (tid === 'earth') earthMapKey = texKey;
         }
       }
@@ -803,7 +1124,8 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
         }).catch(() => undefined);
       }
 
-      syncLightingFromAstro(opts.jdTT);
+      // The clock may have moved on while the map was loading.
+      syncLightingFromAstro(lastJd);
       rebuildMarkers(opts.markers ?? []);
 
       // Initial camera framing + cinematic fly-in
@@ -813,17 +1135,18 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
         camLatRad = 0.12;
         targetLatRad = 0.12;
       } else {
-        // A close-up shows the whole globe with room round it (Saturn with its rings), from where most of it
-        // is in daylight and from the side of its equator that the Sun lights (for a ringed planet, the
-        // bright face of the rings). The picker shows the globe larger, from over the prime meridian.
-        const sun = globeUniforms.uSunDir.value;
-        const sunSide = sun.y >= 0 ? 1 : -1;
-        farthest = tid === 'saturn' ? 84 : 62;
-        targetDist = opts.mode === 'picker' ? 26 : tid === 'saturn' ? 46 : 35;
+        // A close-up shows the whole subject (a ringed planet with its rings) in the part of the window the
+        // bars leave free, from where most of it is in daylight and from the side of its equator that the
+        // Sun lights (for a ringed planet, the bright face of the rings). The picker shows the globe larger,
+        // from over the prime meridian.
+        const sunSide = sunNorth ? 1 : -1;
+        homeLatRad = tid === 'saturn' ? 0.34 * sunSide : tid === 'uranus' ? 0.5 * sunSide : 0.18;
+        zoomedByUser = false;
+        fitToWindow();
         camDist = targetDist * 1.6;
-        targetLatRad = tid === 'saturn' ? 0.34 * sunSide : tid === 'uranus' ? 0.5 * sunSide : 0.18;
+        targetLatRad = homeLatRad;
         camLatRad = targetLatRad + 0.04;
-        targetLonRad = opts.mode === 'picker' ? 0.35 : Math.atan2(-sun.z, sun.x) + 0.6;
+        targetLonRad = opts.mode === 'picker' ? 0.35 : sunLonRad + DAY_SIDE_LEAD_RAD;
         camLonRad = targetLonRad;
       }
     },
@@ -833,9 +1156,33 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
       globeUniforms.uTime.value += dt;
       const rate = dt > 0 ? (Math.abs(jdTT - lastJd) * 86400) / dt : 0;
       lastJd = jdTT;
-      const target = rate > 1e7 ? fastness : Math.min(1, Math.max(0, (rate - 3000) / 30000));
+      const fast = rate > FAST_CLOCK_RATE;
+      if (fast) {
+        clockUnsettled = true;
+        calmSec = 0;
+      } else if (clockUnsettled) {
+        calmSec += dt;
+      }
+      // A close-up turns itself only while the user leaves the globe alone.
+      const selfAimed = currentOpts.mode === 'explore' && !dragging && !aimedByUser;
+      // While the view waits to turn to the day side, and while it turns, the time-lapse's light stays on:
+      // the turn is not made in the dark.
+      const turning = (selfAimed && clockUnsettled && !fast) || Math.abs(aimLeftRad) > 0.1;
+      const target = rate > 1e7 || turning ? fastness : Math.min(1, Math.max(0, (rate - FAST_CLOCK_RATE) / 30000));
       fastness += (target - fastness) * Math.min(1, dt * 3);
       syncLightingFromAstro(jdTT);
+      if (clockUnsettled && calmSec >= CLOCK_SETTLE_SEC) {
+        // A fast clock has slowed down, or the date has jumped: the Sun now lights another side of the globe,
+        // and the camera goes there the shorter way round.
+        clockUnsettled = false;
+        const turn = sunLonRad + DAY_SIDE_LEAD_RAD - targetLonRad;
+        if (selfAimed) aimLeftRad = turn - 2 * Math.PI * Math.round(turn / (2 * Math.PI));
+      }
+      if (aimLeftRad !== 0) {
+        const step = Math.abs(aimLeftRad) < 0.002 ? aimLeftRad : aimLeftRad * Math.min(1, dt * 2);
+        targetLonRad += step;
+        aimLeftRad -= step;
+      }
       if (currentOpts.targetId === 'earth') followEarthDate(dt, jdTT, currentOpts.quality);
 
       if (currentOpts.mode === 'backdrop') {
@@ -848,12 +1195,11 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
       camDist += (targetDist - camDist) * k;
 
       const cp = Math.cos(camLatRad);
-      const camPos = new THREE.Vector3(
+      camera.position.set(
         camDist * cp * Math.cos(camLonRad),
         camDist * Math.sin(camLatRad),
         -camDist * cp * Math.sin(camLonRad),
       );
-      camera.position.copy(camPos);
 
       if (currentOpts.mode === 'backdrop') {
         // Offset lookAt so the Moon sits gracefully on the right side behind the menu
@@ -861,30 +1207,10 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
       } else {
         camera.lookAt(0, 0, 0);
       }
+      camera.updateMatrixWorld();
 
-      // Hide markers on the back hemisphere relative to camera
-      const camDir = camPos.clone().normalize();
-      const labelScale = Math.max(0.45, Math.min(1.3, camDist / 26));
-      for (const mv of markerVisuals) {
-        const front = mv.surfaceNormal.dot(camDir) > 0.08;
-        mv.pin.visible = front;
-        mv.label.visible = front;
-        if (front) {
-          mv.label.scale.set(3.2 * labelScale, 0.6 * labelScale, 1);
-        }
-      }
-
-      // Position & spin floating 3D hardware showcase in the lower-left of camera view
-      if (showcaseModel) {
-        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-        const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
-        showcaseGroup.position.copy(camera.position)
-          .addScaledVector(forward, 9.5)
-          .addScaledVector(right, -3.2)
-          .addScaledVector(up, -1.6);
-        showcaseModel.rotation.y += dt * 0.55;
-      }
+      placeShowcase(dt);
+      layoutMarkers();
     },
 
     setMarkers(markers: GlobeMarker[]): void {
@@ -897,11 +1223,8 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
     },
 
     setSelection(sel: SiteCoord | null, flyTo = false): void {
-      if (!sel) {
-        selGroup.visible = false;
-        return;
-      }
-      selGroup.visible = true;
+      hasSelection = sel !== null;
+      if (!sel) return;
       const pos = latLonToLocalVec(sel.latDeg, sel.lonDeg, GLOBE_RADIUS * 1.012);
       selGroup.position.copy(pos);
       selGroup.lookAt(pos.clone().multiplyScalar(2));
@@ -909,6 +1232,8 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
       if (flyTo) {
         targetLatRad = Math.max(-1.42, Math.min(1.42, sel.latDeg * DEG2RAD));
         targetLonRad = sel.lonDeg * DEG2RAD;
+        aimLeftRad = 0;
+        aimedByUser = true;
       }
     },
 
@@ -949,6 +1274,9 @@ export function createGlobeView(_renderer: THREE.WebGLRenderer): GlobeController
     resize(width: number, height: number): void {
       camera.aspect = width / Math.max(1, height);
       camera.updateProjectionMatrix();
+      viewWidthPx = width;
+      viewHeightPx = Math.max(1, height);
+      fitToWindow();
     },
 
     dispose(): void {

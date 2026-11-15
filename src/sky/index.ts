@@ -13,6 +13,7 @@ import type {
   BodyId, ISky, QualityProfile, SkyFrame, TransientState, Vec3, WorldId,
 } from '../core/types';
 import { assetUrl, fetchJson, hasAsset, texUrl } from '../core/assets';
+import { SECONDS_PER_DAY } from '../core/time';
 import { GALAXIES, cityLightsFor, earthImageryFor } from '../content';
 const DEG2RAD = Math.PI / 180;
 const SKY_RADIUS = 100;
@@ -20,6 +21,16 @@ const SKY_RADIUS = 100;
 const STAR_MAP_DEG_PER_PIXEL = 360 / 8192;
 /** How long to wait before asking again for a picture that failed to load. */
 const TEXTURE_RETRY_SEC = 5;
+/** How long the date must stay with another picture of Earth before it is loaded: a date being dragged across
+ * the months does not load one picture after another. */
+const EARTH_PICTURE_SETTLE_SEC = 0.4;
+/** The clock rate, in simulated seconds per second, from which Earth's picture no longer follows the date. At
+ * a day a second a month is over in half a minute, and every new picture is a large texture whose decoding
+ * and upload stall the frame. */
+const EARTH_PICTURE_HOLD_RATE = SECONDS_PER_DAY;
+
+/** Worlds whose cloud cover hides the sky from the ground: only the Sun's glow comes through. */
+export const OVERCAST_WORLDS: Partial<Record<WorldId, true>> = { venus: true };
 
 interface BrightStarsPayload {
   columns: string[];
@@ -739,23 +750,45 @@ export function createSky(_renderer: THREE.WebGLRenderer): ISky {
   let currentQuality: QualityProfile | null = null;
   /** Counts the changes of quality: a texture that arrives for an older one is thrown away. */
   let qualitySeq = 0;
-  /** The Earth picture on the globe and the one being loaded (empty: none), and the count of such loads. */
+  /** The Earth picture on the globe (empty: none yet), and whether another is being loaded. */
   let earthTexName = '';
-  let earthTexLoading = '';
-  let earthTexSeq = 0;
+  let earthTexLoading = false;
+  /** The picture the date asks for, and for how long it has asked for it. */
+  let earthAskedName = '';
+  let earthAskedSec = 0;
   /** After a failed load, Earth's picture is not asked for again before this, on the clock of `animTime`. */
   let earthTexRetryAt = 0;
 
-  /** Swaps in the Earth picture for a date (that day's clouds where available); no-op when already shown. */
-  function showEarthImagery(name: string): void {
-    if (!currentQuality || name === earthTexName || name === earthTexLoading || animTime < earthTexRetryAt) return;
+  /**
+   * Keeps the Earth picture of the date on the globe (that day's clouds where there are any): one load at a
+   * time, once the date has stayed with a picture for a moment. While the clock runs at
+   * `EARTH_PICTURE_HOLD_RATE` or faster the picture on the globe stays, and the one of the date is loaded
+   * when the clock slows down. The first picture is loaded at once: there is nothing on the globe to keep.
+   */
+  function followEarthDate(dt: number, jdTT: number, clockRate: number): void {
+    const name = earthImageryFor(jdTT).texName;
+    if (name !== earthAskedName) {
+      earthAskedName = name;
+      earthAskedSec = 0;
+    }
+    if (!currentQuality || name === earthTexName || earthTexLoading || animTime < earthTexRetryAt) return;
+    if (earthTexName !== '') {
+      if (Math.abs(clockRate) >= EARTH_PICTURE_HOLD_RATE) return;
+      earthAskedSec += dt;
+      if (earthAskedSec < EARTH_PICTURE_SETTLE_SEC) return;
+    }
     const url = texUrl(name, currentQuality) ?? texUrl('earth_day', currentQuality);
     if (!url) return;
-    earthTexLoading = name;
-    earthTexSeq += 1;
-    const seq = earthTexSeq;
+    earthTexLoading = true;
+    const seq = qualitySeq;
     texLoader.loadAsync(url).then((tex) => {
-      if (seq !== earthTexSeq) {
+      if (seq !== qualitySeq) {
+        tex.dispose();
+        return;
+      }
+      earthTexLoading = false;
+      // The date has moved on to another picture meanwhile: this one is not put on the globe.
+      if (name !== earthAskedName) {
         tex.dispose();
         return;
       }
@@ -765,10 +798,9 @@ export function createSky(_renderer: THREE.WebGLRenderer): ISky {
       earthUniforms.uDayMap.value = tex;
       old.dispose();
       earthTexName = name;
-      earthTexLoading = '';
     }, () => {
-      if (seq !== earthTexSeq) return;
-      earthTexLoading = '';
+      if (seq !== qualitySeq) return;
+      earthTexLoading = false;
       earthTexRetryAt = animTime + TEXTURE_RETRY_SEC;
     });
   }
@@ -800,8 +832,7 @@ export function createSky(_renderer: THREE.WebGLRenderer): ISky {
     currentQuality = quality;
     // Earth's picture is loaded again at the new size; one still on its way at the old size is thrown away.
     earthTexName = '';
-    earthTexLoading = '';
-    earthTexSeq += 1;
+    earthTexLoading = false;
     earthTexRetryAt = 0;
     const starsUrl = texUrl('stars', quality);
     const nightUrl = texUrl('earth_night', quality);
@@ -940,7 +971,7 @@ export function createSky(_renderer: THREE.WebGLRenderer): ISky {
 
       // World atmosphere + galaxies
       atmoUniforms.uSunDir.value.set(sky.bodies.sun.dirLocal[0], sky.bodies.sun.dirLocal[1], sky.bodies.sun.dirLocal[2]).normalize();
-      const atmoCover = activeWorld === 'venus'
+      const atmoCover = OVERCAST_WORLDS[activeWorld]
         ? 0.96
         : activeWorld === 'earth'
           ? THREE.MathUtils.smoothstep(sky.bodies.sun.elDeg, -8, 12) * 0.92
@@ -986,7 +1017,7 @@ export function createSky(_renderer: THREE.WebGLRenderer): ISky {
       const glareScale = Math.max(sunDist * 0.015, sunRadiusWorld * (5 + 5 * frame.sunGlare));
       sunGlareSprite.scale.setScalar(glareScale);
       const glareStrength = Math.max(0, frame.sunGlare * (1 - sky.sunObscuredByEarth * 0.92))
-        * (activeWorld === 'venus' ? 0.25 : 1);
+        * (OVERCAST_WORLDS[activeWorld] ? 0.25 : 1);
       sunGlareMat.opacity = glareStrength;
       // 3. Earth sphere (true angular size at narrow FOV, slight minimum floor at wide 60° FOV so continents read crisply)
       const earthState = sky.bodies.earth;
@@ -1023,11 +1054,11 @@ export function createSky(_renderer: THREE.WebGLRenderer): ISky {
       );
       earthUniforms.uLunarEclipse.value = sky.sunObscuredByEarth;
       earthUniforms.uCityLights.value = cityLightsFor(frame.year);
-      showEarthImagery(earthImageryFor(sky.jdTT).texName);
+      followEarthDate(dt, sky.jdTT, frame.clockRate);
 
       // 3b. Moon sphere when viewing the sky from Earth, Mars, Mercury, etc.
       const moonBody = sky.moon;
-      moonSkyMesh.visible = activeWorld !== 'moon' && !!moonBody && activeWorld !== 'venus';
+      moonSkyMesh.visible = activeWorld !== 'moon' && !!moonBody && !OVERCAST_WORLDS[activeWorld];
       if (moonSkyMesh.visible && moonBody) {
         const mDist = SKY_RADIUS * 0.86;
         moonSkyMesh.position.set(moonBody.dirLocal[0] * mDist, moonBody.dirLocal[1] * mDist, moonBody.dirLocal[2] * mDist);
@@ -1083,10 +1114,12 @@ export function createSky(_renderer: THREE.WebGLRenderer): ISky {
           vis.group.visible = showStar || showRemnant;
           if (!vis.group.visible) continue;
 
-          // Bright supernovae (< -3.5 mag) remain visible even in the daytime lunar sky!
-          const daylightVis = tr.magnitude < -3.5
-            ? Math.max(0.5, frame.starVisibility)
-            : frame.starVisibility;
+          // A supernova brighter than magnitude −3.5 shows by day: its star stays at half strength at least,
+          // and is drawn over the glow of the atmosphere, which would wash it out. Under an overcast sky it
+          // is hidden with the rest.
+          const showsByDay = tr.magnitude < -3.5;
+          const daylightVis = showsByDay ? Math.max(0.5, frame.starVisibility) : frame.starVisibility;
+          vis.starSprite.renderOrder = showsByDay && !OVERCAST_WORLDS[activeWorld] ? 15 : 10;
           const flashCap = frame.reducedFlash ? 6 : 12;
           const inten = Math.min(flashCap, magnitudeToIntensity(tr.magnitude)) * daylightVis;
 

@@ -1,7 +1,7 @@
 import horizonsVal from '../../public/assets/data/horizons_validation.json';
 import { describe, expect, it } from 'vitest';
 import {
-  angularSeparationDeg, computeSky, discVisibleFraction, geocentricPlaces, horizonElevationAt, mapPointSeenFrom,
+  angularSeparationDeg, computeSky, discVisibleFraction, eclipticOfRaDec, geocentricPlaces, horizonElevationAt, mapPointSeenFrom,
   solarFluxWm2, supernovaMagnitude, targetAltAz, worldTemperatureK,
 } from './index';
 import {
@@ -144,5 +144,22 @@ describe('planet-centred skies across the Solar System', () => {
     expect(mapPointSeenFrom('mars', jd2026, mars.lonDeg, mars.distanceAU * Math.cos((mars.latDeg * Math.PI) / 180)).distanceAU).toBeLessThan(0.08);
     // From Earth itself nothing changes.
     expect(mapPointSeenFrom('earth', jd2026, 90, 5).distanceAU).toBeCloseTo(5, 9);
+  });
+
+  it('sees a point that stands for a star where the star is, once its ecliptic latitude is given', () => {
+    // Sirius, 8.6 light years off: a map in the plane of the planets shows it at its ecliptic longitude.
+    const sirius = { raDeg: 101.2871, decDeg: -16.7161 };
+    const ecl = eclipticOfRaDec(sirius.raDeg, sirius.decDeg);
+    const au = 8.6 * 63_241.077;
+    for (const world of ['earth', 'moon', 'mars'] as const) {
+      const seen = mapPointSeenFrom(world, jd2026, ecl.lonDeg, au, ecl.latDeg);
+      expect(seen.raDeg).toBeCloseTo(sirius.raDeg, 3);
+      expect(seen.decDeg).toBeCloseTo(sirius.decDeg, 3);
+      expect(seen.distanceAU / au).toBeCloseTo(1, 4);
+    }
+    // Left in the plane, the same point lies on the ecliptic in Gemini, 40° north of the star.
+    const flat = mapPointSeenFrom('earth', jd2026, ecl.lonDeg, au);
+    expect(flat.decDeg - sirius.decDeg).toBeGreaterThan(38);
+    expect(flat.decDeg - sirius.decDeg).toBeLessThan(41);
   });
 });

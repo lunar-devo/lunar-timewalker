@@ -11,7 +11,8 @@
  *   - After detonation the light front arrives first, then the blast wave (or plasma cloud). A gamma-ray
  *     burst is a thin front of rays inside two opposite beams, and nothing else. The time-lapse always takes
  *     the same few seconds; the real travel times are shown in the panel. It can be halted and moved by hand:
- *     everything drawn follows from the time since detonation.
+ *     everything drawn follows from the time since detonation. It stops at its last second (`labRunSeconds`)
+ *     and holds that picture; until the explosion is reset, a click on the map moves nothing.
  *   - What happens to Earth follows ./physics.ts: the flash lights and scorches the facing side, the ozone
  *     layer thins, the blast strips the air, boils the oceans, melts the crust or takes the planet apart and
  *     pushes what is left away; a CME squeezes the magnetosphere and drives the auroras toward the equator,
@@ -39,13 +40,13 @@ import { createSuitRig, poseSuit, type SuitRig } from '../../player/suit';
 import { SATURN_RING_GLSL, SATURN_RING_INNER, SATURN_RING_OUTER } from '../rings';
 import {
   CME_HALF_WIDTH_RAD, computeLabImpact, LAB_BREAKUP_AT, LAB_EARTH_R, LAB_LIGHT_SEC, LAB_MAX_AU, LAB_MIN_AU, LAB_SHOCK_SEC, labBeamMapHalfAngle,
-  labFrontRadius, labMapDistanceAU, labSceneRadius, LY_AU,
+  labFrontRadius, labFrontSpeed, labMapDistanceAU, labRunSeconds, labSceneRadius, LY_AU,
 } from './physics';
 
 export {
   computeLabFates, computeLabImpact, distanceText, LAB_EXTRA_IDS, LAB_MAX_AU, LAB_MIN_AU, labRunSeconds, LY_AU,
 } from './physics';
-export { labLinkQuery, parseLabLink, type LabLink } from './link';
+export { LAB_FIRST_YEAR, LAB_LAST_YEAR, labLinkQuery, parseLabLink, type LabLink } from './link';
 export { LAB_QUESTIONS } from './quiz';
 
 const EJECTA_PARTICLES = 4200;
@@ -63,8 +64,19 @@ const BREAKUP_DELAY_SEC = 3.6;
  * the body to stay in its part of the map.
  */
 const KICK_RADII = 5.5;
+/** Where the weightless astronaut starts: beside Earth, between it and the camera as the lab opens. */
+const EVA_START = new THREE.Vector3(-4.5, 1.5, 7);
+/** Share of its own speed that a blast front gives the astronaut it passes: it shoves, and runs on ahead. */
+const EVA_SHOVE_SHARE = 0.6;
 /** Camera distance of the close view of Earth; of another body, in proportion to its radius. */
 const CLOSE_DIST = 21;
+/**
+ * A burst's rays pass and are gone: its fronts fade out over this many of the last seconds of the time-lapse,
+ * less than the seconds `labRunSeconds` leaves to spare after the last thing has happened.
+ */
+const BURST_FADE_SEC = 3;
+/** Share of their glow that a burst's fronts lose in the close view, so that the bodies show through them. */
+const BURST_CLOSE_THIN = 0.7;
 
 /** Map radius that takes in the outermost ring and its label. */
 const MAP_RADIUS = labSceneRadius(LAB_MAX_AU) + 2.5;
@@ -81,6 +93,11 @@ const SPOT_GAP = 3;
 const TAG_HEIGHT = 0.026;
 /** A name tag reaches this many pixels into its body's token: its text sits in the middle of the tag. */
 const TAG_TUCK = 3;
+/** Pixels between a body's token and a name that stands to its right or left. */
+const TAG_SIDE_GAP = 4;
+/** Where a name can stand by its body, in the order tried. */
+type TagSide = 'above' | 'below' | 'right' | 'left';
+const TAG_SIDES: TagSide[] = ['above', 'below', 'right', 'left'];
 /** Places a ring label tries, radians along its ring from the side facing the camera: the middle first. */
 const RING_LABEL_TURNS = [0, 0.2, -0.2, 0.4, -0.4, 0.6, -0.6];
 
@@ -249,6 +266,39 @@ const LANDMARK_STARS: Array<{ id: string; lightYears: number; color: number }> =
 ];
 const CRAB_LIGHT_YEARS = 6500;
 
+/**
+ * A star or nebula that marks a far ring: its place in the sky (ecliptic longitude and latitude, J2000
+ * degrees), the distance the lab uses for it, light years, and its colour.
+ */
+interface Landmark {
+  id: string;
+  name: L10n;
+  kind: 'star' | 'nebula';
+  lonDeg: number;
+  latDeg: number;
+  lightYears: number;
+  color: number;
+}
+const CRAB = TRANSIENTS.find((t) => t.id === 'sn1054');
+const LANDMARKS: Landmark[] = [
+  ...LANDMARK_STARS.flatMap((s) => {
+    const star = BRIGHT_STARS.find((b) => b.id === s.id);
+    return star ? [{ id: s.id, name: star.name, kind: 'star' as const, ...eclipticOfRaDec(star.raDeg, star.decDeg), lightYears: s.lightYears, color: s.color }] : [];
+  }),
+  ...(CRAB && CRAB.kind === 'supernova'
+    ? [{ id: 'crab', name: { tr: 'Yengeç Bulutsusu', en: 'Crab Nebula' }, kind: 'nebula' as const, ...eclipticOfRaDec(CRAB.raDeg, CRAB.decDeg), lightYears: CRAB_LIGHT_YEARS, color: 0xffa64d }]
+    : []),
+];
+
+/**
+ * Ecliptic latitude, degrees, of a star or nebula of the map. The map lies in the plane of the planets and
+ * shows such a body at its longitude only: its real direction in the sky is that longitude with this
+ * latitude. 0 for every other body, and for none.
+ */
+export function labLandmarkLatitudeDeg(bodyId: string | null): number {
+  return LANDMARKS.find((mark) => mark.id === bodyId)?.latDeg ?? 0;
+}
+
 /** What the name tag at the explosion says. A solar eruption comes from the Sun itself. */
 const KIND_TAG: Record<LabExplosionKind, L10n> = {
   sn2: { tr: 'Tip II süpernova', en: 'Type II supernova' },
@@ -277,8 +327,8 @@ interface NameTag extends LabelItem {
   y: number;
   radiusPx: number;
   show: number;
-  /** The name stands below its body instead of above it. */
-  below: boolean;
+  /** The side of its body the name stands on. */
+  side: TagSide;
   /** The name is on the screen this frame, in the box that follows (pixels). */
   written: boolean;
   left: number;
@@ -457,15 +507,23 @@ export interface LabController extends ISpaceView {
   setPaused(paused: boolean): void;
   /** Puts the time-lapse at a moment, seconds after detonation. */
   seek(elapsedSec: number): void;
-  /** Seconds since detonation (0 when idle). */
+  /**
+   * Seconds since detonation (0 when idle): never more than the run's length (`labRunSeconds` of the results
+   * last set), where the time-lapse stops and holds its picture until `resetExplosion` or `detonate`.
+   */
   elapsedSec(): number;
   setEvaMode(on: boolean): void;
   setEvaKeys(moveX: number, moveZ: number, moveY: number, boost: boolean): void;
   /**
-   * Called when the map is clicked: the direction and distance of the clicked place, and the id of the body
-   * of the map it was taken from (null for a place on the map itself).
+   * Called when the map is clicked while no run is under way: the direction and distance of the clicked
+   * place, and the id of the body of the map it was taken from (null for a place on the map itself).
    */
   onPlace(cb: (angleRad: number, distanceAU: number, bodyId: string | null) => void): void;
+  /**
+   * Called when a click on the map is ignored because a run is under way (from detonation until the
+   * explosion is reset, the held final picture included): once for each such click, never for a drag.
+   */
+  onLockedClick(cb: () => void): void;
   /** Shows the whole orbit of the explosion, the whole map, or the body in focus up close; the view then stays as chosen. */
   setFraming(framing: LabFraming): void;
   /**
@@ -635,21 +693,27 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     scene.add(sprite);
     const tag: NameTag = {
       sprite, label, centered: true, widthShare: 1,
-      at: new THREE.Vector3(), x: 0, y: 0, radiusPx: 0, show: 0, below: false, written: false, left: 0, right: 0, top: 0, bottom: 0,
+      at: new THREE.Vector3(), x: 0, y: 0, radiusPx: 0, show: 0, side: 'above', written: false, left: 0, right: 0, top: 0, bottom: 0,
     };
     labelSprites.push(tag);
     nameTags.push(tag);
     return tag;
   };
 
-  /** Puts a name's box above or below its body. The text sits in the middle of a tag `tagH` pixels high. */
-  function setNameBox(tag: NameTag, below: boolean, tagH: number): void {
+  /**
+   * Puts a name's box on one side of its body: above or below it, tucked a little into the token, or beside
+   * it. The text sits in the middle of a tag `tagH` pixels high.
+   */
+  function setNameBox(tag: NameTag, side: TagSide, tagH: number): void {
     const halfW = tag.widthShare * tagH * 5;
-    const mid = tag.y + (below ? 1 : -1) * (tag.radiusPx - TAG_TUCK + tagH * 0.5);
-    tag.left = tag.x - halfW;
-    tag.right = tag.x + halfW;
-    tag.top = mid - tagH * 0.3;
-    tag.bottom = mid + tagH * 0.3;
+    const upright = side === 'above' || side === 'below';
+    const sign = side === 'above' || side === 'left' ? -1 : 1;
+    const midX = upright ? tag.x : tag.x + sign * (tag.radiusPx + TAG_SIDE_GAP + halfW);
+    const midY = upright ? tag.y + sign * (tag.radiusPx - TAG_TUCK + tagH * 0.5) : tag.y;
+    tag.left = midX - halfW;
+    tag.right = midX + halfW;
+    tag.top = midY - tagH * 0.3;
+    tag.bottom = midY + tagH * 0.3;
   }
 
   /** What a name's box lies over: 2 for a name of higher precedence, 1 for a body, 0 for nothing. */
@@ -1269,18 +1333,8 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     };
   });
 
-  const crabDef = TRANSIENTS.find((t) => t.id === 'sn1054');
-  const landmarkDefs: Array<{ id: string; name: L10n; kind: 'star' | 'nebula'; raDeg: number; decDeg: number; lightYears: number; color: number }> = [
-    ...LANDMARK_STARS.flatMap((s) => {
-      const star = BRIGHT_STARS.find((b) => b.id === s.id);
-      return star ? [{ id: s.id, name: star.name, kind: 'star' as const, raDeg: star.raDeg, decDeg: star.decDeg, lightYears: s.lightYears, color: s.color }] : [];
-    }),
-    ...(crabDef && crabDef.kind === 'supernova'
-      ? [{ id: 'crab', name: { tr: 'Yengeç Bulutsusu', en: 'Crab Nebula' }, kind: 'nebula' as const, raDeg: crabDef.raDeg, decDeg: crabDef.decDeg, lightYears: CRAB_LIGHT_YEARS, color: 0xffa64d }]
-      : []),
-  ];
-  const landmarks = landmarkDefs.map((def) => {
-    const angle = -THREE.MathUtils.degToRad(eclipticOfRaDec(def.raDeg, def.decDeg).lonDeg);
+  const landmarks = LANDMARKS.map((def) => {
+    const angle = -THREE.MathUtils.degToRad(def.lonDeg);
     const position = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle)).multiplyScalar(labSceneRadius(def.lightYears * LY_AU));
     const glow = new THREE.Sprite(glowMaterial(new THREE.Color(def.color), def.kind === 'nebula' ? 0.55 : 0.8));
     const core = new THREE.Sprite(glowMaterial(def.kind === 'nebula' ? new THREE.Color(0.55, 0.8, 1) : new THREE.Color(1, 1, 1), 0.9));
@@ -1633,6 +1687,8 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
   /** The time-lapse stands still: `elapsed` then moves only when it is set by hand. */
   let paused = false;
   let elapsed = 0;
+  /** The second at which the time-lapse stops and holds its last picture (see `labRunSeconds`). */
+  let runSec = labRunSeconds(impact, []);
   /** The rings that show how each body fares are hidden (the class mode asks for a prediction first). */
   let concealed = false;
   /** Half the angle a burst's beams are drawn with, radians, and the turn that points the far beam away from Earth. */
@@ -1674,8 +1730,13 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
 
   // Optional weightless astronaut flying through the scene.
   let suit: SuitRig | null = null;
-  const evaPos = new THREE.Vector3(-4.5, 1.5, 7);
+  const evaPos = EVA_START.clone();
   const evaVel = new THREE.Vector3();
+  /** Puts the astronaut back beside Earth, at rest. */
+  function homeAstronaut(): void {
+    evaPos.copy(EVA_START);
+    evaVel.set(0, 0, 0);
+  }
   const evaInput = { mx: 0, mz: 0, my: 0, boost: false };
   let evaMode = false;
   let suitPromise: Promise<void> | null = null;
@@ -1711,6 +1772,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
   let sx = 0;
   let sy = 0;
   let placeCb: ((angleRad: number, distanceAU: number, bodyId: string | null) => void) | null = null;
+  let lockedCb: (() => void) | null = null;
   /** The bodies of the map with their names on the screen, for clicks: set by `layoutFor`. */
   let clickable: Array<{ tag: NameTag; body: LabBody }> = [];
   const raycaster = new THREE.Raycaster();
@@ -1857,6 +1919,12 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     // took over (pointercancel) is never one.
     const slop = e.pointerType === 'touch' ? 12 : 5;
     if (e.type !== 'pointerup' || moved >= slop || !el || !placeCb || evaMode) return;
+    // From detonation until the explosion is reset the map is the picture of that run: a click moves
+    // nothing, and the view's owner is told that one was made.
+    if (playing) {
+      lockedCb?.();
+      return;
+    }
     const rect = el.getBoundingClientRect();
     const cx = e.clientX - rect.left;
     const cy = e.clientY - rect.top;
@@ -1871,6 +1939,8 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
         return;
       }
     }
+    // Earth is the middle of the map: nothing can be set at it, on its globe or on its name.
+    if (earthTag.written && cx >= earthTag.left && cx <= earthTag.right && cy >= earthTag.top && cy <= earthTag.bottom) return;
     ndc.set((cx / rect.width) * 2 - 1, -(cy / rect.height) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
     if (!raycaster.ray.intersectPlane(mapPlane, hitPt)) return;
@@ -1992,6 +2062,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       // Start already framed, in the camera's own framing and with Earth in focus, instead of swinging in.
       chosen = null;
       focusId = 'earth';
+      homeAstronaut();
       this.resize(window.innerWidth, window.innerHeight);
       frameView();
       snapView();
@@ -2001,7 +2072,9 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       // While the time-lapse is paused the scene holds still (rotation, flicker, shake); the camera still moves.
       const flow = playing && paused ? 0 : dt;
       time += flow;
-      elapsed += playing ? flow : 0;
+      // The time-lapse stops at its last second and holds that picture.
+      if (playing) elapsed = Math.min(runSec, elapsed + flow);
+      const running = playing && elapsed < runSec;
       const o = impact.outcome;
       const look = LOOK[kind];
       // A solar eruption sends a cloud one way, a burst two thin fronts of rays, a supernova shells all round.
@@ -2047,7 +2120,10 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       const blastR = hasBlast ? frontR : Math.min(frontR, reach * 0.55);
       const dilute = Math.min(1, (6 / Math.max(blastR, 0.01)) ** 0.9);
       const age = hasBlast ? Math.max(0, 1 - Math.max(0, sinceShock - 7) / 9) : Math.max(0, 1 - elapsed / (LAB_SHOCK_SEC * 1.1));
-      const blastAlpha = playing ? dilute * age : 0;
+      // A burst's rays pass and are gone: by the time the time-lapse stops their fronts have faded out, and the
+      // picture it holds is of what they did.
+      const passing = burst ? THREE.MathUtils.clamp((runSec - elapsed) / BURST_FADE_SEC, 0, 1) : 1;
+      const blastAlpha = playing ? dilute * age * passing : 0;
       const lightR = playing ? reach * (elapsed / LAB_LIGHT_SEC) : 0;
       lightFront.visible = playing && !burst && lightR < 150;
       lightFront.scale.setScalar(Math.max(0.01, lightR));
@@ -2075,16 +2151,17 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
 
       // A burst: the two fronts of rays, and behind each the cone it has swept.
       const beamAlpha = burst ? blastAlpha : 0;
+      const beamGlow = beamAlpha * (1 - BURST_CLOSE_THIN * close);
       const mouth = blastR * Math.tan(beamHalf);
       burstFronts.forEach((front, i) => {
         front.visible = beamAlpha > 0.004;
         front.scale.setScalar(Math.max(0.01, blastR));
-        front.material.uniforms.uAlpha.value = beamAlpha * 1.3;
+        front.material.uniforms.uAlpha.value = beamGlow * 1.3;
         beamCones[i].visible = front.visible;
         // The cone's mouth sits on the rim of the front.
         beamCones[i].scale.set(Math.max(0.01, mouth * Math.cos(beamHalf)), Math.max(0.01, blastR * Math.cos(beamHalf)), Math.max(0.01, mouth * Math.cos(beamHalf)));
       });
-      beamUniforms.uAlpha.value = beamAlpha * 0.9;
+      beamUniforms.uAlpha.value = beamGlow * 0.9;
 
       ejectaPoints.visible = !burst && blastAlpha > 0.004;
       if (ejectaPoints.visible) {
@@ -2355,26 +2432,29 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
         let show = tag.show;
         tag.written = false;
         if (show > 0.01) {
-          // A name stays on the side of its body where it stood, unless the other side is clearer.
-          setNameBox(tag, tag.below, tagH);
+          // A name stays on the side of its body where it stood, unless another side is clearer.
+          let best = tag.side;
+          setNameBox(tag, best, tagH);
           let clash = nameClash(i);
-          if (clash > 0) {
-            setNameBox(tag, !tag.below, tagH);
-            const flipped = nameClash(i);
-            if (flipped < clash) {
-              tag.below = !tag.below;
-              clash = flipped;
-            } else {
-              setNameBox(tag, tag.below, tagH);
+          for (const side of TAG_SIDES) {
+            if (clash === 0) break;
+            if (side === tag.side) continue;
+            setNameBox(tag, side, tagH);
+            const there = nameClash(i);
+            if (there < clash) {
+              best = side;
+              clash = there;
             }
           }
-          // A name that would be written over another gives way to it.
-          if (clash === 2) show = 0;
+          tag.side = best;
+          // A name that would be written over a body or over another name gives way to it.
+          if (clash > 0) show = 0;
           tag.written = show > 0.01;
         }
-        const clear = (tag.radiusPx - TAG_TUCK) / tagH;
+        setNameBox(tag, tag.side, tagH);
         tag.sprite.position.copy(tag.at);
-        tag.sprite.center.set(0.5, tag.below ? 1 + clear : -clear);
+        // The sprite is ten times as wide as it is high; its middle goes to the middle of the box.
+        tag.sprite.center.set(0.5 - ((tag.left + tag.right) / 2 - tag.x) / (tagH * 10), 0.5 + ((tag.top + tag.bottom) / 2 - tag.y) / tagH);
         const mat = tag.sprite.material;
         mat.opacity += (show - mat.opacity) * Math.min(1, dt * 10);
       }
@@ -2417,11 +2497,20 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
         } else {
           evaVel.multiplyScalar(Math.exp(-dt * 1.4));
         }
-        // The passing blast front shoves the astronaut outward.
-        if (playing) {
-          const toAstro = evaPos.clone().sub(srcPos);
+        // The passing blast front shoves the astronaut outward and runs on ahead: it gives at most a share of
+        // its own speed, only where it is (a cloud's cone, a burst's two beams), and nothing once it has
+        // faded or the time-lapse has stopped.
+        if (running && blastAlpha > 0.004) {
+          const toAstro = scratchA.copy(evaPos).sub(srcPos);
           const dAstro = toAstro.length();
-          if (Math.abs(dAstro - blastR) < 1.2 && dAstro > 0.3) evaVel.addScaledVector(toAstro.normalize(), flow * 16 * Math.max(0.2, blastAlpha));
+          if (Math.abs(dAstro - blastR) < 1.2 && dAstro > 0.3) {
+            toAstro.divideScalar(dAstro);
+            const offAxis = Math.acos(THREE.MathUtils.clamp(toAstro.dot(away), -1, 1));
+            const inFront = solar ? offAxis <= CME_HALF_WIDTH_RAD : !burst || offAxis <= beamHalf || offAxis >= Math.PI - beamHalf;
+            const frontSpeed = hasBlast || frontR < reach * 0.55 ? labFrontSpeed(reach, elapsed) : 0;
+            const lag = EVA_SHOVE_SHARE * frontSpeed - evaVel.dot(toAstro);
+            if (inFront && lag > 0) evaVel.addScaledVector(toAstro, Math.min(lag, flow * 16 * blastAlpha));
+          }
         }
         evaPos.addScaledVector(evaVel, dt);
         suit.root.position.copy(evaPos);
@@ -2529,6 +2618,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
 
     setResults(nextImpact: LabImpact, fates: LabFate[]): void {
       impact = nextImpact;
+      runSec = labRunSeconds(impact, fates);
       earthMark.material.color.setHex(LEVEL_COLOUR[impact.level]);
       for (const body of [sunBody, ...tokens]) {
         body.fate = fates.find((f) => f.id === body.id) ?? null;
@@ -2566,6 +2656,8 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     },
 
     resetExplosion(): void {
+      // The run that ends here may have shoved the astronaut away: the next one starts beside Earth again.
+      if (playing) homeAstronaut();
       playing = false;
       paused = false;
       elapsed = 0;
@@ -2578,7 +2670,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     },
 
     seek(elapsedSec: number): void {
-      if (playing) elapsed = Math.max(0, elapsedSec);
+      if (playing) elapsed = Math.min(runSec, Math.max(0, elapsedSec));
     },
 
     elapsedSec(): number {
@@ -2588,8 +2680,12 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     setEvaMode(on: boolean): void {
       if (on !== evaMode) {
         // Flying, the camera sits low behind the astronaut; afterwards it goes back to the map.
-        if (on) tLat = 0.32;
-        else if (!manual) applyFraming(framing);
+        if (on) {
+          tLat = 0.32;
+          homeAstronaut();
+        } else if (!manual) {
+          applyFraming(framing);
+        }
         ease = 2.4;
       }
       evaMode = on;
@@ -2606,6 +2702,10 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
 
     onPlace(cb): void {
       placeCb = cb;
+    },
+
+    onLockedClick(cb): void {
+      lockedCb = cb;
     },
 
     setFraming(next: LabFraming): void {

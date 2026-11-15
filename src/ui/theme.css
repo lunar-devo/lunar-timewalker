@@ -33,6 +33,39 @@ button, input, select {
   color: inherit;
 }
 
+/* Keyboard focus: one ring in the accent colour on every control. A click with the mouse does not draw it. */
+:is(button, select, input[type='range'], input[type='checkbox']):focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+}
+
+/* Boxes that scroll show a thin bar at all times, so that content below the edge is not taken for missing. */
+:is(.mn-modal, .mn-credits, .mn-map-col, .mn-chapters-wrap)::-webkit-scrollbar {
+  width: 6px;
+}
+
+:is(.mn-modal, .mn-credits, .mn-map-col, .mn-chapters-wrap)::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  :is(.mn-modal, .mn-credits, .mn-map-col, .mn-chapters-wrap) {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  }
+}
+
+/* Shown for a moment after every page change: it takes the second click of a double click, which would
+   otherwise press whatever the new page has put under the pointer. It lies above the dialogs too. */
+.mn-click-guard {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: auto;
+  background: transparent;
+}
+
 /* ─────────────────────────── Buttons & Controls ─────────────────────────── */
 
 .mn-btn {
@@ -208,6 +241,61 @@ button, input, select {
   flex-wrap: wrap;
   border-bottom: 1px solid var(--c-line-soft);
   padding-bottom: 10px;
+}
+
+/* Small laptop windows: the brand's two short lines stand beside the action block and its sentence runs
+   under both at full width, which keeps the top bar low and leaves the height to the cards. */
+@media (min-width: 900px) and (max-width: 1100px) {
+  .mn-screen {
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .mn-topbar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto 1fr auto;
+    gap: 4px 16px;
+  }
+
+  .mn-brand {
+    display: contents;
+  }
+
+  .mn-brand-title {
+    align-self: center;
+  }
+
+  .mn-brand-sub {
+    grid-column: 1 / -1;
+    margin-top: 4px;
+    font-size: 0.84rem;
+    line-height: 1.4;
+  }
+
+  .mn-top-right {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    gap: 8px;
+  }
+
+  .mn-topbar .mn-actions {
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .mn-topbar .mn-btn {
+    padding: 6px 10px;
+  }
+
+  .mn-topbar .mn-btn-ghost {
+    padding: 6px 8px;
+  }
+
+  .mn-nav-row {
+    gap: 6px 12px;
+    padding-bottom: 8px;
+  }
 }
 
 .mn-chapters-wrap {
@@ -476,6 +564,64 @@ button, input, select {
   font-size: 0.88rem;
 }
 
+/* A row that is a label switches its control from anywhere on the row. */
+label.mn-form-row {
+  cursor: pointer;
+}
+
+/* The list of controls: two columns read downwards, in a dialog widened to hold them. */
+.mn-modal:has(> .mn-help-list) {
+  width: min(1180px, 95vw);
+}
+
+.mn-help-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(10, auto);
+  grid-auto-flow: column;
+  column-gap: 28px;
+}
+
+/* A key name stays on one line; its description takes the rest of the row and wraps there. */
+.mn-help-list strong {
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .mn-help-list {
+    display: block;
+  }
+}
+
+/* Low windows: dialogs use more of the height and stand their rows closer. */
+@media (max-height: 760px) {
+  .mn-modal {
+    max-height: 94vh;
+    padding: 16px 22px;
+    gap: 8px;
+  }
+
+  .mn-modal-head {
+    padding-bottom: 10px;
+  }
+}
+
+@media (max-height: 680px) {
+  .mn-modal-backdrop {
+    padding: 12px;
+  }
+
+  .mn-modal {
+    max-height: 96vh;
+    padding: 12px 20px;
+    gap: 6px;
+  }
+
+  .mn-form-row {
+    padding: 6px 0;
+  }
+}
+
 .mn-credits {
   max-height: 64vh;
   overflow-y: auto;
@@ -492,6 +638,34 @@ button, input, select {
 .mn-credits ul {
   margin: 0;
   padding-left: 18px;
+}
+
+/* A credit that leads to its source: the line keeps the colour of its text and carries an accent underline. */
+.mn-credits a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(125, 211, 252, 0.55);
+  text-underline-offset: 3px;
+  border-radius: 3px;
+  transition: color 0.14s, text-decoration-color 0.14s;
+}
+
+.mn-credits a:hover {
+  color: #ffffff;
+  text-decoration-color: var(--c-accent);
+}
+
+.mn-credits a:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+}
+
+/* Between the one-column layout and a wide window the side columns give way, so the globe keeps its room. */
+@media (max-width: 1100px) {
+  .mn-map-screen {
+    grid-template-columns: minmax(260px, 1fr) minmax(300px, 1.05fr) minmax(260px, 1fr);
+    gap: 10px;
+  }
 }
 
 @media (max-width: 980px) {
@@ -671,7 +845,6 @@ button, input, select {
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
-  outline: none;
 }
 
 .mn-lang option {
@@ -708,4 +881,32 @@ button, input, select {
   font-size: 0.8rem;
   line-height: 1.45;
   color: #e2e8f0;
+}
+
+/* Classroom boards and large monitors: the menu, the map screen and the dialogs are drawn a quarter larger,
+   so that text can be read from the back of a room. The surface and close-up views keep their size, because
+   the labels there are placed in window pixels. Lengths in window units are divided by the same factor. */
+@media (min-width: 1700px) and (min-height: 950px) {
+  :root {
+    --mn-scale: 1.25;
+  }
+
+  .mn-screen,
+  .mn-map-screen,
+  .mn-modal {
+    zoom: var(--mn-scale);
+  }
+
+  .mn-screen {
+    gap: 14px;
+    padding: 28px;
+  }
+
+  .mn-modal {
+    max-height: calc(88vh / var(--mn-scale));
+  }
+
+  .mn-credits {
+    max-height: calc(64vh / var(--mn-scale));
+  }
 }
