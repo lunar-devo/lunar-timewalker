@@ -1472,6 +1472,61 @@
   border-radius: 50%;
 }
 
+/* ─────────────────────────── Orbits view (Earth and Mars) ─────────────────────────── */
+
+.hud-orbit-card {
+  position: fixed;
+  top: 58px;
+  left: 16px;
+  /* The view keeps its picture clear of a strip 360 px wide on the left: the card ends there. */
+  width: min(344px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.hud-orbit-card .hud-card-title {
+  margin-bottom: 0;
+}
+
+.hud-orbit-card .hud-telem-val {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-orbit-card ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--c-dim);
+}
+
+/* Mars as large as it looks on the date shown, in the circle that its largest disc fills. */
+.hud-orbit-eyepiece {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.74rem;
+  color: var(--c-dim);
+}
+
+.hud-orbit-eyepiece > div {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  background: #04070d;
+}
+
+.hud-orbit-eyepiece > div > div {
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, #e9a878, #b9582e 68%, #7c3718);
+}
+
 /* ─────────────────────────── Bars that must fit any width ─────────────────────────── */
 /* Groups keep their natural width, so a bar that is too full overflows as a whole; useFit then drops items. */
 .hud-topbar > .hud-bar-group,

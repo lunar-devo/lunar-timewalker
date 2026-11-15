@@ -1,6 +1,7 @@
 /**
- * The events shown in the app. Each sets a real moment, the best places on the Moon to watch it from,
- * a "before → event → after" sequence, and plain explanations for teachers and students.
+ * The events shown in the app. Each sets a real moment, the places to watch it from (on the Moon, on Mars,
+ * or a close-up view of its own), a "before → event → after" sequence, and plain explanations for teachers
+ * and students.
  */
 import type { EventDef, L10n } from '../core/types';
 
@@ -574,8 +575,8 @@ export const EVENTS: EventDef[] = [
     title: { tr: '2003: Mars’ın 60.000 Yıldaki En Yakın Geçişi', en: '2003: Mars at Its Closest in 60,000 Years' },
     dateLabel: { tr: '27 Ağustos 2003 · 09:51 UT', en: '27 August 2003 · 09:51 UT' },
     summary: {
-      tr: 'Ağustos 2003’te Mars, Dünya’ya yaklaşık 60.000 yıldır olmadığı kadar yaklaştı. Teleskopta Mars’ın aylar içinde nasıl büyüdüğünü izleyin.',
-      en: 'In August 2003 Mars came closer to Earth than at any time in about 60,000 years. Watch it grow in the telescope over the months.',
+      tr: 'Ağustos 2003’te Mars, Dünya’ya yaklaşık 60.000 yıldır olmadığı kadar yaklaştı. İki gezegenin yörüngelerine yukarıdan bakın ve Dünya Mars’a yetişirken aradaki uzaklığın nasıl kapandığını izleyin.',
+      en: 'In August 2003 Mars came closer to Earth than at any time in about 60,000 years. Look down on the two orbits and watch the gap close as Earth catches up with Mars.',
     },
     about: [
       {
@@ -587,59 +588,57 @@ export const EVENTS: EventDef[] = [
         en: 'Sizes in the sky are measured as angles. An arcsecond (″) is a very small angle: the full Moon is about 1,800″ across. Even at its closest, Mars spans only 25″ in a telescope.',
       },
       {
-        tr: 'Bu sırada NASA’nın ikiz gezginleri Spirit ve Opportunity Mars’a doğru yoldaydı; Ocak 2004’te indiler. Yakın görünümde, o tarihte Mars’ta bulunan araçları görebilirsiniz.',
-        en: 'At the time NASA’s twin rovers Spirit and Opportunity were on their way to Mars; they landed in January 2004. In the close-up view you can see the spacecraft that were on Mars at that date.',
+        tr: 'Bu sırada NASA’nın ikiz gezginleri Spirit ve Opportunity Mars’a doğru yoldaydı; Ocak 2004’te indiler. Bu olay yörünge görünümünde oynar: Güneş’e, Dünya’nın ve Mars’ın yörüngelerine yukarıdan bakarsınız; iki gezegen o tarihteki gerçek yerlerindedir.',
+        en: 'At the time NASA’s twin rovers Spirit and Opportunity were on their way to Mars; they landed in January 2004. This event plays in the orbit view: you look down on the Sun and the orbits of Earth and Mars, with both planets at their real places for the date.',
       },
     ],
     date: { year: 2003, month: 8, day: 27, hour: 9, minute: 51 },
     startRate: 1,
     staging: [{
-      where: 'surface',
-      focusId: 'mars',
-      autoSeat: true,
+      where: 'mars_orbit',
       endRate: 1,
       stages: [
         {
-          id: 'm03_m3', kind: 'before', label: BEFORE, seconds: 3, telescopeFovDeg: 0.06,
-          from: { date: { year: 2003, month: 8, day: 27, hour: 9, minute: 51 }, offsetDays: -3 * SIDEREAL_MONTH_DAYS },
+          id: 'm03_before', kind: 'before', label: BEFORE, seconds: 8,
+          from: { date: { year: 2003, month: 6, day: 6 } },
+          to: { date: { year: 2003, month: 8, day: 15 } },
           caption: {
-            tr: 'Haziran 2003, teleskopta Mars: 108 milyon km uzakta, 13″ genişliğinde. (Görüntüler 27,3 gün arayla seçildi.)',
-            en: 'June 2003, Mars in the telescope: 108 million km away and 13″ across. (The frames are 27.3 days apart.)',
+            tr: '6 Haziran 2003’ten itibaren (hızlandırılmış): Mars 107 milyon km uzakta, teleskopta 13″ genişliğinde. Güneş’e daha yakın olan Dünya daha hızlı dolanıyor ve Mars’a arkadan yetişiyor.',
+            en: 'From 6 June 2003 (sped up): Mars is 107 million km away and 13″ across in a telescope. Earth, closer to the Sun, moves faster and is catching up with Mars from behind.',
           },
         },
         {
-          id: 'm03_m2', kind: 'before', label: BEFORE, seconds: 2.5, cut: true, telescopeFovDeg: 0.06,
-          from: { date: { year: 2003, month: 8, day: 27, hour: 9, minute: 51 }, offsetDays: -2 * SIDEREAL_MONTH_DAYS },
-          caption: { tr: 'Temmuz başı: 82 milyon km, 17″.', en: 'Early July: 82 million km, 17″.' },
-        },
-        {
-          id: 'm03_m1', kind: 'before', label: BEFORE, seconds: 2.5, cut: true, telescopeFovDeg: 0.06,
-          from: { date: { year: 2003, month: 8, day: 27, hour: 9, minute: 51 }, offsetDays: -1 * SIDEREAL_MONTH_DAYS },
-          caption: { tr: 'Temmuz sonu: 63 milyon km, 22″.', en: 'Late July: 63 million km, 22″.' },
-        },
-        {
-          id: 'm03_event', kind: 'event', label: DURING, seconds: 9, cut: true, telescopeFovDeg: 0.06,
-          from: { date: { year: 2003, month: 8, day: 27, hour: 9, minute: 51 } },
+          id: 'm03_event', kind: 'event', label: DURING, seconds: 10,
+          from: { date: { year: 2003, month: 8, day: 15 } },
+          to: { date: { year: 2003, month: 8, day: 27, hour: 9, minute: 51 } },
           caption: {
-            tr: '27 Ağustos 2003: 56 milyon km, 25″. Mars yaklaşık 60.000 yılın en yakın noktasında ve gökyüzündeki en parlak cisimlerden biri.',
-            en: '27 August 2003: 56 million km, 25″. Mars is at its closest in about 60,000 years and one of the brightest objects in the sky.',
+            tr: '27 Ağustos 2003, 09:51 UT: 55,76 milyon km, teleskopta 25″. Dünya Güneş ile Mars’ın arasından geçerken Mars da yörüngesinin Güneş’e en yakın bölgesinde: yaklaşık 60.000 yılın en yakın geçişi.',
+            en: '27 August 2003, 09:51 UT: 55.76 million km, 25″ in a telescope. Earth passes between the Sun and Mars just as Mars is near the point of its orbit closest to the Sun: the closest approach in about 60,000 years.',
+          },
+        },
+        {
+          id: 'm03_after', kind: 'after', label: AFTER, seconds: 7,
+          from: { date: { year: 2003, month: 8, day: 27, hour: 9, minute: 51 } },
+          to: { date: { year: 2003, month: 10, day: 15 } },
+          caption: {
+            tr: 'Ekim ortasına kadar (hızlandırılmış): Dünya öne geçiyor ve aradaki uzaklık yeniden açılıyor. 15 Ekim’de 78 milyon km, 18″.',
+            en: 'To mid-October (sped up): Earth pulls ahead and the gap opens again. By 15 October it is 78 million km and 18″.',
           },
         },
       ],
     }],
     defaultSiteId: 'tycho',
-    seenFrom: 'earthMoon',
+    seenFrom: 'anywhere',
     recommendedSiteIds: ['tycho', 'apollo11', 'copernicus', 'shackleton'],
     primaryTargetId: 'mars',
-    marsFocusAssetIds: ['viking1', 'viking2', 'pathfinder', 'mgs'],
     notes: [
       {
-        tr: 'Gerçek: Uzaklık, görünür büyüklük ve parlaklık o tarihler için hesaplanan değerlerdir.',
-        en: 'Real: the distances, apparent sizes and brightness are computed for those dates.',
+        tr: 'Gerçek: Gezegenlerin yörüngelerindeki yerleri, aralarındaki uzaklık ve Mars’ın teleskoptaki genişliği o tarihler için hesaplanır.',
+        en: 'Real: the places of the planets on their orbits, the distance between them and the width of Mars in a telescope are computed for those dates.',
       },
       {
-        tr: 'Büyütme: Yakın görünümdeki Mars küresi NASA haritalarından yapılmıştır; gerçek bir teleskopta Mars bu kadar ayrıntılı görünmez.',
-        en: 'Magnified: the Mars globe in the close-up view is built from NASA maps; a real telescope does not show Mars in this much detail.',
+        tr: 'Ölçekli değil: Güneş ve gezegenler, yörüngelerine göre çok büyük çizilmiştir; gerçek ölçekte görünmeyecek kadar küçük kalırlardı.',
+        en: 'Not to scale: the Sun and the planets are drawn far too large for their orbits; at true scale they would be too small to see.',
       },
     ],
     infoTopicIds: ['mars_2003', 'viking', 'mars_global'],
@@ -954,5 +953,120 @@ export const EVENTS: EventDef[] = [
     infoTopicIds: ['shackleton', 'artemis', 'earth_from_moon'],
     accent: '#6ee7a8',
     cardTopicId: 'shackleton',
+  },
+
+  {
+    id: 'ingenuity2021',
+    order: 12,
+    category: 'mission',
+    title: { tr: 'Ingenuity: Başka Bir Gezegende İlk Uçuş', en: 'Ingenuity: The First Flight on Another Planet' },
+    dateLabel: { tr: '19 Nisan 2021 · 07:34 UT', en: '19 April 2021 · 07:34 UT' },
+    summary: {
+      tr: 'Mars helikopteri Ingenuity’nin Jezero Krateri’ndeki ilk uçuşunu birkaç adım öteden izleyin: 3 metreye yükseliyor, havada asılı kalıp dönüyor ve 39,1 saniye sonra yeniden yere konuyor.',
+      en: 'Watch the Mars helicopter Ingenuity make its first flight in Jezero Crater from a few steps away: it climbs to 3 metres, hovers, turns and sets down again after 39.1 seconds.',
+    },
+    about: [
+      {
+        tr: '19 Nisan 2021’de 1,8 kilogramlık Ingenuity helikopteri Mars’ta, Jezero Krateri’nin tabanından havalandı. Bu, başka bir gezegende motor gücüyle yapılan ilk kontrollü uçuştu. Helikopter 07:34 UT’de yerden kesildi, planlandığı gibi 3 metreye yükseldi, 30 saniye havada asılı kaldı, bu sırada 96 derece döndü ve havalandıktan 39,1 saniye sonra yere kondu.',
+        en: 'On 19 April 2021 the 1.8-kilogram helicopter Ingenuity took off from the floor of Jezero Crater on Mars. It was the first powered, controlled flight on another planet. The helicopter left the ground at 07:34 UT, climbed to its planned 3 metres, hovered for 30 seconds, turned 96 degrees while hovering and touched down 39.1 seconds after lift-off.',
+      },
+      {
+        tr: 'Mars’ın havası Dünya’nınkinin yaklaşık yüzde biri yoğunluğundadır; bu kadar ince havada tutunabilmek için pervanelerin dakikada yaklaşık 2.500 kez dönmesi gerekir. Uçuşu kimse o anda yönetmedi: komutlar önceden gönderildi, helikopter kendi başına uçtu. Veriler Dünya’ya üç saat sonra, 10:46 UT’de ulaştı ve uçuş o zaman JPL’de doğrulandı.',
+        en: 'The air on Mars is about one percent as dense as Earth’s; to hold itself up in air that thin, the rotors have to spin about 2,500 times a minute. Nobody flew it live: the commands were sent ahead and the helicopter flew by itself. The data reached Earth three hours later, at 10:46 UT, and that is when the flight was confirmed at JPL.',
+      },
+      {
+        tr: 'Perseverance gezgini uçuşu 64 metre öteden, Van Zyl Seyir Noktası’ndan izledi. Helikopter, Wright Kardeşler’in 1903’te uçurduğu ilk uçaktan küçük bir kumaş parçası taşıyordu; havalandığı alana da Wright Kardeşler Alanı (Wright Brothers Field) adı verildi.',
+        en: 'The Perseverance rover watched the flight from Van Zyl Overlook, 64 metres away. The helicopter carried a small piece of fabric from the aeroplane the Wright brothers first flew in 1903, and its airfield was named Wright Brothers Field.',
+      },
+    ],
+    date: { year: 2021, month: 4, day: 19, hour: 7, minute: 34 },
+    startRate: 1,
+    staging: [{
+      where: 'surface',
+      focusId: 'ingenuity',
+      endRate: 1,
+      stages: [
+        {
+          id: 'ing_ground', kind: 'before', label: BEFORE, seconds: 8, zoomFovDeg: 24,
+          standAt: { x: -7, z: -15, headingDeg: 38 },
+          from: { date: { year: 2021, month: 4, day: 19, hour: 7, minute: 33, second: 40 } },
+          caption: {
+            tr: '19 Nisan 2021, 07:33 UT. Jezero Krateri’nde öğle vakti. Ingenuity yerde, pervaneleri duruyor. Perseverance 64 metre öteden izliyor.',
+            en: '19 April 2021, 07:33 UT. Midday in Jezero Crater. Ingenuity stands on the ground, its rotors still. Perseverance watches from 64 metres away.',
+          },
+        },
+        {
+          id: 'ing_climb', kind: 'event', label: DURING, seconds: 18, zoomFovDeg: 24,
+          from: { date: { year: 2021, month: 4, day: 19, hour: 7, minute: 33, second: 48 } },
+          caption: {
+            tr: 'Pervaneler hızlanıyor (gerçek hızda). 07:34 UT: Ingenuity yerden kesiliyor ve 3 metreye yükseliyor.',
+            en: 'The rotors spin up (real speed). 07:34 UT: Ingenuity leaves the ground and climbs to 3 metres.',
+          },
+        },
+        {
+          id: 'ing_hover', kind: 'event', label: DURING, seconds: 28, zoomFovDeg: 24,
+          from: { date: { year: 2021, month: 4, day: 19, hour: 7, minute: 34, second: 6 } },
+          caption: {
+            tr: 'Otuz saniye havada: Ingenuity 3 metrede asılı kalıyor ve olduğu yerde 96 derece dönüyor. Dünya’nınkinin yüzde biri kadar yoğun havada pervaneleri dakikada yaklaşık 2.500 kez dönüyor.',
+            en: 'Thirty seconds in the air: Ingenuity hovers at 3 metres and turns 96 degrees on the spot. In air one percent as dense as Earth’s, its rotors spin about 2,500 times a minute.',
+          },
+        },
+        {
+          id: 'ing_touchdown', kind: 'event', label: DURING, seconds: 13, zoomFovDeg: 24,
+          from: { date: { year: 2021, month: 4, day: 19, hour: 7, minute: 34, second: 34 } },
+          caption: {
+            tr: 'Alçalış ve iniş: havalandıktan 39,1 saniye sonra Ingenuity yeniden yerde. Başka bir gezegendeki ilk motorlu, kontrollü uçuş tamamlandı.',
+            en: 'Descent and touchdown: 39.1 seconds after lift-off Ingenuity is on the ground again. The first powered, controlled flight on another planet is complete.',
+          },
+        },
+        {
+          id: 'ing_confirmed', kind: 'after', label: AFTER, seconds: 10, cut: true, focusGround: true,
+          from: { date: { year: 2021, month: 4, day: 19, hour: 10, minute: 45, second: 55 } },
+          caption: {
+            tr: '10:46 UT, üç saat sonra: uçuşun verileri Dünya’ya ulaşıyor ve uçuş JPL’de doğrulanıyor. Helikopter çoktandır yerde, bekliyor.',
+            en: '10:46 UT, three hours later: the flight data reaches Earth and the flight is confirmed at JPL. The helicopter has long been back on the ground, waiting.',
+          },
+        },
+        {
+          id: 'ing_after', kind: 'after', label: AFTER, seconds: 8, focusGround: true,
+          from: { date: { year: 2021, month: 4, day: 19, hour: 10, minute: 46, second: 5 } },
+          caption: {
+            tr: 'Beş deneme uçuşu için tasarlanan Ingenuity, Ocak 2024’e kadar 72 kez uçtu. Artık serbestçe dolaşabilirsiniz.',
+            en: 'Designed for five test flights, Ingenuity went on to fly 72 times by January 2024. You can now walk around freely.',
+          },
+        },
+      ],
+    }],
+    cues: [
+      {
+        id: 'ing_confirmation',
+        at: { date: { year: 2021, month: 4, day: 19, hour: 10, minute: 46 } },
+        speaker: { tr: 'Håvard Grip (JPL, Ingenuity’nin baş pilotu)', en: 'Håvard Grip (JPL, Ingenuity’s chief pilot)' },
+        text: {
+          tr: '“Altimeter data confirms that Ingenuity has performed its first flight, the first flight of a powered aircraft on another planet.” (Yükseklik ölçer verileri, Ingenuity’nin ilk uçuşunu, motorlu bir hava aracının başka bir gezegendeki ilk uçuşunu yaptığını doğruluyor.) — veriler Dünya’ya ulaştığında, uçuştan üç saat sonra.',
+          en: '“Altimeter data confirms that Ingenuity has performed its first flight, the first flight of a powered aircraft on another planet.” — when the data reached Earth, three hours after the flight.',
+        },
+      },
+    ],
+    defaultSiteId: 'mars_jezero',
+    seenFrom: 'mars',
+    recommendedSiteIds: ['mars_jezero'],
+    notes: [
+      {
+        tr: 'Gerçek: Havalanma saati (07:34 UT), 3 metrelik yükseklik, 30 saniyelik asılı kalış, 96 derecelik dönüş, havada geçen 39,1 saniye ve verilerin Dünya’ya ulaştığı saat (10:46 UT) NASA’nın 19 Nisan 2021 tarihli duyurusundandır. Duyuru saatleri dakikasıyla verir; burada uçuş 07:34:00’da başlar.',
+        en: 'Real: the lift-off time (07:34 UT), the height of 3 metres, the 30-second hover, the 96-degree turn, the 39.1 seconds in the air and the time the data reached Earth (10:46 UT) come from NASA’s release of 19 April 2021. The release gives the times to the minute; here the flight starts at 07:34:00.',
+      },
+      {
+        tr: 'Yaklaşık: Tırmanış ve alçalış hızları (en çok saniyede yaklaşık 1 metre), dönüşün asılı kalışın hangi anında ve hangi yöne yapıldığı ve pervanelerin hızlanıp yavaşlama süresi, kayıtlı değerlere uyacak biçimde seçilmiştir. Pervanelerin kaldırdığı toz gösterilmez.',
+        en: 'Approximate: the climb and descent rates (about 1 metre per second at most), when in the hover the turn is made and which way, and how long the rotors take to spin up and down are chosen to fit the recorded values. The dust raised by the rotors is not shown.',
+      },
+      {
+        tr: 'Yaklaşık: Gezgin helikopterden kayıtlardaki uzaklıkta (64 m) durur, ama hangi yönde durduğu ve iki aracın arazideki tam yeri gerçeği yansıtmaz. Zemin NASA’nın MOLA yükseklik ölçümlerinden yapılmıştır; bu ölçümler taşları ve küçük engebeleri göstermez.',
+        en: 'Approximate: the rover stands at the recorded distance from the helicopter (64 m), but the direction it stands in and the exact spot of the two vehicles on the ground are not the real ones. The ground is built from NASA’s MOLA elevation measurements, which do not show rocks or small bumps.',
+      },
+    ],
+    infoTopicIds: ['ingenuity', 'perseverance', 'mars_global'],
+    accent: '#e9865a',
+    cardTopicId: 'ingenuity',
   },
 ];

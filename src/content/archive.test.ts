@@ -38,6 +38,13 @@ describe('The archive topic of a place', () => {
     expect(archiveTopicAt({ ...ground, siteId: 'tycho' })).toBe('moon');
     expect(archiveTopicAt({ ...ground, siteId: 'custom' })).toBe('moon');
     expect(archiveTopicAt({ ...ground, world: 'saturn', siteId: 'apollo11' })).toBe('saturn');
+    // On Mars: the hardware of the mission site, or Mars itself at a point picked on the globe.
+    expect(archiveTopicAt({ ...ground, world: 'mars', siteId: 'mars_insight' })).toBe('insight');
+    expect(archiveTopicAt({ ...ground, world: 'mars', siteId: 'mars_viking1' })).toBe('viking');
+    expect(['perseverance', 'ingenuity']).toContain(archiveTopicAt({ ...ground, world: 'mars', siteId: 'mars_jezero' }));
+    expect(archiveTopicAt({ ...ground, world: 'mars', siteId: 'custom' })).toBe('mars_global');
+    // The orbit cinematic is about the 2003 close approach.
+    expect(archiveTopicAt({ ...ground, spaceTargetId: 'mars_orbit' })).toBe('mars_2003');
   });
 
   it('is the nearest real thing to the lab’s explosion, in the lab and while it is watched', () => {

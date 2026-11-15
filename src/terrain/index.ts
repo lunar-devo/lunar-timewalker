@@ -1,9 +1,10 @@
 /**
- * Lunar terrain.
+ * Terrain of a site on the Moon or on Mars.
  *
- *  - Base relief: NASA LRO LOLA. Global SVS #4720 LDEM (16 px/deg, ~1.9 km) everywhere, plus PGDA 5 m/px
- *    measured DEMs at the south-pole sites. Resampled once per site into two node grids (wide: 200 m,
- *    near: 5 m) that the CPU and the GPU read identically.
+ *  - Base relief, Moon: NASA LRO LOLA. Global SVS #4720 LDEM (16 px/deg, ~1.9 km) everywhere, plus PGDA 5 m/px
+ *    measured DEMs at the south-pole sites. Mars: NASA MGS MOLA MEGDR (16 px/deg, ~3.7 km), metres above the
+ *    areoid. Resampled once per site into two node grids (wide: 200 m, near: 5 m) that the CPU and the GPU
+ *    read identically.
  *  - Sub-resolution relief: the analytic crater field in ./field.ts (statistical, not measured).
  *  - Geometry: camera-centred clipmap rings displaced in the vertex shader; crater octaves fade out with
  *    distance once the vertex grid can no longer carry them, while per-pixel normals keep them all.
@@ -12,15 +13,15 @@
  */
 import * as THREE from 'three';
 import type {
-  Collider, ITerrain, LightingState, QualityProfile, SiteDef, TerrainLoadInfo, WorldId,
+  Collider, ITerrain, LightingState, QualityProfile, SiteBody, SiteDef, TerrainLoadInfo, WorldId,
 } from '../core/types';
 import { assetUrl, fetchJson } from '../core/assets';
 import { lf, tpl } from '../core/l10n';
 import {
-  type Dem, type DemMeta, demMeters, loadDem, loadDemLayer, MOON_RADIUS_M,
+  BODY_RADIUS_M, type Dem, type DemMeta, demMeters, loadDem, loadDemLayer,
 } from '../core/dem';
 import {
-  detailHeight, FIELD_GLSL, FIRST_NORMAL_ONLY_OCTAVE, type FieldConfig, type KnownCrater,
+  CRATER_ROLL, detailHeight, FIELD_GLSL, FIRST_NORMAL_ONLY_OCTAVE, type FieldConfig, type KnownCrater,
 } from './field';
 
 const DEG2RAD = Math.PI / 180;
@@ -40,8 +41,16 @@ const SHADOW_SUN_DISTANCE_M = 110_000;
 /** Cascades 0–1 only draw rings reaching this far; beyond it the far-horizon visibility takes over. */
 const NEAR_CASCADE_REACH_M = 6000;
 const FAR_HORIZON_START_M = 3000;
-/** Real named craters near a site (positions approximate, from Apollo traverse maps). */
+/**
+ * Real named craters near a site (positions approximate, from Apollo traverse maps) and the level pad the
+ * hardware stands on. The Mars pads reach past every model of the site: the landers stand 18 m from the
+ * arrival point, the rover at Jezero 82 m.
+ */
 const SITE_FEATURES: Record<string, { flatRadiusM: number; known: KnownCrater[] }> = {
+  mars_jezero: { flatRadiusM: 90, known: [] },
+  mars_viking1: { flatRadiusM: 30, known: [] },
+  mars_viking2: { flatRadiusM: 30, known: [] },
+  mars_insight: { flatRadiusM: 30, known: [] },
   apollo11: {
     flatRadiusM: 20,
     known: [
@@ -49,6 +58,70 @@ const SITE_FEATURES: Record<string, { flatRadiusM: number; known: KnownCrater[] 
       { x: 430, z: -20, radiusM: 92, fresh: 0.9 },   // West crater, ~185 m wide, ~400 m east (Eagle overflew it)
     ],
   },
+};
+
+/** Where a body's measured ground comes from and how its colour map becomes the ground's albedo and tint. */
+interface BodyGround {
+  demJson: string;
+  /** Instrument name shown while the elevation map loads. */
+  instrument: string;
+  colorMap: string;
+  /** Normal albedo = albedoBase + albedoPerLuminance · (linear luminance of the colour map), kept inside albedoRange. */
+  albedoBase: number;
+  albedoPerLuminance: number;
+  albedoRange: readonly [number, number];
+  /**
+   * The body's typical ground hue (linear RGB at luminance 1) and how far, 0..1, the colour map's hue at the
+   * site is pulled toward it before it tints the ground. Alone, it tints the ground when the map cannot be read.
+   */
+  hue: readonly [number, number, number];
+  hueWeight: number;
+  /** Used when the colour map cannot be read. */
+  fallbackAlbedo: number;
+  /** FieldConfig.smallCraterRoll of the body. */
+  smallCraterRoll: number;
+  /** Share, 0..1, of the 2.5 m ground cells that hold a rock. */
+  rockDensity: number;
+}
+
+const BODY_GROUND: Record<SiteBody, BodyGround> = {
+  // Normal albedo: dark mare ≈ 0.07–0.10, bright highlands ≈ 0.15–0.17.
+  moon: {
+    demJson: 'assets/dem/moon_global.json',
+    instrument: 'LOLA',
+    colorMap: 'assets/tex/moon_color_2k.webp',
+    albedoBase: 0.06,
+    albedoPerLuminance: 0.3,
+    albedoRange: [0.07, 0.17],
+    hue: [1, 1, 1],
+    hueWeight: 0.65,
+    fallbackAlbedo: 0.12,
+    smallCraterRoll: CRATER_ROLL,
+    rockDensity: 0.42,
+  },
+  // Mars reflects about 0.10 (dark basaltic plains) to 0.30 (bright dust). The colour map (Viking MDIM 2.1) is
+  // a contrast-stretched mosaic whose dark regions lean blue, so its hue is held half-way to Mars's rust.
+  mars: {
+    demJson: 'assets/dem/mars_global.json',
+    instrument: 'MOLA',
+    colorMap: 'assets/tex/mars_color_2k.webp',
+    albedoBase: 0.03,
+    albedoPerLuminance: 1.25,
+    albedoRange: [0.10, 0.30],
+    hue: [1.54, 0.89, 0.57],
+    hueWeight: 0.5,
+    fallbackAlbedo: 0.17,
+    smallCraterRoll: 7,
+    rockDensity: 0.58,
+  },
+};
+
+/** Ground albedo and tint of a world visited on another body's site (a re-coloured Moon site). */
+const RECOLOURED_GROUND: Partial<Record<WorldId, { albedo: number; tint: readonly [number, number, number] }>> = {
+  mercury: { albedo: 0.13, tint: [0.92, 0.88, 0.83] },
+  venus: { albedo: 0.19, tint: [1.12, 0.84, 0.48] },
+  mars: { albedo: 0.21, tint: [1.22, 0.70, 0.45] },
+  earth: { albedo: 0.25, tint: [0.62, 0.74, 0.54] },
 };
 
 interface PackIndex {
@@ -89,8 +162,13 @@ function fetchGrid(g: NodeGrid, x: number, z: number): number {
   return (d[k] * (1 - tx) + d[k + 1] * tx) * (1 - tz) + (d[k + n] * (1 - tx) + d[k + n + 1] * tx) * tz;
 }
 
-/** Site-local (east, south) metres → selenographic lat/lon, azimuthal equidistant about the site. */
-function localToLatLon(eastM: number, southM: number, lat0Deg: number, lon0Deg: number, out: [number, number]): void {
+/**
+ * Site-local (east, south) metres → latitude / east longitude on a sphere of `radiusM`, azimuthal equidistant
+ * about the site.
+ */
+function localToLatLon(
+  eastM: number, southM: number, lat0Deg: number, lon0Deg: number, radiusM: number, out: [number, number],
+): void {
   const northM = -southM;
   const dist = Math.hypot(eastM, northM);
   if (dist < 1e-6) {
@@ -98,7 +176,7 @@ function localToLatLon(eastM: number, southM: number, lat0Deg: number, lon0Deg: 
     out[1] = lon0Deg;
     return;
   }
-  const c = dist / MOON_RADIUS_M;
+  const c = dist / radiusM;
   const theta = Math.atan2(eastM, northM);
   const phi0 = lat0Deg * DEG2RAD;
   const sinC = Math.sin(c);
@@ -114,7 +192,7 @@ function catmullRom(p0: number, p1: number, p2: number, p3: number, t: number): 
   return p1 + 0.5 * t * (p2 - p0 + t * (2 * p0 - 5 * p1 + 4 * p2 - p3 + t * (3 * (p1 - p2) + p3 - p0)));
 }
 
-/** Bicubic (Catmull–Rom) sample of the global equirectangular DEM, metres above the 1737.4 km sphere. */
+/** Bicubic (Catmull–Rom) sample of a global equirectangular DEM, metres above the body's reference surface. */
 function sampleGlobal(dem: Dem, latDeg: number, lonDeg: number): number {
   const w = dem.meta.width;
   const h = dem.meta.height;
@@ -340,7 +418,7 @@ void main() {
     if (a > 0.0) h += craterOctave(p, o).x * a;
   }
   h += knownCraters(p).x;
-  h -= dot(p, p) / (2.0 * MOON_RADIUS);
+  h -= dot(p, p) / (2.0 * uBodyRadius);
   vWorld = vec3(p.x, h, p.y);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }
@@ -411,7 +489,7 @@ void main() {
   float nm = hiResMask(p);
   vec2 g = texture(uWideG, gridUv(uWideRect, p)).rg;
   if (nm > 0.0) g = mix(g, texture(uNearG, gridUv(uNearRect, p)).rg, nm);
-  g -= p / MOON_RADIUS;
+  g -= p / uBodyRadius;
 
   float sunHLen = length(uSunDir.xz);
   vec2 sunH = sunHLen > 1e-4 ? uSunDir.xz / sunHLen : vec2(0.0);
@@ -539,7 +617,8 @@ export function createTerrain(renderer: THREE.WebGLRenderer): ITerrain {
   object3d.name = 'terrain';
   const shadowScene = new THREE.Scene();
 
-  let globalDem: Dem | null = null;
+  const globalDems: Partial<Record<SiteBody, Dem>> = {};
+  let siteBody: SiteBody = 'moon';
   let packIndex: PackIndex | null = null;
   let quality: QualityProfile | null = null;
 
@@ -564,6 +643,7 @@ export function createTerrain(renderer: THREE.WebGLRenderer): ITerrain {
     flatZ: 0,
     flatRadiusM: 0,
     known: [],
+    smallCraterRoll: CRATER_ROLL,
   };
 
   const blank = (): THREE.DataTexture => heightTexture(emptyGrid());
@@ -578,6 +658,8 @@ export function createTerrain(renderer: THREE.WebGLRenderer): ITerrain {
     uKnown: { value: [new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4()] },
     uFocus: { value: new THREE.Vector2() },
     uGeoFade: { value: new THREE.Vector2(3, 5.4) },
+    uBodyRadius: { value: BODY_RADIUS_M.moon },
+    uSmallCraterRoll: { value: CRATER_ROLL },
   };
 
   const shadowTargets: THREE.WebGLRenderTarget[] = [];
@@ -867,7 +949,7 @@ export function createTerrain(renderer: THREE.WebGLRenderer): ITerrain {
       if (count >= rockLimit) break;
       const i = bi + di;
       const j = bj + dj;
-      if (rand(i, j, 1) > 0.42) continue;
+      if (rand(i, j, 1) > BODY_GROUND[siteBody].rockDensity) continue;
       const x = (i + rand(i, j, 2)) * ROCK_CELL_M;
       const z = (j + rand(i, j, 3)) * ROCK_CELL_M;
       const padDist = fieldCfg.flatRadiusM > 0 ? Math.hypot(x - fieldCfg.flatX, z - fieldCfg.flatZ) : Infinity;
@@ -1017,7 +1099,7 @@ export function createTerrain(renderer: THREE.WebGLRenderer): ITerrain {
   }
 
   function curvature(x: number, z: number): number {
-    return (x * x + z * z) / (2 * MOON_RADIUS_M);
+    return (x * x + z * z) / (2 * fieldUniforms.uBodyRadius.value);
   }
 
   function coarseHeight(x: number, z: number): number {
@@ -1046,25 +1128,42 @@ export function createTerrain(renderer: THREE.WebGLRenderer): ITerrain {
   }
 
   // ───────────── site data ─────────────
-  let moonColorImage: HTMLImageElement | null = null;
+  const colorImages: Partial<Record<SiteBody, HTMLImageElement>> = {};
 
-  async function siteAlbedo(site: SiteDef): Promise<{ albedo: number; tint: THREE.Vector3 }> {
-    if (!moonColorImage) {
-      const img = new Image();
-      img.src = assetUrl('assets/tex/moon_color_2k.webp');
-      await img.decode();
-      moonColorImage = img;
+  /**
+   * On its own body the ground wears the albedo and tint sampled from that body's colour map at the site; a
+   * Moon site visited as another world wears that world's fixed colours. Heights are never touched.
+   */
+  function applyGroundLook(): void {
+    const look = activeWorld === siteBody ? undefined : RECOLOURED_GROUND[activeWorld];
+    if (look) {
+      surfaceUniforms.uAlbedo.value = look.albedo;
+      surfaceUniforms.uTint.value.set(look.tint[0], look.tint[1], look.tint[2]);
+    } else {
+      surfaceUniforms.uAlbedo.value = albedo;
+      surfaceUniforms.uTint.value.copy(siteTint);
     }
-    const w = moonColorImage.naturalWidth;
-    const h = moonColorImage.naturalHeight;
+  }
+
+  async function siteAlbedo(site: SiteDef, body: SiteBody): Promise<{ albedo: number; tint: THREE.Vector3 }> {
+    const ground = BODY_GROUND[body];
+    let image = colorImages[body];
+    if (!image) {
+      image = new Image();
+      image.src = assetUrl(ground.colorMap);
+      await image.decode();
+      colorImages[body] = image;
+    }
+    const w = image.naturalWidth;
+    const h = image.naturalHeight;
     const sx = Math.floor(((site.lonDeg + 180) / 360) * w);
     const sy = Math.min(h - 3, Math.max(0, Math.floor(((90 - site.latDeg) / 180) * h)));
     const canvas = document.createElement('canvas');
     canvas.width = 5;
     canvas.height = 5;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return { albedo: 0.12, tint: new THREE.Vector3(1, 1, 1) };
-    ctx.drawImage(moonColorImage, Math.max(0, sx - 2), Math.max(0, sy - 2), 5, 5, 0, 0, 5, 5);
+    if (!ctx) throw new Error('2D canvas unavailable');
+    ctx.drawImage(image, Math.max(0, sx - 2), Math.max(0, sy - 2), 5, 5, 0, 0, 5, 5);
     const px = ctx.getImageData(0, 0, 5, 5).data;
     const lin = [0, 0, 0];
     for (let k = 0; k < px.length; k += 4) {
@@ -1075,12 +1174,12 @@ export function createTerrain(renderer: THREE.WebGLRenderer): ITerrain {
     }
     const lum = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
     const tint = new THREE.Vector3(lin[0], lin[1], lin[2]).divideScalar(Math.max(lum, 1e-4));
-    tint.lerp(new THREE.Vector3(1, 1, 1), 0.65);
-    // Normal albedo: dark mare ≈ 0.07–0.10, bright highlands ≈ 0.15–0.17.
-    return { albedo: Math.min(0.17, Math.max(0.07, 0.06 + 0.3 * lum)), tint };
+    tint.lerp(new THREE.Vector3(ground.hue[0], ground.hue[1], ground.hue[2]), ground.hueWeight);
+    const [lo, hi] = ground.albedoRange;
+    return { albedo: Math.min(hi, Math.max(lo, ground.albedoBase + ground.albedoPerLuminance * lum)), tint };
   }
 
-  async function buildWideGrid(site: SiteDef, dem: Dem, onRow: (f: number) => void): Promise<NodeGrid> {
+  async function buildWideGrid(site: SiteDef, dem: Dem, radiusM: number, onRow: (f: number) => void): Promise<NodeGrid> {
     const n = WIDE_NODES;
     const size = (n - 1) * WIDE_SPACING_M;
     const data = new Float32Array(n * n);
@@ -1088,7 +1187,7 @@ export function createTerrain(renderer: THREE.WebGLRenderer): ITerrain {
     for (let j = 0; j < n; j++) {
       const south = (j / (n - 1) - 0.5) * size;
       for (let i = 0; i < n; i++) {
-        localToLatLon((i / (n - 1) - 0.5) * size, south, site.latDeg, site.lonDeg, ll);
+        localToLatLon((i / (n - 1) - 0.5) * size, south, site.latDeg, site.lonDeg, radiusM, ll);
         data[j * n + i] = sampleGlobal(dem, ll[0], ll[1]);
       }
       if ((j & 63) === 63) {
@@ -1129,19 +1228,26 @@ export function createTerrain(renderer: THREE.WebGLRenderer): ITerrain {
     },
 
     async load(site, q, onProgress): Promise<TerrainLoadInfo> {
-      onProgress?.(0.02, 'LOLA');
-      globalDem ??= await loadDem('assets/dem/moon_global.json');
-      const dem = globalDem;
-      const pack = await loadNearPack(site);
+      const body = site.body ?? 'moon';
+      const ground = BODY_GROUND[body];
+      onProgress?.(0.02, ground.instrument);
+      const dem = globalDems[body] ?? await loadDem(ground.demJson);
+      globalDems[body] = dem;
+      // Measured high-resolution packs exist for Moon sites only.
+      const pack = body === 'moon' ? await loadNearPack(site) : null;
       onProgress?.(0.3);
 
-      const wideRaw = await buildWideGrid(site, dem, (f) => onProgress?.(0.3 + f * 0.5));
+      const wideRaw = await buildWideGrid(site, dem, BODY_RADIUS_M[body], (f) => onProgress?.(0.3 + f * 0.5));
       hasHiRes = pack !== null;
       near = pack ? pack.grid : emptyGrid();
       originElevationM = hasHiRes ? fetchGrid(near, 0, 0) : fetchGrid(wideRaw, 0, 0);
       for (let k = 0; k < wideRaw.data.length; k++) wideRaw.data[k] -= originElevationM;
       if (hasHiRes) for (let k = 0; k < near.data.length; k++) near.data[k] -= originElevationM;
       wide = wideRaw;
+      siteBody = body;
+      fieldUniforms.uBodyRadius.value = BODY_RADIUS_M[body];
+      fieldCfg.smallCraterRoll = ground.smallCraterRoll;
+      fieldUniforms.uSmallCraterRoll.value = ground.smallCraterRoll;
       onProgress?.(0.85);
 
       const features = SITE_FEATURES[site.id];
@@ -1164,13 +1270,13 @@ export function createTerrain(renderer: THREE.WebGLRenderer): ITerrain {
       fieldUniforms.uNearRect.value.set(near.cx, near.cz, near.size, near.n);
       fieldUniforms.uHiRes.value = hasHiRes ? 1 : 0;
 
-      const alb = await siteAlbedo(site).catch(() => ({ albedo: 0.12, tint: new THREE.Vector3(1, 1, 1) }));
+      const alb = await siteAlbedo(site, body).catch(() => ({
+        albedo: ground.fallbackAlbedo,
+        tint: new THREE.Vector3(ground.hue[0], ground.hue[1], ground.hue[2]),
+      }));
       albedo = alb.albedo;
       siteTint.copy(alb.tint);
-      if (activeWorld === 'moon') {
-        surfaceUniforms.uAlbedo.value = albedo;
-        surfaceUniforms.uTint.value.copy(siteTint);
-      }
+      applyGroundLook();
 
       api.setQuality(q);
       placeRings(0, 0);
@@ -1178,16 +1284,23 @@ export function createTerrain(renderer: THREE.WebGLRenderer): ITerrain {
       onProgress?.(1);
 
       const globalMpp = Math.round(dem.meta.metersPerSample);
+      let sourceLabel = lf(
+        tpl`LOLA küresel ${globalMpp} m/px (SVS #4720) + istatistiksel kraterler`,
+        tpl`LOLA global ${globalMpp} m/px (SVS #4720) + statistical craters`,
+      );
+      if (body === 'mars') {
+        sourceLabel = lf(
+          tpl`MOLA küresel ${globalMpp} m/px (MEGDR 16 px/°) + istatistiksel kraterler`,
+          tpl`MOLA global ${globalMpp} m/px (MEGDR 16 px/deg) + statistical craters`,
+        );
+      } else if (hasHiRes && pack) {
+        sourceLabel = lf(
+          tpl`LOLA ${pack.mpp.toFixed(0)} m/px ölçüm (PGDA ${pack.label}) + LOLA küresel ${globalMpp} m/px + istatistiksel kraterler`,
+          tpl`LOLA ${pack.mpp.toFixed(0)} m/px measured (PGDA ${pack.label}) + LOLA global ${globalMpp} m/px + statistical craters`,
+        );
+      }
       return {
-        sourceLabel: hasHiRes && pack
-          ? lf(
-            tpl`LOLA ${pack.mpp.toFixed(0)} m/px ölçüm (PGDA ${pack.label}) + LOLA küresel ${globalMpp} m/px + istatistiksel kraterler`,
-            tpl`LOLA ${pack.mpp.toFixed(0)} m/px measured (PGDA ${pack.label}) + LOLA global ${globalMpp} m/px + statistical craters`,
-          )
-          : lf(
-            tpl`LOLA küresel ${globalMpp} m/px (SVS #4720) + istatistiksel kraterler`,
-            tpl`LOLA global ${globalMpp} m/px (SVS #4720) + statistical craters`,
-          ),
+        sourceLabel,
         dataResolutionM: hasHiRes && pack ? pack.mpp : dem.meta.metersPerSample,
         hasHiRes,
         originElevationM,
@@ -1300,22 +1413,7 @@ export function createTerrain(renderer: THREE.WebGLRenderer): ITerrain {
         cloudUniforms.uHaze.value.setHex(look.haze);
         cloudUniforms.uRelief.value = look.relief;
       }
-      if (world === 'mercury') {
-        surfaceUniforms.uAlbedo.value = 0.13;
-        surfaceUniforms.uTint.value.set(0.92, 0.88, 0.83);
-      } else if (world === 'venus') {
-        surfaceUniforms.uAlbedo.value = 0.19;
-        surfaceUniforms.uTint.value.set(1.12, 0.84, 0.48);
-      } else if (world === 'mars') {
-        surfaceUniforms.uAlbedo.value = 0.21;
-        surfaceUniforms.uTint.value.set(1.22, 0.70, 0.45);
-      } else if (world === 'earth') {
-        surfaceUniforms.uAlbedo.value = 0.25;
-        surfaceUniforms.uTint.value.set(0.62, 0.74, 0.54);
-      } else {
-        surfaceUniforms.uAlbedo.value = albedo;
-        surfaceUniforms.uTint.value.copy(siteTint);
-      }
+      applyGroundLook();
     },
 
     dispose(): void {

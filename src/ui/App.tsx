@@ -2,22 +2,22 @@
  * Root UI:
  *   - Home menu: Events (with category filters), Galaxies (3D viewer), Worlds (walkable physics),
  *     Explosion Lab, Spectator Mode, Free Exploration, Tutorial
- *   - 3D Moon Map for choosing where to watch an event from
+ *   - 3D map of the Moon or Mars for choosing where to land or where to watch an event from
  *   - Loading screen, SurfaceHud, SpaceHud, and clean glass panels
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import './theme.css';
-import type { EventCategory, L10n, Lang, Quality, SiteDef, WorldId } from '../core/types';
+import type { EventCategory, L10n, Lang, Quality, SiteBody, SiteDef, WorldId } from '../core/types';
 import { fmt, lf, loc, tpl, tx, useLang } from '../core/i18n';
 import { useGame } from '../core/store';
 import { formatDate } from '../core/time';
 import { useDialog } from './useDialog';
 import { targetAltAz } from '../astro';
 import {
-  BODY_NAMES, CREDIT_GROUPS, EVENTS, GALAXIES, SITES, TRANSIENTS, WORLD_ORDER, WORLDS,
+  BODY_NAMES, CREDIT_GROUPS, EVENTS, GALAXIES, SITES_BY_BODY, TRANSIENTS, WORLD_ORDER, WORLDS,
 } from '../content';
 import { game } from '../game/api';
-import { SpaceHud, SurfaceHud } from './hud';
+import { EVENT_BODY, ONLY_FROM_BODY, SpaceHud, SurfaceHud } from './hud';
 import { LangPicker } from './LangPicker';
 import { SpectatorBar, TutorialPanel } from './modes';
 
@@ -307,6 +307,28 @@ function SiteBadges({ badge, targetName, lang }: { badge: SiteBadge; targetName:
   );
 }
 
+/** What the map and the loading screen say about each body that has places of its own. */
+const BODY_TEXTS: Record<SiteBody, { landingPlaces: L10n; viewingPlaces: L10n; freeVisit: L10n; loading: L10n }> = {
+  moon: {
+    landingPlaces: { tr: 'İniş yerleri', en: 'Landing places' },
+    viewingPlaces: { tr: 'Gözlem yerleri (önerilenler üstte)', en: 'Viewing places (recommended first)' },
+    freeVisit: {
+      tr: 'Ortadaki Ay küresini sürükleyerek döndürün. Sağdaki listeden bir yer seçin ya da küre üzerinde istediğiniz noktaya tıklayın. İndikten sonra alttaki zaman çubuğuyla istediğiniz tarihe gidebilir, üst çubuktan başka bir gezegene geçebilirsiniz.',
+      en: 'Drag the Moon globe to turn it. Pick a site on the right or click anywhere on the sphere. Once on the ground, use the time bar to visit any date or switch worlds from the top bar.',
+    },
+    loading: { tr: 'NASA LRO / LOLA arazi verisi yükleniyor', en: 'Loading NASA LRO / LOLA terrain' },
+  },
+  mars: {
+    landingPlaces: { tr: 'Mars’ta iniş yerleri', en: 'Landing places on Mars' },
+    viewingPlaces: { tr: 'Mars’ta gözlem yerleri (önerilenler üstte)', en: 'Viewing places on Mars (recommended first)' },
+    freeVisit: {
+      tr: 'Ortadaki Mars küresini sürükleyerek döndürün. Sağdaki listeden bir aracın iniş yerini seçin ya da küre üzerinde istediğiniz noktaya tıklayın. İndikten sonra alttaki zaman çubuğuyla istediğiniz tarihe gidebilir, üst çubuktan başka bir gezegene geçebilirsiniz.',
+      en: 'Drag the Mars globe to turn it. Pick a spacecraft’s landing place on the right or click anywhere on the sphere. Once on the ground, use the time bar to visit any date or switch worlds from the top bar.',
+    },
+    loading: { tr: 'NASA MGS / MOLA arazi verisi yükleniyor', en: 'Loading NASA MGS / MOLA terrain' },
+  },
+};
+
 function MapScreen() {
   const lang = useLang();
   const activeEventId = useGame((s) => s.activeEventId);
@@ -316,41 +338,51 @@ function MapScreen() {
   const mapWorld = useGame((s) => s.mapWorld);
 
   const activeEvent = EVENTS.find((e) => e.id === activeEventId);
+  // An event that happens on the Moon or on Mars is watched from there, whatever world the map was on.
+  const eventBody = activeEvent ? EVENT_BODY[activeEvent.seenFrom] : undefined;
+  const shownWorld: WorldId = eventBody ?? mapWorld;
+  // The Moon and Mars have places of their own. Every other world is visited on the ground of a Moon site.
+  const body: SiteBody = shownWorld === 'mars' ? 'mars' : 'moon';
+  const elsewhere = shownWorld !== body;
+  const sites = SITES_BY_BODY[body];
 
-  // The listed places, and the point picked on the globe if there is one.
+  // The listed places, and the point picked on the globe if there is one: what their own sky holds.
   const siteBadges = useMemo(() => {
     const out: Record<string, SiteBadge> = {};
     const targetId = activeEvent?.primaryTargetId;
     const transient = targetId ? TRANSIENTS.find((t) => t.id === targetId && t.kind === 'supernova') : undefined;
 
-    for (const s of mapSelection?.id === 'custom' ? [...SITES, mapSelection] : SITES) {
-      const sun = targetAltAz(clock.jdTT, s, 'sun');
-      const earth = targetAltAz(clock.jdTT, s, 'earth');
+    for (const s of mapSelection?.id === 'custom' ? [...sites, mapSelection] : sites) {
+      const sun = targetAltAz(clock.jdTT, s, 'sun', body);
+      const earth = targetAltAz(clock.jdTT, s, 'earth', body);
       let targetEl: number | null = null;
-      if (targetId && targetId in BODY_NAMES && targetId !== 'sun' && targetId !== 'earth') {
-        targetEl = targetAltAz(clock.jdTT, s, targetId as keyof typeof BODY_NAMES).elDeg;
+      if (targetId && targetId in BODY_NAMES && targetId !== 'sun' && targetId !== 'earth' && targetId !== body) {
+        targetEl = targetAltAz(clock.jdTT, s, targetId as keyof typeof BODY_NAMES, body).elDeg;
       } else if (transient && transient.kind === 'supernova') {
-        targetEl = targetAltAz(clock.jdTT, s, { raDeg: transient.raDeg, decDeg: transient.decDeg }).elDeg;
+        targetEl = targetAltAz(clock.jdTT, s, { raDeg: transient.raDeg, decDeg: transient.decDeg }, body).elDeg;
       }
       out[s.id] = { sunUp: sun.elDeg > 0, earthUp: earth.elDeg > 0, targetEl };
     }
     return out;
-  }, [clock.jdTT, activeEvent, mapSelection]);
+  }, [clock.jdTT, activeEvent, mapSelection, sites, body]);
 
   const orderedSites = useMemo(() => {
     const rec = new Set(activeEvent?.recommendedSiteIds ?? []);
-    return [...SITES].sort((a, b) => (rec.has(b.id) ? 1 : 0) - (rec.has(a.id) ? 1 : 0));
-  }, [activeEvent]);
+    return [...sites].sort((a, b) => (rec.has(b.id) ? 1 : 0) - (rec.has(a.id) ? 1 : 0));
+  }, [activeEvent, sites]);
 
-  const selectedSite: SiteDef = mapSelection ?? orderedSites[0];
+  // A selection that lies on the other body (the map has just changed worlds) gives way to the first place here.
+  const selectedSite: SiteDef = mapSelection && (mapSelection.body ?? 'moon') === body ? mapSelection : orderedSites[0];
   const targetName = activeEvent?.primaryTargetId ? shortTargetName(activeEvent.primaryTargetId, lang) : '';
-  const moonOnly = activeEvent?.seenFrom === 'moon';
-  const elsewhere = mapWorld !== 'moon' && !moonOnly;
-  const worldName = WORLDS[mapWorld].name;
+  const worldName = WORLDS[shownWorld].name;
 
   // The chosen place is brought into view: it may lie below the fold of the list, or (a point picked on the
   // globe) above it.
   const placesRef = useRef<HTMLDivElement>(null);
+  // The list of another body starts at its top, under its heading.
+  useEffect(() => {
+    placesRef.current?.scrollTo(0, 0);
+  }, [body]);
   useEffect(() => {
     placesRef.current?.querySelector('.mn-site-item.is-selected')?.scrollIntoView({ block: 'nearest' });
   }, [selectedSite.id, selectedSite.latDeg, selectedSite.lonDeg]);
@@ -378,8 +410,8 @@ function MapScreen() {
             <span>{activeEvent ? tx(lang, 'İzleme yeri', 'Watch from') : tx(lang, 'Gezegen', 'World')}</span>
             <select
               className="mn-lang"
-              value={moonOnly ? 'moon' : mapWorld}
-              disabled={moonOnly}
+              value={shownWorld}
+              disabled={eventBody !== undefined}
               onChange={(e) => game.setMapWorld(e.target.value as WorldId)}
             >
               {WORLD_ORDER.map((wid) => (
@@ -411,14 +443,17 @@ function MapScreen() {
       </div>
 
       <div className="mn-map-col">
-        {(elsewhere || moonOnly) && (
+        {(elsewhere || eventBody || body === 'mars') && (
           <div className="mn-map-note">
-            {moonOnly && (
-              <p>{tx(lang, 'Bu olay Ay’da geçer; yalnızca Ay’dan izlenir.', 'This event takes place on the Moon and can only be watched from there.')}</p>
+            {eventBody && <p>{loc(ONLY_FROM_BODY[eventBody], lang)}</p>}
+            {body === 'mars' && (
+              <p>
+                {tx(lang, 'Mars’ın zemini NASA MOLA yükseklik verisinden kurulur; verinin çözünürlüğünden ince engebeler bir modeldir.', 'The ground of Mars is built from NASA MOLA elevation data; relief finer than its resolution is a model.')}
+              </p>
             )}
             {elsewhere && (
               <p>
-                {WORLDS[mapWorld].solidSurface
+                {WORLDS[shownWorld].solidSurface
                   ? tx(
                     lang,
                     tpl`${worldName}: gökyüzü, çekim ve ışık bu gezegen için hesaplanır. Zemin ise seçtiğiniz Ay bölgesinin yükseklik verisinden uyarlanmış bir modeldir.`,
@@ -436,7 +471,7 @@ function MapScreen() {
                 {tx(lang, 'Olay için en uygun gözlem yeri kendiliğinden seçilir. Gezegen hızlı döndüğü için gökyüzü yıldızlara sabitlenir: gezegenin her dönüşünde tek kare gösterilir.', 'The best viewing spot for the event is chosen automatically. Because the planet spins quickly, the sky is held to the stars: one frame is shown per rotation of the planet.')}
               </p>
             )}
-            {elsewhere && activeEvent?.seenFrom === 'earthMoon' && (
+            {shownWorld !== 'moon' && activeEvent?.seenFrom === 'earthMoon' && (
               <p>
                 {tx(lang, 'Bu olay, Dünya ve Ay’dan görünen hâliyle anlatılır. Başka bir gezegenden aynı an farklı görünür; orada göreceğiniz, o gezegenin o andaki hesaplanmış gökyüzüdür.', 'This event is described as it appears from Earth and the Moon. From another planet the same moment looks different; what you will see there is that planet’s computed sky at that moment.')}
               </p>
@@ -464,7 +499,7 @@ function MapScreen() {
           </>
         ) : (
           <p style={{ margin: 0, fontSize: '0.86rem', lineHeight: 1.55, color: 'var(--c-dim)' }}>
-            {tx(lang, 'Ortadaki Ay küresini sürükleyerek döndürün. Sağdaki listeden bir yer seçin ya da küre üzerinde istediğiniz noktaya tıklayın. İndikten sonra alttaki zaman çubuğuyla istediğiniz tarihe gidebilir, üst çubuktan başka bir gezegene geçebilirsiniz.', 'Drag the Moon globe to turn it. Pick a site on the right or click anywhere on the sphere. Once on the ground, use the time bar to visit any date or switch worlds from the top bar.')}
+            {loc(BODY_TEXTS[body].freeVisit, lang)}
           </p>
         )}
       </div>
@@ -475,9 +510,7 @@ function MapScreen() {
 
       <div className="mn-map-col" ref={placesRef}>
         <div className="mn-section-label">
-          {activeEvent
-            ? (tx(lang, 'Gözlem yerleri (önerilenler üstte)', 'Viewing places (recommended first)'))
-            : (tx(lang, 'İniş yerleri', 'Landing places'))}
+          {loc(activeEvent ? BODY_TEXTS[body].viewingPlaces : BODY_TEXTS[body].landingPlaces, lang)}
         </div>
 
         {selectedSite.id === 'custom' && (
@@ -667,7 +700,14 @@ function EventMenuScreen() {
                 </div>
 
                 <div className="mn-card-foot">
-                  <span>{tx(lang, 'Yer seç ve izle', 'Choose a place and watch')}</span>
+                  {/* An event with no scene on the ground opens its own view; the others lead to the map. */}
+                  <span>
+                    {!ev.staging?.some((s) => s.where === 'surface')
+                      ? tx(lang, 'İzle', 'Watch')
+                      : ev.seenFrom === 'mars'
+                        ? tx(lang, 'Mars’ta yer seç ve izle', 'Choose a place on Mars and watch')
+                        : tx(lang, 'Yer seç ve izle', 'Choose a place and watch')}
+                  </span>
                   <span>→</span>
                 </div>
               </button>
@@ -821,8 +861,8 @@ export default function App() {
       {phase === 'loading' && (
         <div className="mn-screen" style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
           <div className="mn-brand-tag">
-            {mapWorld === 'moon'
-              ? tx(lang, 'NASA LRO / LOLA arazi verisi yükleniyor', 'Loading NASA LRO / LOLA terrain')
+            {mapWorld === 'moon' || mapWorld === 'mars'
+              ? loc(BODY_TEXTS[mapWorld].loading, lang)
               : tx(lang, 'Ortam hazırlanıyor', 'Preparing the world')}
           </div>
           <h2 style={{ margin: '10px 0', fontSize: '1.5rem' }}>

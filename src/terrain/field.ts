@@ -11,6 +11,10 @@ export const OCTAVE_CELLS = [900, 340, 130, 50, 19, 7.2, 2.7, 1.0, 0.4] as const
 export const OCTAVE_COUNT = OCTAVE_CELLS.length;
 /** Octaves at or above this index are shaded per pixel only (too small for the finest vertex grid). */
 export const FIRST_NORMAL_ONLY_OCTAVE = 8;
+/** Octaves from this index on (cells of 50 m and less) hold the small craters: at most about 33 m across. */
+export const FIRST_SMALL_OCTAVE = 3;
+/** A cell holds a crater where its 3-bit roll (0–7) reaches this: half of the cells. */
+export const CRATER_ROLL = 4;
 
 /** Added to cell indices before hashing so they are non-negative on both CPU and GPU. */
 const CELL_HASH_OFFSET = 1048576;
@@ -34,6 +38,11 @@ export interface FieldConfig {
   flatZ: number;
   flatRadiusM: number;
   known: KnownCrater[];
+  /**
+   * The roll a cell of the small octaves must reach to hold a crater: CRATER_ROLL as on the airless Moon; 7
+   * leaves a quarter of them, as on Mars, whose air stops small impactors and whose wind fills small pits.
+   */
+  smallCraterRoll: number;
 }
 
 function smoothstep(e0: number, e1: number, x: number): number {
@@ -64,7 +73,7 @@ function craterProfile(r: number, radiusM: number, fresh: number): number {
   return rim * (1 - t) * (1 - t) * (1 + 2 * t);
 }
 
-function octaveHeight(x: number, z: number, octave: number): number {
+function octaveHeight(x: number, z: number, octave: number, smallCraterRoll: number): number {
   const cell = OCTAVE_CELLS[octave];
   const bx = Math.floor(x / cell - 0.5);
   const bz = Math.floor(z / cell - 0.5);
@@ -74,7 +83,7 @@ function octaveHeight(x: number, z: number, octave: number): number {
       const cx = bx + i;
       const cz = bz + j;
       const h = hash32(cx + CELL_HASH_OFFSET, cz + CELL_HASH_OFFSET, octave);
-      if ((h >>> 29) < 4) continue;
+      if ((h >>> 29) < (octave >= FIRST_SMALL_OCTAVE ? smallCraterRoll : CRATER_ROLL)) continue;
       const ox = (h & 255) / 255;
       const oz = ((h >>> 8) & 255) / 255;
       const rr = ((h >>> 16) & 255) / 255;
@@ -107,7 +116,7 @@ export function detailHeight(
   for (let o = firstOctave; o <= lastOctave; o++) {
     let amp = o < cfg.firstHiResOctave ? 1 - hiRes : 1;
     if (OCTAVE_CELLS[o] > 1.5) amp *= flat;
-    if (amp > 0) sum += octaveHeight(x, z, o) * amp;
+    if (amp > 0) sum += octaveHeight(x, z, o, cfg.smallCraterRoll) * amp;
   }
   for (const k of cfg.known) {
     const d = Math.hypot(x - k.x, z - k.z);
@@ -119,7 +128,8 @@ export function detailHeight(
 /**
  * GLSL (ES 3.00) twin of the functions above. Requires these uniforms:
  *   highp sampler2D uNearH, uWideH (R32F node grids), vec4 uNearRect / uWideRect (centreX, centreZ, sizeM, nodes),
- *   float uHiRes, int uFirstHiResOctave, vec3 uFlat (x, z, radius), vec4 uKnown[4] (x, z, radius, fresh).
+ *   float uHiRes, int uFirstHiResOctave, vec3 uFlat (x, z, radius), vec4 uKnown[4] (x, z, radius, fresh),
+ *   float uBodyRadius (mean radius of the site's body, metres), uint uSmallCraterRoll (FieldConfig.smallCraterRoll).
  */
 export const FIELD_GLSL = /* glsl */ `
 uniform highp sampler2D uNearH;
@@ -130,8 +140,9 @@ uniform float uHiRes;
 uniform int uFirstHiResOctave;
 uniform vec3 uFlat;
 uniform vec4 uKnown[4];
+uniform float uBodyRadius;
+uniform uint uSmallCraterRoll;
 
-const float MOON_RADIUS = 1737400.0;
 const int OCTAVES = ${OCTAVE_COUNT};
 const int GEO_OCTAVES = ${FIRST_NORMAL_ONLY_OCTAVE};
 const float CELL[${OCTAVE_COUNT}] = float[${OCTAVE_COUNT}](${OCTAVE_CELLS.map((c) => c.toFixed(1)).join(', ')});
@@ -175,7 +186,7 @@ float baseHeight(vec2 p, float nm) {
 /** Decodes the crater (if any) of cell c in octave o. */
 bool craterAt(vec2 c, int o, out vec2 centre, out float R, out float fresh) {
   uint h = hash32(uint(int(c.x) + ${CELL_HASH_OFFSET}), uint(int(c.y) + ${CELL_HASH_OFFSET}), uint(o));
-  if ((h >> 29) < 4u) return false;
+  if ((h >> 29) < (o >= ${FIRST_SMALL_OCTAVE} ? uSmallCraterRoll : ${CRATER_ROLL}u)) return false;
   float cell = CELL[o];
   centre = (c + vec2(float(h & 255u), float((h >> 8) & 255u)) / 255.0) * cell;
   float rr = float((h >> 16) & 255u) / 255.0;

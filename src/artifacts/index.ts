@@ -1,24 +1,29 @@
 /**
- * Hardware on the lunar surface ("silent witnesses") and the player's deployable beacon.
+ * Hardware on the ground ("silent witnesses") and the player's deployable beacon.
  *
  * Everything is driven by the simulation clock: each asset appears at its real arrival time, and the
  * Apollo 11 Lunar Module follows the mission timeline — final descent to touchdown (20 July 1969,
  * 20:17:40 UT), ascent-stage lift-off (21 July, 17:54:00 UT) and the flag blown over by the ascent
  * engine. Times are historical; the descent and ascent trajectories are simplified fits to the
  * mission's altitude/velocity call-outs, not reconstructed telemetry.
+ *
+ * On Mars the hardware is the NASA model of each vehicle, and the Ingenuity helicopter flies its first
+ * flight (19 April 2021) by the same clock: the height, the hover, the turn and the time in the air are the
+ * recorded ones; how fast it climbs and descends and when in the hover it turns are choices made here.
  */
 import * as THREE from 'three';
 import type {
   ArtifactInfo, ArtifactPlacement, ArtifactVisual, Collider, GroundQuery, IArtifacts,
   LightingState, SurfaceAsset,
 } from '../core/types';
-import { loadGlb } from '../core/gltf';
+import { fitModelToHeight, loadGlb } from '../core/gltf';
 import { softDotTexture } from '../core/sprites';
 import { jdTTFromCalendarUT, SECONDS_PER_DAY } from '../core/time';
 
 const DEG2RAD = Math.PI / 180;
 const MOON_G = 1.62;
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
+const X_AXIS = new THREE.Vector3(1, 0, 0);
 
 /** Apollo 11 mission times, UT. */
 const A11_TOUCHDOWN_JD = jdTTFromCalendarUT({ year: 1969, month: 7, day: 20, hour: 20, minute: 17, second: 40 });
@@ -30,6 +35,30 @@ const A11_CLIMB_SEC = 150;
 const LM_PAD_SPAN_M = 9.4;
 const DUST_COUNT = 1500;
 
+/**
+ * Ingenuity's first flight, from NASA release 21-039: airborne at 07:34 UT on 19 April 2021 (the release
+ * gives the minute; the flight is set at its start), a climb to 3 m, a 30 s hover with a 96° turn, and
+ * touchdown after 39.1 s in the air.
+ */
+const FLIGHT_LIFTOFF_JD = jdTTFromCalendarUT({ year: 2021, month: 4, day: 19, hour: 7, minute: 34, second: 0 });
+const FLIGHT_HEIGHT_M = 3;
+const FLIGHT_HOVER_SEC = 30;
+const FLIGHT_AIRBORNE_SEC = 39.1;
+const FLIGHT_TURN_DEG = 96;
+/**
+ * The 9.1 s that are not hover, shared between the climb and the descent: the release does not give the
+ * rates. Eased at both ends, these give a peak of 1.1 m/s going up and 0.9 m/s coming down.
+ */
+const FLIGHT_CLIMB_SEC = 4.1;
+const FLIGHT_DESCENT_SEC = FLIGHT_AIRBORNE_SEC - FLIGHT_HOVER_SEC - FLIGHT_CLIMB_SEC;
+/** The turn is placed in the middle of the hover: these many seconds after the hover begins, for this long. */
+const FLIGHT_TURN_DELAY_SEC = 10;
+const FLIGHT_TURN_SEC = 10;
+/** The rotors run up to speed before lift-off and run down after touchdown over this long (a choice made here). */
+export const FLIGHT_SPIN_SEC = 6;
+/** NASA's round figure for the rotors in flight: about 2,500 turns a minute. */
+const ROTOR_TURNS_PER_SEC = 2500 / 60;
+
 interface ManagedArtifact {
   assetId: string;
   visual: ArtifactVisual;
@@ -40,13 +69,18 @@ interface ManagedArtifact {
   focus: THREE.Vector3;
   radiusM: number;
   present: boolean;
+  /** Walk-blocking footprint: a cylinder of this radius and height standing on the ground. */
+  collider: ColliderShape;
 }
 
+interface ColliderShape { radius: number; height: number }
+
 /**
- * Walk-blocking footprint per hardware type: LM descent-stage body (wide enough to keep the eyes clear of its
- * corners and the gear folded out from its sides; the legs are open), instruments, flag pole.
+ * Walk-blocking footprint per hardware type built here: LM descent-stage body (wide enough to keep the eyes
+ * clear of its corners and the gear folded out from its sides; the legs are open), instruments, flag pole.
+ * A model's footprint is measured from the model.
  */
-const COLLIDER_SHAPE: Record<ArtifactVisual, { radius: number; height: number }> = {
+const COLLIDER_SHAPE: Record<Exclude<ArtifactVisual, 'model'>, ColliderShape> = {
   apollo_lm_descent: { radius: 2.7, height: 3.2 },
   lrrr: { radius: 0.45, height: 0.6 },
   psep: { radius: 0.55, height: 0.9 },
@@ -69,6 +103,17 @@ interface FlagRig {
   pivot: THREE.Group;
 }
 
+/** The Ingenuity model with its two rotors free to turn about the mast. */
+interface HelicopterRig {
+  /** Carries the whole helicopter: raised and turned in flight. */
+  body: THREE.Group;
+  rotors: THREE.Object3D[];
+  /** Each rotor's orientation in the model as shipped; the spin is applied on top of it. */
+  rotorRest: THREE.Quaternion[];
+  /** Height of the helicopter's centre above its feet. */
+  centreY: number;
+}
+
 interface BeaconRig {
   root: THREE.Group;
   solarPivot: THREE.Object3D;
@@ -89,6 +134,37 @@ function ascentOffset(t: number): [number, number, number] {
   if (t <= 10) return [0, 0.85 * t * t, 0];
   const s = t - 10;
   return [1.2 * s * s, 85 + 17 * s + 0.3 * s * s, Math.min(0.9, 0.06 * s)];
+}
+
+function smoothstep01(x: number): number {
+  const k = Math.min(1, Math.max(0, x));
+  return k * k * (3 - 2 * k);
+}
+
+/** Ingenuity's height above the ground, metres, `t` seconds after its first lift-off. */
+export function flightHeightM(t: number): number {
+  if (t <= 0 || t >= FLIGHT_AIRBORNE_SEC) return 0;
+  if (t < FLIGHT_CLIMB_SEC) return FLIGHT_HEIGHT_M * smoothstep01(t / FLIGHT_CLIMB_SEC);
+  const descending = t - FLIGHT_CLIMB_SEC - FLIGHT_HOVER_SEC;
+  return descending <= 0 ? FLIGHT_HEIGHT_M : FLIGHT_HEIGHT_M * (1 - smoothstep01(descending / FLIGHT_DESCENT_SEC));
+}
+
+/** How far Ingenuity has turned from the heading it stood at, degrees, `t` seconds after lift-off; it lands turned. */
+export function flightTurnDeg(t: number): number {
+  return FLIGHT_TURN_DEG * smoothstep01((t - FLIGHT_CLIMB_SEC - FLIGHT_TURN_DELAY_SEC) / FLIGHT_TURN_SEC);
+}
+
+/**
+ * Turns each rotor has made `t` seconds after lift-off, counted from standstill: a steady run-up before
+ * lift-off, full speed in the air, a steady run-down after touchdown.
+ */
+export function flightRotorTurns(t: number): number {
+  const s = t + FLIGHT_SPIN_SEC;
+  if (s <= 0) return 0;
+  if (s < FLIGHT_SPIN_SEC) return (ROTOR_TURNS_PER_SEC * s * s) / (2 * FLIGHT_SPIN_SEC);
+  const atSpeed = ROTOR_TURNS_PER_SEC * (FLIGHT_SPIN_SEC / 2 + Math.min(t, FLIGHT_AIRBORNE_SEC));
+  const u = Math.min(FLIGHT_SPIN_SEC, t - FLIGHT_AIRBORNE_SEC);
+  return u <= 0 ? atSpeed : atSpeed + ROTOR_TURNS_PER_SEC * (u - (u * u) / (2 * FLIGHT_SPIN_SEC));
 }
 
 function metal(color: number, roughness = 0.4, metalness = 0.7): THREE.MeshStandardMaterial {
@@ -152,6 +228,27 @@ async function buildLunarModule(): Promise<LunarModule> {
   const root = new THREE.Group();
   root.add(vehicle);
   return { root, vehicle, ascent, centreY: (box.max.y - box.min.y) * scale * 0.5 };
+}
+
+/** The cylinder that encloses a fitted model: half its longer side across, its full height. */
+function modelCollider(model: THREE.Object3D): ColliderShape {
+  const size = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3());
+  return { radius: Math.max(size.x, size.z) / 2, height: size.y };
+}
+
+/**
+ * Wraps the fitted Ingenuity model for flight and finds its two rotors (the nodes `rotors_01` and `rotors_02`
+ * of NASA's GLB, both centred on the mast).
+ */
+function createHelicopterRig(model: THREE.Group, heightM: number): HelicopterRig {
+  const body = new THREE.Group();
+  body.add(model);
+  const rotors: THREE.Object3D[] = [];
+  for (const name of ['rotors_01', 'rotors_02']) {
+    const rotor = model.getObjectByName(name);
+    if (rotor) rotors.push(rotor);
+  }
+  return { body, rotors, rotorRest: rotors.map((r) => r.quaternion.clone()), centreY: heightM / 2 };
 }
 
 function createLrrrVisual(): THREE.Group {
@@ -342,6 +439,8 @@ export function createArtifacts(): IArtifacts {
   let beacon: BeaconRig | null = null;
   let lm: LunarModule | null = null;
   let flag: FlagRig | null = null;
+  let helicopter: HelicopterRig | null = null;
+  const spin = new THREE.Quaternion();
   let groundY = 0;
   let pulseClock = 0;
 
@@ -370,13 +469,14 @@ export function createArtifacts(): IArtifacts {
     for (const m of managed) {
       m.root.remove(m.ring);
       disposeMeshes(m.ring, true);
-      // The lunar module is a clone from the model cache; every other piece is built here.
-      disposeMeshes(m.root, m.visual !== 'apollo_lm_descent');
+      // The lunar module and the models are clones from the model cache; every other piece is built here.
+      disposeMeshes(m.root, m.visual !== 'apollo_lm_descent' && m.visual !== 'model');
     }
     object3d.clear();
     managed.length = 0;
     lm = null;
     flag = null;
+    helicopter = null;
   }
 
   function emitDust(cx: number, cz: number, perSecond: number, dt: number): void {
@@ -450,6 +550,23 @@ export function createArtifacts(): IArtifacts {
     return true;
   }
 
+  /**
+   * Places the helicopter for the given clock: on the ground as it stands, or in its first flight. The two
+   * rotors turn in opposite directions about the mast, which is the X axis of the node that carries them.
+   */
+  function updateHelicopter(m: ManagedArtifact, rig: HelicopterRig, jdTT: number): void {
+    const t = (jdTT - FLIGHT_LIFTOFF_JD) * SECONDS_PER_DAY;
+    const up = flightHeightM(t);
+    rig.body.position.y = up;
+    rig.body.rotation.y = -flightTurnDeg(t) * DEG2RAD;
+    const angle = (flightRotorTurns(t) % 1) * Math.PI * 2;
+    for (let i = 0; i < rig.rotors.length; i++) {
+      spin.setFromAxisAngle(X_AXIS, i % 2 === 0 ? angle : -angle);
+      rig.rotors[i].quaternion.copy(rig.rotorRest[i]).premultiply(spin);
+    }
+    m.focus.set(m.position.x, m.position.y + up + rig.centreY, m.position.z);
+  }
+
   function updateFlag(jdTT: number): void {
     if (!flag) return;
     // Blown over by the ascent engine exhaust (reported by Aldrin as they lifted off).
@@ -458,19 +575,27 @@ export function createArtifacts(): IArtifacts {
     flag.pivot.rotation.z = -(Math.PI / 2 - 0.05) * (k * k * (3 - 2 * k));
   }
 
-  async function buildVisual(visual: ArtifactVisual): Promise<THREE.Object3D> {
-    if (visual === 'apollo_lm_descent') {
+  async function buildVisual(pl: ArtifactPlacement, asset: SurfaceAsset | undefined): Promise<THREE.Object3D> {
+    if (pl.visual === 'model') {
+      if (!asset?.modelFile || pl.heightM === undefined) throw new Error(`Placement ${pl.assetId}: a model needs modelFile and heightM`);
+      const model = await loadGlb(asset.modelFile);
+      fitModelToHeight(model, pl.heightM);
+      if (pl.assetId !== 'ingenuity') return model;
+      helicopter = createHelicopterRig(model, pl.heightM);
+      return helicopter.body;
+    }
+    if (pl.visual === 'apollo_lm_descent') {
       lm = await buildLunarModule();
       return lm.root;
     }
-    if (visual === 'flag') {
+    if (pl.visual === 'flag') {
       const f = createFlagVisual();
       flag = f.rig;
       return f.group;
     }
-    if (visual === 'psep') return createPsepVisual();
-    if (visual === 'tv_camera') return createTvCameraVisual();
-    if (visual === 'bootprints') return createBootprintsVisual();
+    if (pl.visual === 'psep') return createPsepVisual();
+    if (pl.visual === 'tv_camera') return createTvCameraVisual();
+    if (pl.visual === 'bootprints') return createBootprintsVisual();
     return createLrrrVisual();
   }
 
@@ -491,7 +616,8 @@ export function createArtifacts(): IArtifacts {
         const y = ground.heightAt(pl.eastM, pl.southM);
         root.position.set(pl.eastM, y, pl.southM);
         root.rotation.y = -pl.headingDeg * DEG2RAD;
-        root.add(await buildVisual(pl.visual));
+        const visual = await buildVisual(pl, asset);
+        root.add(visual);
         const ring = createHighlightRing(pl.radiusM);
         root.add(ring);
         object3d.add(root);
@@ -506,6 +632,7 @@ export function createArtifacts(): IArtifacts {
           focus: root.position.clone(),
           radiusM: pl.radiusM,
           present: false,
+          collider: pl.visual === 'model' ? modelCollider(visual) : COLLIDER_SHAPE[pl.visual],
         });
       }
       syncShadowCasters();
@@ -522,6 +649,7 @@ export function createArtifacts(): IArtifacts {
           m.present = jdTT >= m.arrivalJdTT;
           m.root.visible = m.present;
           m.focus.copy(m.position);
+          if (helicopter && m.assetId === 'ingenuity') updateHelicopter(m, helicopter, jdTT);
         }
         changed ||= wasVisible !== m.root.visible;
         const ringMat = m.ring.material as THREE.MeshBasicMaterial;
@@ -559,7 +687,7 @@ export function createArtifacts(): IArtifacts {
 
     colliders(out: Collider[]): void {
       for (const m of managed) {
-        const shape = COLLIDER_SHAPE[m.visual];
+        const shape = m.collider;
         if (!m.present || !m.root.visible || shape.radius <= 0) continue;
         out.push({ x: m.position.x, z: m.position.z, radius: shape.radius, top: m.position.y + shape.height });
         if (m.visual === 'apollo_lm_descent') {

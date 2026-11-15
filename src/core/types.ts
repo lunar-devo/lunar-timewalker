@@ -51,11 +51,19 @@ export interface QualityProfile {
 }
 
 // ───────────────────────────── sites ─────────────────────────────
-/** Selenographic coordinates (mean-Earth/polar-axis), longitude east-positive in [-180, 180]. */
+/**
+ * A place on a body, by latitude and east longitude in [-180, 180]: selenographic (mean-Earth/polar-axis) on
+ * the Moon, areocentric (IAU, east-positive) on Mars.
+ */
 export interface SiteCoord { latDeg: number; lonDeg: number }
+
+/** The body a site lies on: its own elevation data, radius and sky. */
+export type SiteBody = 'moon' | 'mars';
 
 export interface SiteDef extends SiteCoord {
   id: string;                 // e.g. 'apollo11'; 'custom' for a free pick on the globe
+  /** The body the site lies on; a site without one is on the Moon. */
+  body?: SiteBody;
   name: L10n;
   region: L10n;
   blurb: L10n;
@@ -307,7 +315,7 @@ export interface TerrainLoadInfo {
   /** Best real-data ground resolution under the spawn point, meters per sample. */
   dataResolutionM: number;
   hasHiRes: boolean;
-  /** Elevation of the spawn point above the 1737.4 km reference sphere, meters. */
+  /** Elevation of the spawn point above the site's body's reference (the Moon's 1737.4 km sphere, Mars's areoid), meters. */
   originElevationM: number;
   /** Representative normal albedo of the site (0..1). */
   albedo: number;
@@ -322,7 +330,7 @@ export interface ITerrain extends GroundQuery {
   renderCasterShadows(casters: THREE.Object3D[], lighting: LightingState, center: THREE.Vector3): void;
   /**
    * Terrain horizon as seen from (x, z) at eyeHeight: elevation angle in degrees for `samples` azimuths
-   * (index i ↔ azimuth i·360/samples, North through East). Includes lunar curvature.
+   * (index i ↔ azimuth i·360/samples, North through East). Includes the curvature of the site's body.
    */
   horizonProfile(x: number, z: number, eyeHeightM: number, samples?: number): Float32Array;
   /** Appends boulders within `range` metres of (x, z) that block walking. */
@@ -480,9 +488,11 @@ export interface SurfaceAsset {
 }
 
 export type ArtifactVisual =
-  | 'apollo_lm_descent' | 'lrrr' | 'psep' | 'flag' | 'tv_camera' | 'bootprints' | 'plaque' | 'beacon';
+  | 'apollo_lm_descent' | 'lrrr' | 'psep' | 'flag' | 'tv_camera' | 'bootprints' | 'plaque' | 'beacon'
+  /** The GLB model named by the asset's `modelFile`, standing on the ground at `heightM`. */
+  | 'model';
 
-/** Placement of a SurfaceAsset on a walkable lunar site, offsets from the site origin. */
+/** Placement of a SurfaceAsset on a walkable site, offsets from the site origin. */
 export interface ArtifactPlacement {
   assetId: string;
   siteId: string;
@@ -492,6 +502,8 @@ export interface ArtifactPlacement {
   visual: ArtifactVisual;
   /** Radius of the highlight ring. */
   radiusM: number;
+  /** For the 'model' visual: the model's height once it stands on the ground, in metres. */
+  heightM?: number;
 }
 
 export interface ArtifactInfo {
@@ -761,11 +773,12 @@ export interface EventDef {
   defaultSiteId: string;
   recommendedSiteIds: string[];
   /**
-   * Where the event can be watched from. 'moon': it happens on the Moon or shows only from there.
-   * 'earthMoon': an arrangement in the sky of Earth and the Moon; other worlds see the same moment differently.
-   * 'anywhere': it looks the same from every world of the Solar System, or plays in a close-up view.
+   * Where the event can be watched from. 'moon': it happens on the Moon or shows only from there. 'mars': it
+   * happens on Mars and is watched from a site there. 'earthMoon': an arrangement in the sky of Earth and the
+   * Moon; other worlds see the same moment differently. 'anywhere': it looks the same from every world of the
+   * Solar System, or plays in a close-up view.
    */
-  seenFrom: 'moon' | 'earthMoon' | 'anywhere';
+  seenFrom: 'moon' | 'mars' | 'earthMoon' | 'anywhere';
   /** Sky target the view faces at the start; also drives map visibility badges. */
   primaryTargetId?: string;
   /** What is measured or recorded and what is a model in this scene. */

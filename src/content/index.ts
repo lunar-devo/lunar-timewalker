@@ -1,6 +1,7 @@
 export { archiveTopicAt } from './archive';
 export {
-  ARTIFACT_PLACEMENTS, BODY_NAMES, BODY_TOPICS, INFO_TOPICS, SITES, SURFACE_ASSETS, TRANSIENTS,
+  ARTIFACT_PLACEMENTS, BODY_NAMES, BODY_TOPICS, INFO_TOPICS, MARS_SITES, SITES, SITES_BY_BODY, SURFACE_ASSETS,
+  TRANSIENTS,
 } from './catalog';
 export { CREDIT_GROUPS, type CreditItem } from './credits';
 export { EVENTS } from './events';

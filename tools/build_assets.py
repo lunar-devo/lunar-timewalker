@@ -764,6 +764,69 @@ def sample_grid_bilinear(arr: np.ndarray, rows_f: np.ndarray, cols_f: np.ndarray
     return np.where(inside, out, np.nan).astype(np.float32)
 
 
+def pds_label_value(label: str, key: str) -> str:
+    """Value of one `KEY = value` line of a PDS3 label, without quotes and without the `<UNIT>` suffix."""
+    m = re.search(rf"^\s*{re.escape(key)}\s*=\s*(\"[^\"]*\"|\S+)", label, re.MULTILINE)
+    if m is None:
+        raise RuntimeError(f"PDS label has no {key}")
+    return m.group(1).strip('"')
+
+
+def build_mars_dem() -> None:
+    """Global Mars DEM from the MGS MOLA gridded record (16 px/deg, metres above the areoid), in the Moon DEM's format.
+
+    The grid's geometry comes from the PDS label beside the image. MOLA stores longitude 0..360° E from the left edge;
+    the columns are rolled so the left edge is 180° W, the convention of moon_global.
+    """
+    base = "https://pds-geosciences.wustl.edu/mgs/mgs-m-mola-5-megdr-l3-v1/mgsl_300x/meg016/"
+    url = base + "megt90n000eb.img"
+    credit = "NASA MGS MOLA Science Team / PDS Geosciences Node (MEGDR 16 px/deg, MEGT90N000EB)"
+    label = download(base + "megt90n000eb.lbl").read_text()
+    lines = int(pds_label_value(label, "LINES"))
+    samples = int(pds_label_value(label, "LINE_SAMPLES"))
+    west = float(pds_label_value(label, "WESTERNMOST_LONGITUDE"))
+    east = float(pds_label_value(label, "EASTERNMOST_LONGITUDE"))
+    lat_top = float(pds_label_value(label, "MAXIMUM_LATITUDE"))
+    lat_bottom = float(pds_label_value(label, "MINIMUM_LATITUDE"))
+    expected = {
+        "SAMPLE_TYPE": "MSB_INTEGER", "SAMPLE_BITS": "16", "UNIT": "METER",
+        "MAP_PROJECTION_TYPE": "SIMPLE CYLINDRICAL", "POSITIVE_LONGITUDE_DIRECTION": "EAST",
+    }
+    for key, want in expected.items():
+        got = pds_label_value(label, key)
+        if got != want:
+            raise RuntimeError(f"MOLA label {key} is {got}, expected {want}")
+    if east - west != 360.0 or lat_top != 90.0 or lat_bottom != -90.0:
+        raise RuntimeError(f"MOLA grid is not global: lon {west}..{east}, lat {lat_bottom}..{lat_top}")
+
+    raw = np.fromfile(download(url, timeout=600), dtype=">i2")
+    if raw.size != lines * samples:
+        raise RuntimeError(f"MOLA image holds {raw.size} samples, label says {lines} x {samples}")
+    lon_left = -180.0
+    shift = round((west - lon_left) / 360.0 * samples)
+    heights = np.roll(raw.reshape(lines, samples), shift, axis=1).astype(np.float32)
+
+    bin_path = DEM_DIR / "mars_global.bin"
+    offset, scale = encode_ldem_bin(heights, bin_path)
+    meta = {
+        "width": samples,
+        "height": lines,
+        "offset": round(offset, 3),
+        "scale": round(scale, 6),
+        "nodata": None,
+        "projection": "equirect",
+        "lonLeftDeg": lon_left,
+        "latTopDeg": lat_top,
+        "metersPerSample": round(2.0 * math.pi * 3_389_500.0 / samples, 2),
+        "source": url,
+        "credit": credit,
+    }
+    (DEM_DIR / "mars_global.json").write_text(json.dumps(meta, indent=2))
+    for fn in ("mars_global.bin", "mars_global.json"):
+        MANIFEST_DATA[f"dem/{fn}"] = {"source": url, "credit": credit, "width": samples, "height": lines}
+    log(f"  wrote dem/mars_global.bin {samples}x{lines} ({bin_path.stat().st_size / 1e6:.2f} MB), min={heights.min():.0f}m max={heights.max():.0f}m")
+
+
 def build_dems() -> None:
     # 1. Global DEM from SVS #4720 ldem_16.tif (16 px/deg, 5760x2880, km above 1737.4 km), kept at native resolution.
     url_16 = "https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_16.tif"
@@ -1243,7 +1306,8 @@ STEPS = {
     "small_bodies": (build_small_body_textures, "textures", ("tex/pluto_color_", "tex/europa_color_")),
     "galaxies": (build_galaxy_images, "textures", ("tex/galaxy_",)),
     "models": (build_models, "textures", ("models/",)),
-    "dems": (build_dems, "data", ("dem/",)),
+    "dems": (build_dems, "data", ("dem/moon_global", "dem/sites/")),
+    "mars_dem": (build_mars_dem, "data", ("dem/mars_global",)),
     "stars_catalog": (build_bright_stars, "data", ("data/bright_stars",)),
     "horizons": (build_horizons_validation, "data", ("data/horizons_",)),
     "donki": (build_donki_archive, "data", ("data/donki_",)),

@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-14T22:35:09.496395+00:00",
+  "generated": "2026-11-15T09:40:19.923027+00:00",
   "files": {
     "data/bright_stars.json": {
       "source": "https://heasarc.gsfc.nasa.gov/xamin/vo/tap/sync?REQUEST=doQuery&LANG=ADQL&FORMAT=votable&QUERY=SELECT+ra,dec,vmag,bv_color+FROM+bsc5p+WHERE+vmag+%3C%3D+6.5+ORDER+BY+vmag+ASC",
@@ -18,6 +18,18 @@
       "source": "https://images-api.nasa.gov",
       "credit": "NASA Image and Video Library",
       "note": "44 topics"
+    },
+    "dem/mars_global.bin": {
+      "source": "https://pds-geosciences.wustl.edu/mgs/mgs-m-mola-5-megdr-l3-v1/mgsl_300x/meg016/megt90n000eb.img",
+      "credit": "NASA MGS MOLA Science Team / PDS Geosciences Node (MEGDR 16 px/deg, MEGT90N000EB)",
+      "width": 5760,
+      "height": 2880
+    },
+    "dem/mars_global.json": {
+      "source": "https://pds-geosciences.wustl.edu/mgs/mgs-m-mola-5-megdr-l3-v1/mgsl_300x/meg016/megt90n000eb.img",
+      "credit": "NASA MGS MOLA Science Team / PDS Geosciences Node (MEGDR 16 px/deg, MEGT90N000EB)",
+      "width": 5760,
+      "height": 2880
     },
     "dem/moon_global.bin": {
       "source": "https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_16.tif",

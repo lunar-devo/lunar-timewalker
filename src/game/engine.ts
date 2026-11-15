@@ -13,10 +13,11 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import type {
   BodyId, CmeVisual, Collider, EventDef, GameAPI, GlobeMarker, HorizonEvent, ISpaceView, L10n, LabBody, LabConfigPatch,
   LabExplosionKind, LabFate, LabFraming, LabImpactLevel, LabQuiz, LabSetup, LabState, Lang, LightingState,
-  LightReading, PanelId, Settings, SiteCoord, SiteDef, SkyState, SkyTarget, StageDef, StagingDef, SupernovaDef,
+  LightReading, PanelId, Settings, SiteBody, SiteCoord, SiteDef, SkyState, SkyTarget, StageDef, StagingDef, SupernovaDef,
   Telemetry, TerrainLoadInfo, TransientDef, TransientState, WorldId,
 } from '../core/types';
 import { loadManifest, setMaxTextureSize } from '../core/assets';
+import { BODY_RADIUS_M } from '../core/dem';
 import { frame, type FrameProjection } from '../core/frame';
 import { fmt, lf, loadDict, loc, tpl } from '../core/l10n';
 import { Input, keyBelongsToControl } from '../core/input';
@@ -36,7 +37,7 @@ import {
 import { createArtifacts } from '../artifacts';
 import { createAudio } from '../audio';
 import {
-  ARTIFACT_PLACEMENTS, BODY_NAMES, BODY_TOPICS, BRIGHT_STARS, EVENTS, GALAXIES, SITES,
+  ARTIFACT_PLACEMENTS, BODY_NAMES, BODY_TOPICS, BRIGHT_STARS, EVENTS, GALAXIES, MARS_SITES, SITES, SITES_BY_BODY,
   SURFACE_ASSETS, TRANSIENTS, TUTORIAL_DATE, TUTORIAL_SITE_ID, TUTORIAL_STEPS, WORLDS, type TutorialCheck,
 } from '../content';
 import { createNasa } from '../nasa';
@@ -46,6 +47,7 @@ import { createTerrain } from '../terrain';
 import { createGlobeView } from '../views/globe';
 import { createRemnantView, createSunView } from '../views/special';
 import { createGalaxyView, GALAXY_NO_INSETS } from '../views/galaxy';
+import { createOrbitsView } from '../views/orbits';
 import {
   computeLabFates, computeLabImpact, createLabView, LAB_EXTRA_IDS, LAB_FIRST_YEAR, LAB_LAST_YEAR, LAB_MAX_AU, LAB_MIN_AU,
   LAB_QUESTIONS, labLandmarkLatitudeDeg, labLinkQuery, labRunSeconds, parseLabLink, type LabLink,
@@ -65,6 +67,66 @@ const DEG2RAD = Math.PI / 180;
 const RAD2DEG = 180 / Math.PI;
 /** The fewest device pixels to a CSS pixel the resolution governor may bring the drawing down to. */
 const MIN_PIXEL_RATIO = 0.75;
+
+/** The elevation data a site's ground is built from, named for the data panel until the terrain says more. */
+const DEM_NAME: Record<SiteBody, L10n> = { moon: { tr: 'LOLA DEM', en: 'LOLA DEM' }, mars: { tr: 'MOLA DEM', en: 'MOLA DEM' } };
+
+/** The site a free visit to a body starts at when the Sun is up at none of its sites. */
+const HOME_SITE_ID: Record<SiteBody, string> = { moon: 'apollo11', mars: 'mars_jezero' };
+
+/** What is said when an event that takes place on a body is taken to another world. */
+const BOUND_EVENT_NOTICE: Record<SiteBody, L10n> = {
+  moon: { tr: 'Bu olay Ay’da geçer; yalnızca Ay’dan izlenir.', en: 'This event takes place on the Moon and can only be watched from there.' },
+  mars: { tr: 'Bu olay Mars’ta geçer; yalnızca Mars’tan izlenir.', en: 'This event takes place on Mars and can only be watched from there.' },
+};
+
+/** What is said on a world from which an event that takes place on a body cannot be watched. */
+const WATCHED_ONLY_FROM: Record<SiteBody, (title: L10n) => L10n> = {
+  moon: (title) => lf(
+    tpl`“${title}” yalnızca Ay’dan izlenir. İzlemek için üstteki listeden Ay’ı seçin.`,
+    tpl`“${title}” can only be watched from the Moon. Choose the Moon in the list above to watch it.`,
+  ),
+  mars: (title) => lf(
+    tpl`“${title}” yalnızca Mars’tan izlenir. İzlemek için üstteki listeden Mars’ı seçin.`,
+    tpl`“${title}” can only be watched from Mars. Choose Mars in the list above to watch it.`,
+  ),
+};
+
+/** How a place picked freely on a body's globe is described. */
+const PICKED_SITE_TEXT: Record<SiteBody, Pick<SiteDef, 'region' | 'blurb'>> = {
+  moon: {
+    region: { tr: 'Serbest Seçim Koordinatı', en: 'Custom Selenographic Coordinate' },
+    blurb: {
+      tr: '3B Ay küresi üzerinden doğrudan seçtiğiniz özel iniş koordinatı.',
+      en: 'Custom lunar coordinates picked directly on the 3D Moon globe.',
+    },
+  },
+  mars: {
+    region: { tr: 'Serbest Seçim Koordinatı', en: 'Custom Areographic Coordinate' },
+    blurb: {
+      tr: '3B Mars küresi üzerinden doğrudan seçtiğiniz özel iniş koordinatı.',
+      en: 'Custom Martian coordinates picked directly on the 3D Mars globe.',
+    },
+  },
+};
+
+/** The body an event takes place on and can only be watched from; null for an event of the sky. */
+function eventBody(ev: EventDef | undefined): SiteBody | null {
+  return ev?.seenFrom === 'moon' || ev?.seenFrom === 'mars' ? ev.seenFrom : null;
+}
+
+/**
+ * True when `world` is the body `site` lies on: the ground, its hardware and its sky are then the site's own.
+ * Otherwise a Moon site lends its ground to another world.
+ */
+function standsOnSite(world: WorldId, site: SiteDef): boolean {
+  return world === (site.body ?? 'moon');
+}
+
+/** The close-up view an event plays in when it has no part on the ground: it opens there, with no map and no landing. */
+function viewOnlyStaging(ev: EventDef | undefined): StagingDef | undefined {
+  return ev?.staging?.some((s) => s.where === 'surface') ? undefined : ev?.staging?.[0];
+}
 
 /** What the lab's model says of the explosion that is set: for Earth, for the other bodies, and how long the time-lapse runs. */
 type LabResults = Pick<LabState, 'impact' | 'fates' | 'runSec'>;
@@ -264,6 +326,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
   const remnantView = createRemnantView(renderer);
   const galaxyView = createGalaxyView(renderer);
   const labView = createLabView(renderer);
+  const orbitsView = createOrbitsView(renderer);
   labView.onPlace((angleRad, distanceAU, bodyId) => api.setLabConfig({ angleRad, distanceAU, anchorId: bodyId }, true));
   /** Wall time of the last notice that a run locks the map: it is not repeated for every click. */
   let lastLockedNoticeMs = -Infinity;
@@ -534,17 +597,19 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     lastClockJd = startJd;
     // Quotes tied to clock moments are part of the sequence and replay with it.
     for (const cue of ev.cues ?? []) firedCueIds.delete(cue.id);
-    // On another world the sequence is watched from a seat chosen for it and held under the same stars. On
-    // the Moon the astronaut stands at a real place and sees its sky; only a sequence that runs through many
-    // of the Moon's rotations is held, under the stars that are over the place at its first moment.
+    // On a world that borrows a Moon site's ground the sequence is watched from a seat chosen for it and held
+    // under the same stars. At a real place the astronaut sees the place's own sky, and an event that happens
+    // there is seen as it happens. A sky event is held under the stars that are over the place at its first
+    // moment where the world turns many times while it plays: on Mars always, on the Moon when the sequence
+    // says so.
     seatZenithIcrf = null;
     if (staging.where === 'surface' && st.site && st.world !== 'orbit') {
-      if (st.world !== 'moon') {
+      if (!standsOnSite(st.world, st.site)) {
         const picked = staging.focusId ? pickSeat(st.world, startJd, focusFrom(st.world, staging.focusId)) : null;
         seat = picked ?? seat ?? { latDeg: st.site.latDeg, lonDeg: st.site.lonDeg };
         seatZenithIcrf = zenithIcrf(st.world, startJd, seat);
-      } else if (staging.heldToStars) {
-        seatZenithIcrf = zenithIcrf('moon', momentJd(staging.stages[0].from), st.site);
+      } else if (st.world === 'mars' ? ev.seenFrom !== 'mars' : staging.heldToStars) {
+        seatZenithIcrf = zenithIcrf(st.world, momentJd(staging.stages[0].from), st.site);
       }
     }
     // A sequence started while time is paused (Pause, then Replay) runs: the director only advances unpaused.
@@ -558,11 +623,14 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
   /**
    * Stops the director. `finished` jumps the clock to the end of the sequence; an interrupted sequence stays
    * at its moment. Either way time returns to the sequence's resting rate instead of its time-lapse rate.
+   * At a real place the sky is the place's own again once nothing holds it: a held sequence that has played
+   * ends on the moment nearest its end at which the stars it was held under stand over the place again.
    */
   function endStaging(finished: boolean): void {
     skippedStaging = null;
     if (!director) return;
     const staging = director.staging;
+    const heldZenith = seatZenithIcrf;
     director = null;
     stageShade = false;
     seatZenithIcrf = null;
@@ -570,13 +638,16 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     frame.stageProgress = finished ? 1 : frame.stageProgress;
     releaseStageFov();
     const st = getGame();
-    // On the Moon the sky is the landed place's own again once nothing holds it.
-    if (st.world === 'moon') seat = null;
+    let endJd = finished ? stagingEndJd(staging) : st.clock.jdTT;
+    if (st.site && st.world !== 'orbit' && standsOnSite(st.world, st.site)) {
+      if (finished && heldZenith) endJd = momentUnderStars(heldZenith, st.world, st.site, endJd);
+      seat = null;
+    }
     setGame({
       stage: st.stage ? (finished ? stageStatusOf(staging, staging.stages.length - 1, false) : { ...st.stage, playing: false }) : null,
       skyLocked: false,
     });
-    setGame({ clock: { jdTT: finished ? stagingEndJd(staging) : st.clock.jdTT, rate: staging.endRate, paused: false } });
+    setGame({ clock: { jdTT: endJd, rate: staging.endRate, paused: false } });
   }
 
   function releaseStageFov(): void {
@@ -693,10 +764,11 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       : null;
   }
 
-  /** A place on the Moon that is no named site, made up for watching an event from. */
-  function viewingSpot(at: SiteCoord): SiteDef {
+  /** A place that is no named site, made up on `body` for watching an event from. */
+  function viewingSpot(at: SiteCoord, body: SiteBody): SiteDef {
     return {
       id: 'custom',
+      body,
       latDeg: at.latDeg,
       lonDeg: at.lonDeg,
       name: lf(tpl`Gözlem noktası (${at.latDeg}°, ${at.lonDeg}°)`, tpl`Viewing spot (${at.latDeg}°, ${at.lonDeg}°)`),
@@ -709,6 +781,66 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
   }
 
   /**
+   * The first listed site of `body` where the Sun is up at `jdTT`, so that a free visit does not open in the
+   * dark; the body's home site when it is night at all of them.
+   */
+  function freeSite(body: SiteBody, jdTT: number): SiteDef {
+    const sites = SITES_BY_BODY[body];
+    return sites.find((s) => computeSky(jdTT, s, body).bodies.sun.elDeg > 8) ?? sites.find((s) => s.id === HOME_SITE_ID[body]) ?? sites[0];
+  }
+
+  /**
+   * The place on `body` that a chapter is watched from; without one (`ev` undefined), where a free visit at
+   * `jdTT` begins. A chapter that takes place on the body has its own site. For an event of the sky, Mars
+   * gets a spot from which its target stands high in a dark sky as the sequence begins, and the Moon its
+   * best vantage (or, for a chapter without a sequence, the recommended site where the target stands highest).
+   */
+  function siteFor(ev: EventDef | undefined, body: SiteBody, jdTT: number): SiteDef {
+    if (!ev) return freeSite(body, jdTT);
+    const sites = SITES_BY_BODY[body];
+    const own = sites.find((s) => s.id === ev.defaultSiteId) ?? sites.find((s) => s.id === HOME_SITE_ID[body]) ?? sites[0];
+    const surface = ev.staging?.find((s) => s.where === 'surface');
+    if (body === 'mars') {
+      if (ev.seenFrom === 'mars') return own;
+      const seatAt = surface?.focusId ? pickSeat('mars', momentJd(surface.stages[0].from), focusFrom('mars', surface.focusId)) : null;
+      return seatAt ? viewingSpot(seatAt, 'mars') : freeSite('mars', jdTT);
+    }
+    if (surface?.autoSeat && surface.focusId) return pickVantage(surface, surface.focusId) ?? own;
+    if (!ev.primaryTargetId || surface) return own;
+    const targetId = ev.primaryTargetId;
+    const trDef = transientById(targetId);
+    let best = own;
+    let bestEl = -90;
+    for (const sid of ev.recommendedSiteIds) {
+      const cand = sites.find((s) => s.id === sid);
+      if (!cand) continue;
+      const sk = computeSky(jdTT, cand);
+      const el = targetId in sk.bodies ? sk.bodies[targetId as BodyId].elDeg : trDef ? transientState(trDef, sk).elDeg : -90;
+      if (el > bestEl) {
+        bestEl = el;
+        best = cand;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * The moment nearest `jdTT` at which the stars that have `zenith` (a direction in space) overhead stand
+   * over `site` again. The world turns evenly, so the place under those stars moves through the longitudes
+   * at a steady rate.
+   */
+  function momentUnderStars(zenith: THREE.Vector3, world: Exclude<WorldId, 'orbit'>, site: SiteCoord, jdTT: number): number {
+    const lonUnder = (jd: number): number => {
+      const f = zenith.clone().applyMatrix3(new THREE.Matrix3().fromArray(bodyOrientation(world, jd).fixedToIcrf));
+      return Math.atan2(f.y, f.x) * RAD2DEG;
+    };
+    const wrap = (deg: number): number => ((((deg + 180) % 360) + 360) % 360) - 180;
+    const lon = lonUnder(jdTT);
+    const degPerDay = wrap(lonUnder(jdTT + 0.01) - lon) / 0.01;
+    return jdTT + wrap(site.lonDeg - lon) / degPerDay;
+  }
+
+  /**
    * Best place to watch a staged sky event: the target stays well above the horizon for every moment of the
    * sequence, ideally in a dark sky at its start. Named sites win ties; otherwise an observing spot is made up.
    * A sequence that is held under the same stars is seen as its first moment shows it: its place is chosen
@@ -717,7 +849,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
   function pickVantage(staging: StagingDef, targetId: string): SiteDef | null {
     if (staging.heldToStars) {
       const seatAt = pickSeat('moon', momentJd(staging.stages[0].from), targetId);
-      return seatAt && viewingSpot(seatAt);
+      return seatAt && viewingSpot(seatAt, 'moon');
     }
     const ref = SITES[0];
     const trDef = transientById(targetId);
@@ -754,7 +886,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       for (let lon = -180; lon < 180; lon += 5) {
         const v = score({ latDeg: lat, lonDeg: lon }, false);
         if (best && v <= best.score) continue;
-        best = { score: v, site: viewingSpot({ latDeg: lat, lonDeg: lon }) };
+        best = { score: v, site: viewingSpot({ latDeg: lat, lonDeg: lon }, 'moon') };
       }
     }
     return best?.site ?? null;
@@ -835,16 +967,18 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
   }
 
   /**
-   * Puts the astronaut's surroundings (ground, sky, gravity) on `world`. Free exploration of another world
-   * begins at a seat chosen for it; a chapter's sequence picks its own seat when it starts.
+   * Puts the astronaut's surroundings (ground, sky, gravity) on `world`, with `site` under the feet. The
+   * hardware of a site stands on its own body only. On a world that borrows the site's ground, free
+   * exploration begins at a seat chosen for it; a chapter's sequence picks its own seat when it starts.
    */
-  function applyWorld(world: WorldId): void {
+  function applyWorld(world: WorldId, site: SiteDef): void {
     terrain.setWorld(world);
     sky.setWorld(world);
     player.setWorld(WORLDS[world]);
-    artifacts.object3d.visible = world === 'moon';
+    const own = standsOnSite(world, site);
+    artifacts.object3d.visible = own;
     const st = getGame();
-    seat = world === 'moon' || world === 'orbit' || st.activeEventId ? null : pickFreeSeat(world, st.clock.jdTT);
+    seat = own || world === 'moon' || world === 'orbit' || st.activeEventId ? null : pickFreeSeat(world, st.clock.jdTT);
     lastEventCalcMs = 0;
   }
 
@@ -856,12 +990,10 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     const st = getGame();
     const ev = eventById(st.activeEventId);
     if (!ev) return;
-    if (ev.seenFrom === 'moon' && st.world !== 'moon') {
+    const bound = eventBody(ev);
+    if (bound && st.world !== bound) {
       setGame({ stage: null });
-      showToast(lf(
-        tpl`“${ev.title}” yalnızca Ay’dan izlenir. İzlemek için üstteki listeden Ay’ı seçin.`,
-        tpl`“${ev.title}” can only be watched from the Moon. Choose the Moon in the list above to watch it.`,
-      ), 'warn');
+      showToast(WATCHED_ONLY_FROM[bound](ev.title), 'warn');
       return;
     }
     const surface = ev.staging?.find((s) => s.where === 'surface');
@@ -917,9 +1049,12 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
 
   // ─────────────────────────── Map Globe Setup ───────────────────────────
 
+  /** Opens the picker globe of the body the map is on (Mars, or the Moon for every other world) with its sites. */
   async function enterMapGlobe(jdTT: number, selectedSite: SiteDef): Promise<void> {
     const st = getGame();
-    const markers: GlobeMarker[] = SITES.map((s) => ({
+    const body: SiteBody = st.mapWorld === 'mars' ? 'mars' : 'moon';
+    const sites = SITES_BY_BODY[body];
+    const markers: GlobeMarker[] = sites.map((s) => ({
       id: s.id,
       latDeg: s.latDeg,
       lonDeg: s.lonDeg,
@@ -930,7 +1065,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
 
     showSpaceView(globeView);
     await globeView.enter({
-      targetId: 'moon',
+      targetId: body,
       jdTT,
       lang: st.settings.lang,
       quality: QUALITY[st.settings.quality],
@@ -940,23 +1075,20 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         audio.cue('ui-click');
         const customSite: SiteDef = {
           id: 'custom',
+          body,
           latDeg,
           lonDeg,
           name: lf(
             tpl`Özel Nokta (${(l: Lang) => fmt(latDeg, 1, l)}°, ${(l: Lang) => fmt(lonDeg, 1, l)}°)`,
             tpl`Custom Site (${(l: Lang) => fmt(latDeg, 1, l)}°, ${(l: Lang) => fmt(lonDeg, 1, l)}°)`,
           ),
-          region: { tr: 'Serbest Seçim Koordinatı', en: 'Custom Selenographic Coordinate' },
-          blurb: {
-            tr: '3B Ay küresi üzerinden doğrudan seçtiğiniz özel iniş koordinatı.',
-            en: 'Custom lunar coordinates picked directly on the 3D Moon globe.',
-          },
+          ...PICKED_SITE_TEXT[body],
         };
         setGame({ mapSelection: customSite });
         globeView.setSelection(customSite, false);
       },
       onMarker: (markerId) => {
-        const found = SITES.find((s) => s.id === markerId);
+        const found = sites.find((s) => s.id === markerId);
         if (found) {
           audio.cue('ui-click');
           setGame({ mapSelection: found });
@@ -971,8 +1103,9 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
   }
 
   /**
-   * Makes `eventId` the active chapter (null = free exploration): its start time, rate and best site. Free
-   * exploration starts at `freeJd`: today, unless it follows from something that showed another date.
+   * Makes `eventId` the active chapter (null = free exploration): its start time, rate, map and best site.
+   * Free exploration starts at `freeJd`: today, unless it follows from something that showed another date.
+   * A chapter that takes place on Mars is chosen on Mars's map; everything else starts on the Moon's.
    */
   function prepareEvent(eventId: string | null, freeJd = jdTTNow()): SiteDef {
     endStaging(false);
@@ -988,33 +1121,12 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     const jdTT = surfaceStaging
       ? momentJd(surfaceStaging.stages[0].from)
       : ev ? jdTTFromCalendarUT(ev.date) : freeJd;
-    let defaultSite = SITES.find((s) => s.id === (ev?.defaultSiteId ?? 'apollo11')) ?? SITES[0];
-    if (!ev) {
-      // The first listed place where the Sun is up then, so that the visit does not open in the dark.
-      defaultSite = SITES.find((s) => computeSky(jdTT, s).bodies.sun.elDeg > 8) ?? defaultSite;
-    } else if (surfaceStaging?.autoSeat && surfaceStaging.focusId) {
-      defaultSite = pickVantage(surfaceStaging, surfaceStaging.focusId) ?? defaultSite;
-    } else if (ev?.primaryTargetId && !surfaceStaging) {
-      // Unstaged chapters: the recommended site where the target stands highest.
-      let bestEl = -90;
-      for (const sid of ev.recommendedSiteIds) {
-        const cand = SITES.find((s) => s.id === sid);
-        if (!cand) continue;
-        const sk = computeSky(jdTT, cand);
-        const trDef = transientById(ev.primaryTargetId);
-        const el = ev.primaryTargetId in sk.bodies
-          ? sk.bodies[ev.primaryTargetId as BodyId].elDeg
-          : trDef ? transientState(trDef, sk).elDeg : -90;
-        if (el > bestEl) {
-          bestEl = el;
-          defaultSite = cand;
-        }
-      }
-    }
+    const body = eventBody(ev) ?? 'moon';
+    const defaultSite = siteFor(ev, body, jdTT);
     setGame({
       activeEventId: eventId,
       mapSelection: defaultSite,
-      mapWorld: 'moon',
+      mapWorld: body,
       stage: null,
       clock: { jdTT, rate: surfaceStaging ? 0 : ev?.startRate ?? 1, paused: false },
       toast: null,
@@ -1107,7 +1219,13 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       setGame({ spaceView: null });
     }
     const site = prepareEvent(ev.id);
-    await api.landAt(site);
+    const view = viewOnlyStaging(ev);
+    if (view) {
+      setGame({ site: null });
+      api.enterSpaceView(view.where);
+    } else {
+      await api.landAt(site);
+    }
     if (token !== spectatorToken || !getGame().spectator) return;
     // Hands off: no walking or hotkeys; the director frames every moment.
     input.enabled = false;
@@ -1387,6 +1505,13 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       input.exitLock();
       const site = prepareEvent(eventId);
       clearPageState();
+      // An event with no part on the ground opens in its close-up view: no map, no landing, and the menu behind it.
+      const view = viewOnlyStaging(eventById(eventId));
+      if (view) {
+        setGame({ site: null });
+        this.enterSpaceView(view.where);
+        return;
+      }
       // A new chapter has to be landed: the map's back button leads to the menu, not to the old scene.
       setGame({ phase: 'map', site: null });
       enterMapGlobe(getGame().clock.jdTT, site).catch(() => undefined);
@@ -1434,10 +1559,12 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       endStaging(false);
       const st = getGame();
       const q = QUALITY[st.settings.quality];
-      // The world chosen on the map; events that belong to the Moon are always watched from it.
-      const world: WorldId = eventById(st.activeEventId)?.seenFrom === 'moon' ? 'moon' : st.mapWorld;
-      // On another world the Moon site only lends its ground: what is being loaded is that world.
-      const placeName = world === 'moon' ? site.name : WORLDS[world].name;
+      const ev = eventById(st.activeEventId);
+      // A site on Mars is Mars. A Moon site is the Moon for an event that takes place there; otherwise it lends
+      // its ground to the world chosen on the map, except to Mars, which is never shown on borrowed ground.
+      const world: WorldId = site.body === 'mars' ? 'mars' : eventBody(ev) === 'moon' || st.mapWorld === 'mars' ? 'moon' : st.mapWorld;
+      // On a world that borrows the site's ground, what is being loaded is that world.
+      const placeName = standsOnSite(world, site) ? site.name : WORLDS[world].name;
 
       setGame({
         phase: 'loading',
@@ -1491,8 +1618,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       if (terrainInfo === null || mine !== journey) return;
 
       // Compute initial sky state so we can orient the astronaut toward the chapter's primary target
-      const sky0 = computeSky(st.clock.jdTT, site);
-      const ev = eventById(st.activeEventId);
+      const sky0 = computeSky(st.clock.jdTT, site, site.body ?? 'moon');
       let headingDeg = site.spawnHeadingDeg ?? 0;
       let pitchDeg = 0;
       if (ev?.primaryTargetId) {
@@ -1503,7 +1629,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         } else {
           const trDef = transientById(ev.primaryTargetId);
           if (trDef) {
-            const ts = transientState(trDef, sky0);
+            const ts = transientState(trDef, sky0, site.body ?? 'moon');
             headingDeg = ts.azDeg;
             if (ts.elDeg > 2) pitchDeg = Math.min(55, ts.elDeg * 0.9);
           }
@@ -1540,9 +1666,11 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       player.teleport(spawnX, spawnZ, headingDeg, terrain, pitchDeg);
       lastHorizonPos.set(1e9, 0, 1e9);
 
-      applyWorld(world);
+      applyWorld(world, site);
       setGame({
         world,
+        // The map follows the world landed on: a Mars site is Mars whatever the map was on.
+        mapWorld: world,
         site,
         mapSelection: site,
         terrainInfo,
@@ -1561,8 +1689,22 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     },
 
     setMapWorld(world: WorldId): void {
+      const st = getGame();
+      const ev = eventById(st.activeEventId);
+      const bound = eventBody(ev);
+      if (bound && world !== bound) {
+        showToast(BOUND_EVENT_NOTICE[bound], 'warn');
+        return;
+      }
       audio.cue('ui-click');
-      setGame({ mapWorld: world });
+      if ((world === 'mars') === (st.mapWorld === 'mars')) {
+        setGame({ mapWorld: world });
+        return;
+      }
+      // To Mars or back from it the map is another globe, with that body's sites and its place for the chapter.
+      const site = siteFor(ev, world === 'mars' ? 'mars' : 'moon', st.clock.jdTT);
+      setGame({ mapWorld: world, mapSelection: site });
+      if (st.phase === 'map') enterMapGlobe(st.clock.jdTT, site).catch(() => undefined);
     },
 
     setPaused(paused: boolean): void {
@@ -1614,7 +1756,8 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       const ev = eventById(st.activeEventId);
       if (!ev) return;
       const where = st.phase === 'space' ? st.spaceView?.targetId : 'surface';
-      if (ev.staging?.some((s) => s.where === where) && (st.world === 'moon' || ev.seenFrom !== 'moon' || where !== 'surface')) {
+      const bound = eventBody(ev);
+      if (ev.staging?.some((s) => s.where === where) && (where !== 'surface' || bound === null || st.world === bound)) {
         this.replayStaging();
         return;
       }
@@ -1643,12 +1786,13 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
     },
 
     enterSpaceView(targetId: string): void {
-      // Only what has a close-up view: the Sun, the remnant of a supernova, a galaxy, or a globe (the Moon,
-      // Earth, a planet). A comet has none.
+      // Only what has a close-up view: the Sun, the remnant of a supernova, a galaxy, a globe (the Moon,
+      // Earth, a planet) or the orbits of Earth and Mars. A comet has none.
       const transient = TRANSIENTS.find((t) => t.id === targetId);
       const supernova = transient?.kind === 'supernova' ? transient : undefined;
       const galaxy = GALAXIES.find((g) => g.id === targetId);
-      if (targetId !== 'sun' && !supernova && !galaxy && targetId !== 'moon' && !(targetId in BODY_NAMES)) return;
+      const orbits = targetId === 'mars_orbit';
+      if (targetId !== 'sun' && !supernova && !galaxy && !orbits && targetId !== 'moon' && !(targetId in BODY_NAMES)) return;
       audio.cue('teleport');
       audio.setScene('space');
       clearPageState();
@@ -1706,6 +1850,16 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
             }
           }).catch(() => undefined);
         }
+      } else if (orbits) {
+        showSpaceView(orbitsView);
+        orbitsView.enter({
+          targetId,
+          jdTT: st.clock.jdTT,
+          lang: st.settings.lang,
+          quality: q,
+          mode: 'explore',
+        }).catch(() => undefined);
+        orbitsView.attach(canvas);
       } else if (supernova) {
         showSpaceView(remnantView);
         remnantView.enter({
@@ -2014,10 +2168,14 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
 
     setWorld(world: WorldId): void {
       const st = getGame();
-      if (eventById(st.activeEventId)?.seenFrom === 'moon' && world !== 'moon') {
-        showToast({ tr: 'Bu olay Ay’da geçer; yalnızca Ay’dan izlenir.', en: 'This event takes place on the Moon and can only be watched from there.' }, 'warn');
+      const ev = eventById(st.activeEventId);
+      const bound = eventBody(ev);
+      if (bound && world !== bound) {
+        showToast(BOUND_EVENT_NOTICE[bound], 'warn');
         return;
       }
+      const onMars = st.site?.body === 'mars';
+      if (onMars && world === 'mars') return;
       audio.cue('teleport');
       const apply = (): void => {
         const prevZeroG = WORLDS[getGame().world]?.zeroG ?? false;
@@ -2026,7 +2184,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         endStaging(false);
         clearPageState();
         artifacts.removeBeacon();
-        applyWorld(world);
+        if (st.site) applyWorld(world, st.site);
         if (!WORLDS[world].zeroG && (prevZeroG || player.state.position.y > terrain.heightAt(player.state.position.x, player.state.position.z) + 12)) {
           player.teleport(player.state.position.x, player.state.position.z, player.state.headingDeg, terrain, player.state.pitchDeg);
         }
@@ -2047,16 +2205,26 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
           beginEventHere();
         }
       };
+      if (st.site && !onMars && world !== 'mars') {
+        apply();
+        return;
+      }
+      // Mars is a place of its own: going there, or leaving it, loads another ground.
+      let jdTT = st.clock.jdTT;
       if (!st.site) {
         // From the menu, or from a close-up view opened from it: a free visit, loaded as this world from the
         // start, at the moment the view showed.
         leaveModes();
-        const site = prepareEvent(null, st.phase === 'space' ? st.clock.jdTT : jdTTNow());
-        setGame({ mapWorld: world });
-        this.landAt(site).catch(() => undefined);
-      } else {
-        apply();
+        jdTT = st.phase === 'space' ? st.clock.jdTT : jdTTNow();
+        prepareEvent(null, jdTT);
+      } else if (ev) {
+        // A visit under way keeps its date and its chapter, which plays again as seen from the new world.
+        if (ev.id === LAB_WATCH_EVENT_ID) showLabWatchFrom(world);
+        playedStagings.delete(`${ev.id}:surface:${world}`);
       }
+      const site = siteFor(eventById(getGame().activeEventId), world === 'mars' ? 'mars' : 'moon', jdTT);
+      setGame({ mapWorld: world });
+      this.landAt(site).catch(() => undefined);
     },
 
     openSpaceLab(preset: LabExplosionKind = 'sn2'): void {
@@ -2316,7 +2484,9 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
       };
       showLabWatchFrom(world);
       const query = labScenarioQuery(lab);
-      const site = prepareEvent(LAB_WATCH_EVENT_ID);
+      const moonSite = prepareEvent(LAB_WATCH_EVENT_ID);
+      // Mars is watched from its own ground; any other world borrows the Moon site's.
+      const site = world === 'mars' ? siteFor(eventById(LAB_WATCH_EVENT_ID), 'mars', lab.jdTT) : moonSite;
       setGame({ mapWorld: world, labReturn: query });
       await this.landAt(site);
     },
@@ -2567,8 +2737,11 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         if (input.wasPressed('Digit6')) api.setRate(864000);
       }
 
-      // [B] places (or moves) the measuring mast: Sun and Earth visibility here over the next lunar day.
-      if (!covered && input.wasPressed('KeyB')) {
+      // [B] places (or moves) the measuring mast: Sun and Earth visibility here over the next lunar day. Its
+      // reckoning is the Moon's sky: elsewhere there is none to give.
+      if (!covered && input.wasPressed('KeyB') && st.world !== 'moon') {
+        showToast({ tr: 'Ölçüm direği yalnızca Ay’da kurulabilir.', en: 'The measuring mast can only be set up on the Moon.' });
+      } else if (!covered && input.wasPressed('KeyB')) {
         audio.cue('confirm');
         const fwdX = Math.sin(player.state.headingDeg * DEG2RAD);
         const fwdZ = -Math.cos(player.state.headingDeg * DEG2RAD);
@@ -2830,7 +3003,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
 
       // Check surface artifacts first when close
       const tmpV = new THREE.Vector3();
-      for (const art of (st.world === 'moon' ? artifacts.list() : [])) {
+      for (const art of (standsOnSite(st.world, st.site) ? artifacts.list() : [])) {
         if (!art.present) continue;
         tmpV.copy(art.position).add(new THREE.Vector3(0, 0.8, 0));
         const dirToArt = tmpV.clone().sub(player.camera.position).normalize();
@@ -3049,8 +3222,8 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         const tempK = worldTemperatureK(st.world, sunBody.elDeg, sunVis, sunBody.distanceAU, st.terrainInfo?.albedo ?? 0.12);
 
         const telem: Telemetry = {
-          latDeg: st.site.latDeg - (player.state.position.z / 1_737_400) * RAD2DEG,
-          lonDeg: st.site.lonDeg + (player.state.position.x / (1_737_400 * Math.max(0.05, Math.cos(st.site.latDeg * DEG2RAD)))) * RAD2DEG,
+          latDeg: st.site.latDeg - (player.state.position.z / BODY_RADIUS_M[st.site.body ?? 'moon']) * RAD2DEG,
+          lonDeg: st.site.lonDeg + (player.state.position.x / (BODY_RADIUS_M[st.site.body ?? 'moon'] * Math.max(0.05, Math.cos(st.site.latDeg * DEG2RAD)))) * RAD2DEG,
           elevationM: (st.terrainInfo?.originElevationM ?? 0) + player.state.position.y,
           headingDeg: player.state.headingDeg,
           pitchDeg: player.state.pitchDeg,
@@ -3074,7 +3247,7 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
           surfaceTempK: tempK,
           radiationMsvDay: SURFACE_RADIATION_MSV_DAY[st.world] ?? null,
           accuracy: currentSky.accuracy,
-          terrainSource: st.terrainInfo?.sourceLabel ?? { tr: 'LOLA DEM', en: 'LOLA DEM' },
+          terrainSource: st.terrainInfo?.sourceLabel ?? DEM_NAME[st.site.body ?? 'moon'],
           terrainResolutionM: st.terrainInfo?.dataResolutionM ?? 240,
         };
 
@@ -3141,8 +3314,9 @@ export function startEngine(canvas: HTMLCanvasElement): GameAPI {
         const chapter = params.get('chapter');
         if (chapter) {
           api.selectEvent(chapter === 'free' ? null : chapter);
-          const site = SITES.find((s) => s.id === params.get('site')) ?? getGame().mapSelection;
-          if (site) await api.landAt(site);
+          // An event with no part on the ground has opened its view; anything else is landed.
+          const site = [...SITES, ...MARS_SITES].find((s) => s.id === params.get('site')) ?? getGame().mapSelection;
+          if (site && getGame().phase === 'map') await api.landAt(site);
         }
       }
       // A link to a lab scenario (`?lab=…`, see views/lab/link.ts) opens the lab with it.

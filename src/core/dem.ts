@@ -1,10 +1,12 @@
 /**
  * Decoder for the "LDEM-BIN" elevation format produced by tools/build_data.py:
  * a gzip stream of little-endian Uint16, row-major, each row delta-encoded (first value absolute,
- * the rest differences mod 65536). height_m = offset + scale · value, metres above the 1 737 400 m sphere.
+ * the rest differences mod 65536). height_m = offset + scale · value, metres above the body's reference sphere
+ * (the Moon's 1 737 400 m sphere, Mars's areoid).
  * Safe to use from Web Workers.
  */
 import { assetUrl } from './assets';
+import type { SiteBody } from './types';
 
 export interface DemMeta {
   width: number;
@@ -31,7 +33,8 @@ export interface Dem {
   data: Uint16Array;
 }
 
-export const MOON_RADIUS_M = 1_737_400;
+/** Mean radius of each body that has sites, metres: what turns ground distances into angles and bends the horizon. */
+export const BODY_RADIUS_M: Record<SiteBody, number> = { moon: 1_737_400, mars: 3_389_500 };
 
 async function gunzipIfNeeded(buf: ArrayBuffer): Promise<ArrayBuffer> {
   const head = new Uint8Array(buf, 0, 2);

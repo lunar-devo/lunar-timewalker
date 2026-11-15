@@ -8,7 +8,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './hud.css';
 import type {
-  DonkiResult, GalaxyDef, GalaxyPicture, L10n, Lang, NasaImage, NasaTopicResult, SkyTarget, WorldId,
+  DonkiResult, EventDef, GalaxyDef, GalaxyPicture, L10n, Lang, NasaImage, NasaTopicResult, SiteBody, SkyTarget, WorldId,
 } from '../../core/types';
 import { getManifest } from '../../core/assets';
 import { frame } from '../../core/frame';
@@ -26,6 +26,7 @@ import { game } from '../../game/api';
 import { createNasa } from '../../nasa';
 import { parseLabLink } from '../../views/lab/link';
 import { LAB_WATCH_EVENT_ID, LAB_WATCH_NAME, LAB_WATCH_TARGET_ID } from '../../views/lab/watch';
+import { orbitViewInfo } from '../../views/orbits';
 import { sunViewLabels } from '../../views/special';
 import { LangPicker } from '../LangPicker';
 import { LabDrawer } from './LabDrawer';
@@ -65,6 +66,18 @@ const LIGHT_NAMES: Record<GalaxyPicture['id'], L10n> = {
   visible: { tr: 'Görünür ışık', en: 'Visible light' },
   infrared: { tr: 'Kızılötesi', en: 'Infrared' },
   ultraviolet: { tr: 'Morötesi', en: 'Ultraviolet' },
+};
+/** The body an event is bound to, for the events that happen on one: it is watched from a place there. */
+export const EVENT_BODY: Partial<Record<EventDef['seenFrom'], SiteBody>> = { moon: 'moon', mars: 'mars' };
+/** What the map and the world list say while such an event holds them to its body. */
+export const ONLY_FROM_BODY: Record<SiteBody, L10n> = {
+  moon: { tr: 'Bu olay Ay’da geçer; yalnızca Ay’dan izlenir.', en: 'This event takes place on the Moon and can only be watched from there.' },
+  mars: { tr: 'Bu olay Mars’ta geçer; yalnızca Mars’tan izlenir.', en: 'This event takes place on Mars and can only be watched from there.' },
+};
+/** Close-up views that are not named after a body of the sky or a galaxy: what the bar calls them. */
+const VIEW_TITLES: Partial<Record<string, L10n>> = {
+  lab: { tr: 'Patlama Laboratuvarı', en: 'Explosion Lab' },
+  mars_orbit: { tr: 'Dünya ve Mars’ın yörüngeleri', en: 'The orbits of Earth and Mars' },
 };
 /** Mean width of the full Moon in Earth's sky, degrees. */
 const FULL_MOON_DEG = 0.518;
@@ -300,6 +313,42 @@ const STAGE_KIND_ORDER = ['before', 'event', 'after'] as const;
 /** An object brighter than the full Moon (this magnitude) is not lost in the Sun's glare, however close it stands. */
 const GLARE_HIDES_FAINTER_THAN_MAG = -12;
 
+/**
+ * The note under the caption while the sky is held to the stars. The lab's supernova is narrated for the world it is
+ * watched from, the archive's events for the Moon. Mars and the Moon are walked on their measured ground; the ground
+ * of the other planets is a model.
+ */
+function heldSkyNote(lang: Lang, world: WorldId, labWatch: boolean): string {
+  const name = WORLDS[world].name;
+  if (!labWatch) {
+    return world === 'mars'
+      ? tx(
+        lang,
+        tpl`${name} üzerinden izliyorsunuz; anlatım Ay’dan görünen hâle göre yazılmıştır. Gökyüzü yıldızlara sabitlendi: gezegenin her dönüşünde tek kare gösterilir.`,
+        tpl`Watching from ${name}; the narration was written for the view from the Moon. The sky is held to the stars: one frame is shown per rotation of the planet.`,
+      )
+      : tx(
+        lang,
+        tpl`${name} üzerinden izliyorsunuz; anlatım Ay’dan görünen hâle göre yazılmıştır. Gökyüzü yıldızlara sabitlendi: gezegenin her dönüşünde tek kare gösterilir. Zemin modeldir.`,
+        tpl`Watching from ${name}; the narration was written for the view from the Moon. The sky is held to the stars: one frame is shown per rotation of the planet. The ground is a model.`,
+      );
+  }
+  if (world === 'moon') {
+    return tx(lang, 'Ay üzerinden izliyorsunuz. Gökyüzü yıldızlara sabitlendi: Ay’ın her dönüşünde tek kare gösterilir.', 'Watching from the Moon. The sky is held to the stars: one frame is shown per rotation of the Moon.');
+  }
+  return world === 'mars'
+    ? tx(
+      lang,
+      tpl`${name} üzerinden izliyorsunuz. Gökyüzü yıldızlara sabitlendi: gezegenin her dönüşünde tek kare gösterilir.`,
+      tpl`Watching from ${name}. The sky is held to the stars: one frame is shown per rotation of the planet.`,
+    )
+    : tx(
+      lang,
+      tpl`${name} üzerinden izliyorsunuz. Gökyüzü yıldızlara sabitlendi: gezegenin her dönüşünde tek kare gösterilir. Zemin modeldir.`,
+      tpl`Watching from ${name}. The sky is held to the stars: one frame is shown per rotation of the planet. The ground is a model.`,
+    );
+}
+
 function StagePanel() {
   const lang = useLang();
   const stage = useGame((s) => s.stage);
@@ -378,21 +427,7 @@ function StagePanel() {
           <div className="hud-stage-caption">{loc(stage.caption, lang)}</div>
           {skyLocked && (
             <div className="hud-stage-note">
-              {/* The lab's supernova is narrated for the world it is watched from; the archive's events, for the Moon.
-                  On the Moon the ground is the measured one, and what turns under the sky is the Moon. */}
-              {activeEventId !== LAB_WATCH_EVENT_ID
-                ? tx(
-                  lang,
-                  tpl`${WORLDS[world].name} üzerinden izliyorsunuz; anlatım Ay’dan görünen hâle göre yazılmıştır. Gökyüzü yıldızlara sabitlendi: gezegenin her dönüşünde tek kare gösterilir. Zemin modeldir.`,
-                  tpl`Watching from ${WORLDS[world].name}; the narration was written for the view from the Moon. The sky is held to the stars: one frame is shown per rotation of the planet. The ground is a model.`,
-                )
-                : world === 'moon'
-                  ? tx(lang, 'Ay üzerinden izliyorsunuz. Gökyüzü yıldızlara sabitlendi: Ay’ın her dönüşünde tek kare gösterilir.', 'Watching from the Moon. The sky is held to the stars: one frame is shown per rotation of the Moon.')
-                  : tx(
-                    lang,
-                    tpl`${WORLDS[world].name} üzerinden izliyorsunuz. Gökyüzü yıldızlara sabitlendi: gezegenin her dönüşünde tek kare gösterilir. Zemin modeldir.`,
-                    tpl`Watching from ${WORLDS[world].name}. The sky is held to the stars: one frame is shown per rotation of the planet. The ground is a model.`,
-                  )}
+              {heldSkyNote(lang, world, activeEventId === LAB_WATCH_EVENT_ID)}
               {EVENTS.find((e) => e.id === activeEventId)?.seenFrom === 'earthMoon' && (
                 <> {tx(lang, 'Bu dizilim Dünya ve Ay’a özgüdür; buradan açılar farklıdır.', 'This alignment is specific to Earth and the Moon; the angles are different from here.')}</>
               )}
@@ -1025,6 +1060,7 @@ export function SurfaceHud() {
   const shownActions = barActions.filter((a) => tight < a.dropAt);
 
   const activeEvent = EVENTS.find((e) => e.id === activeEventId);
+  const eventBody = activeEvent ? EVENT_BODY[activeEvent.seenFrom] : undefined;
   const nextEvent = activeEvent ? EVENTS.find((e) => e.order === activeEvent.order + 1) : undefined;
 
   async function handleTakePhoto(kind: '4k' | '8k'): Promise<void> {
@@ -1128,12 +1164,10 @@ export function SurfaceHud() {
             className="hud-bar-select"
             value={world}
             aria-label={tx(lang, 'Ortam / Çekim', 'World / Gravity')}
-            // On the Moon during an event that happens there no other world can be chosen; from another
-            // world the list stays open, since it is the way back to the Moon.
-            disabled={activeEvent?.seenFrom === 'moon' && world === 'moon'}
-            title={activeEvent?.seenFrom === 'moon'
-              ? tx(lang, 'Bu olay Ay’da geçer; yalnızca Ay’dan izlenir.', 'This event takes place on the Moon and can only be watched from there.')
-              : undefined}
+            // On the Moon or on Mars during an event that happens there no other world can be chosen; from
+            // another world the list stays open, since it is the way back.
+            disabled={eventBody !== undefined && eventBody === world}
+            title={eventBody ? loc(ONLY_FROM_BODY[eventBody], lang) : undefined}
             onChange={(e) => game.setWorld(e.target.value as WorldId)}
           >
             {WORLD_ORDER.map((wid) => {
@@ -1146,8 +1180,8 @@ export function SurfaceHud() {
             })}
           </select>
           <button type="button" className="hud-bar-btn" onClick={() => game.openMap()}>
-            {/* The place is a place on the Moon; on the other worlds the button only opens the map. */}
-            {world === 'moon' && site ? loc(site.name, lang).split(' (')[0] : tx(lang, 'Harita', 'Map')} [M]
+            {/* A place belongs to the Moon or to Mars; on a world that only borrows its ground the button opens the map. */}
+            {site && (site.body ?? 'moon') === world ? loc(site.name, lang).split(' (')[0] : tx(lang, 'Harita', 'Map')} [M]
           </button>
         </div>
 
@@ -1482,48 +1516,146 @@ export function SurfaceHud() {
 
 // ─────────────────────────── SpaceHud (Galaxies, Planets, Sun, Remnants, Explosion Lab) ───────────────────────────
 
+/** A dot of a close-up view that the HUD names. The view writes where the dot is on the screen every frame. */
+interface ViewDot {
+  id: string;
+  name: L10n;
+  /** Shares of the viewport's width and height from its top-left corner. */
+  x: number;
+  y: number;
+  shown: boolean;
+}
+
+/** How far a dot's name stands from the dot, px: clear of a planet's ball at the distance the views open at. */
+const DOT_NAME_GAP_PX = 26;
+
 /**
- * Names on the dots of Mercury, Venus and Earth in the Sun view. The view writes where each dot is on the
- * screen every frame; the names follow in a frame loop of their own. A name stands on the side of its dot
- * away from the Sun, which is in the middle of the view, and far enough out to clear Earth's ball and the
- * Moon's dot beside it at the distance the view opens at.
+ * Names on the dots of a close-up view: the planets of the Sun view; the Sun, the planets and Mars's
+ * perihelion in the orbits view. The names follow the dots in a frame loop of their own. A name stands on the
+ * side of its dot away from the middle of the view, where the Sun is; where it would lie over a name placed
+ * before it (Mars passing its perihelion), it goes to the other side.
  */
-function SunDotNames({ lang }: { lang: Lang }) {
+function DotNames({ dots, lang }: { dots: ViewDot[]; lang: Lang }) {
   const itemRefs = useRef(new Map<string, HTMLSpanElement>());
 
   useEffect(() => {
     let raf = 0;
     const loop = (): void => {
-      for (const label of sunViewLabels) {
-        const el = itemRefs.current.get(label.id);
-        if (!el) continue;
-        el.style.visibility = label.shown ? 'visible' : 'hidden';
-        el.style.left = `${label.x * 100}%`;
-        el.style.top = `${label.y * 100}%`;
-        el.style.transform = label.y < 0.5 ? 'translate(-50%, calc(-100% - 26px))' : 'translate(-50%, 26px)';
+      // Every size is read before anything is moved, so that the page is laid out once a frame.
+      const sized = dots.flatMap((dot) => {
+        const el = itemRefs.current.get(dot.id);
+        return el ? [{ dot, el, width: el.offsetWidth, height: el.offsetHeight }] : [];
+      });
+      const placed: Box2D[] = [];
+      for (const { dot, el, width, height } of sized) {
+        el.style.visibility = dot.shown ? 'visible' : 'hidden';
+        if (!dot.shown) continue;
+        const x1 = dot.x * window.innerWidth - width / 2;
+        const y = dot.y * window.innerHeight;
+        const above: Box2D = { x1, y1: y - DOT_NAME_GAP_PX - height, x2: x1 + width, y2: y - DOT_NAME_GAP_PX };
+        const below: Box2D = { x1, y1: y + DOT_NAME_GAP_PX, x2: x1 + width, y2: y + DOT_NAME_GAP_PX + height };
+        const sides = dot.y < 0.5 ? [above, below] : [below, above];
+        const box = sides.find((b) => !overlapsBox(b, placed)) ?? sides[0];
+        placed.push(box);
+        el.style.left = `${box.x1}px`;
+        el.style.top = `${box.y1}px`;
       }
       raf = window.requestAnimationFrame(loop);
     };
     raf = window.requestAnimationFrame(loop);
     return () => window.cancelAnimationFrame(raf);
-  }, []);
+  }, [dots]);
 
   return (
     <>
-      {sunViewLabels.map((label) => (
+      {dots.map((dot) => (
         <span
-          key={label.id}
+          key={dot.id}
           className="hud-star-label"
-          style={{ visibility: 'hidden' }}
+          style={{ visibility: 'hidden', transform: 'none' }}
           ref={(el) => {
-            if (el) itemRefs.current.set(label.id, el);
-            else itemRefs.current.delete(label.id);
+            if (el) itemRefs.current.set(dot.id, el);
+            else itemRefs.current.delete(dot.id);
           }}
         >
-          {loc(label.name, lang)}
+          {loc(dot.name, lang)}
         </span>
       ))}
     </>
+  );
+}
+
+/** Mars's largest apparent diameter, arcseconds: that of 27 August 2003. A disc this wide fills the eyepiece drawn in the orbits view's card. */
+const MARS_LARGEST_ARCSEC = 25.1;
+
+/**
+ * The orbits view's card: how far Mars is from Earth on the date shown, how long light takes to cross, and
+ * how large Mars looks in a telescope, with a disc drawn to that size. The view writes the numbers every
+ * frame; the card follows in a frame loop of its own and rewrites its texts only when the distance changes.
+ */
+function OrbitCard({ lang }: { lang: Lang }) {
+  const distanceRef = useRef<HTMLSpanElement>(null);
+  const lightRef = useRef<HTMLSpanElement>(null);
+  const sizeRef = useRef<HTMLSpanElement>(null);
+  const discRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let raf = 0;
+    let shownKm = -1;
+    const loop = (): void => {
+      const info = orbitViewInfo;
+      if (info.shown && info.distanceKm !== shownKm && distanceRef.current && lightRef.current && sizeRef.current && discRef.current) {
+        shownKm = info.distanceKm;
+        const millionKm = fmt(info.distanceKm / 1e6, 2, lang);
+        const au = fmt(info.distanceAU, 3, lang);
+        const minutes = fmt(info.lightTimeSec / 60, 1, lang);
+        distanceRef.current.textContent = tx(lang, tpl`${millionKm} milyon km · ${au} AU`, tpl`${millionKm} million km · ${au} AU`);
+        lightRef.current.textContent = tx(lang, tpl`${minutes} dk`, tpl`${minutes} min`);
+        sizeRef.current.textContent = `${fmt(info.marsDiameterArcsec, 1, lang)}″`;
+        const share = `${Math.min(1, info.marsDiameterArcsec / MARS_LARGEST_ARCSEC) * 100}%`;
+        discRef.current.style.width = share;
+        discRef.current.style.height = share;
+      }
+      raf = window.requestAnimationFrame(loop);
+    };
+    raf = window.requestAnimationFrame(loop);
+    return () => window.cancelAnimationFrame(raf);
+  }, [lang]);
+
+  return (
+    <div className="hud-card hud-space-side hud-orbit-card">
+      <div className="hud-card-title">
+        <span>{tx(lang, 'Dünya ile Mars arasında', 'Between Earth and Mars')}</span>
+      </div>
+      <div>
+        <div className="hud-telem-row">
+          <span>{tx(lang, 'Uzaklık', 'Distance')}</span>
+          <span className="hud-telem-val" ref={distanceRef}>—</span>
+        </div>
+        <div className="hud-telem-row">
+          <span>{tx(lang, 'Işığın geliş süresi', 'Light travel time')}</span>
+          <span className="hud-telem-val" ref={lightRef}>—</span>
+        </div>
+        <div className="hud-telem-row">
+          <span>{tx(lang, 'Mars’ın görünen çapı', 'Apparent diameter of Mars')}</span>
+          <span className="hud-telem-val" ref={sizeRef}>—</span>
+        </div>
+      </div>
+      <div className="hud-orbit-eyepiece">
+        <div><div ref={discRef} /></div>
+        <span>
+          {tx(
+            lang,
+            tpl`Mars bu tarihte teleskopta bu büyüklükte görünür. En büyük hâli (${fmt(MARS_LARGEST_ARCSEC, 1, lang)}″, 27 Ağustos 2003) çemberi doldurur.`,
+            tpl`This is how large Mars looks in a telescope on this date. At its largest (${fmt(MARS_LARGEST_ARCSEC, 1, lang)}″, 27 August 2003) it fills the circle.`,
+          )}
+        </span>
+      </div>
+      <ul>
+        <li>{tx(lang, 'Parlak çizgi Dünya ile Mars arasındaki uzaklıktır.', 'The bright line is the distance between Earth and Mars.')}</li>
+        <li>{tx(lang, 'Ölçekli değildir: Güneş yaklaşık 19 kat, gezegenler yaklaşık 1.400 kat büyük çizilmiştir. Yörüngeler, gezegenlerin yerleri ve aralarındaki uzaklık gösterilen tarih için hesaplanır.', 'Not to scale: the Sun is drawn about 19 times and the planets about 1,400 times too large. The orbits, the planets’ places and the distance between them are computed for the date shown.')}</li>
+      </ul>
+    </div>
   );
 }
 
@@ -1546,6 +1678,7 @@ export function SpaceHud() {
   const galShot = galDef?.pictures.find((p) => p.id === spaceView.galaxyPictureId) ?? galDef?.pictures[0];
   const remnant = TRANSIENTS.find((t) => t.id === tid);
   const isLab = tid === 'lab';
+  const viewTitle = VIEW_TITLES[tid];
   const canWalkHere = WORLD_ORDER.includes(tid as WorldId);
   // The line under a globe that says what its picture is. Earth's names the month of its picture, and the
   // view keeps the picture it has while the clock runs at a day each second or faster: the line would then
@@ -1577,7 +1710,7 @@ export function SpaceHud() {
             </select>
           ) : (
             <strong style={{ fontSize: '0.92rem' }}>
-              {isLab ? tx(lang, 'Patlama Laboratuvarı', 'Explosion Lab') : resolveTargetName(tid, lang)}
+              {viewTitle ? loc(viewTitle, lang) : resolveTargetName(tid, lang)}
             </strong>
           )}
         </div>
@@ -1735,7 +1868,9 @@ export function SpaceHud() {
         </div>
       )}
 
-      {tid === 'sun' && <SunDotNames lang={lang} />}
+      {tid === 'sun' && <DotNames dots={sunViewLabels} lang={lang} />}
+      {tid === 'mars_orbit' && <DotNames dots={orbitViewInfo.labels} lang={lang} />}
+      {tid === 'mars_orbit' && <OrbitCard lang={lang} />}
       {tid === 'sun' && (
         <div className="hud-card hud-space-side" style={{ position: 'fixed', top: 58, left: 16, width: 'min(320px, 30vw)', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div className="hud-card-title">

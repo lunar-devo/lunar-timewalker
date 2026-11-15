@@ -4,7 +4,7 @@
  * asked for, so that it never shows the pictures of a page that was left behind.
  */
 import type { BodyId, LabExplosionKind, WorldId } from '../core/types';
-import { BODY_TOPICS, SITES, TRANSIENTS } from './catalog';
+import { ARTIFACT_PLACEMENTS, BODY_TOPICS, MARS_SITES, SITES, SURFACE_ASSETS, TRANSIENTS } from './catalog';
 import { EVENTS } from './events';
 import { GALAXIES } from './galaxies';
 
@@ -45,10 +45,17 @@ export function archiveTopicAt(place: ArchivePlace): string {
     // A close-up view the event is staged in shows the event; any other shows its own subject.
     if (place.stagedHere && eventTopic) return eventTopic;
     if (id === 'moon') return WORLD_TOPICS.moon;
+    // The orbit cinematic is about the close approach of 2003, also when opened outside that event.
+    if (id === 'mars_orbit') return 'mars_2003';
     if (id in BODY_TOPICS) return BODY_TOPICS[id as BodyId];
     return GALAXIES.find((g) => g.id === id)?.topicId ?? TRANSIENTS.find((t) => t.id === id)?.topicId ?? WORLD_TOPICS.orbit;
   }
   if (eventTopic) return eventTopic;
+  if (place.world === 'mars') {
+    // On a Mars mission site: the hardware that stands there; elsewhere on Mars, the planet itself.
+    const placed = MARS_SITES.some((s) => s.id === place.siteId) ? ARTIFACT_PLACEMENTS.find((p) => p.siteId === place.siteId) : undefined;
+    return SURFACE_ASSETS.find((a) => a.id === placed?.assetId)?.topicId ?? WORLD_TOPICS.mars;
+  }
   if (place.world !== 'moon') return WORLD_TOPICS[place.world];
   // On the Moon without an event: the place stood on, where the archive has pictures of it.
   if (place.siteId === 'apollo11') return 'apollo11';

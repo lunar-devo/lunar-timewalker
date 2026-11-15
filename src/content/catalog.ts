@@ -1,9 +1,9 @@
 /**
- * Bilingual (TR/EN) catalogues: lunar sites, historical supernovae and comets, hardware on the Moon
- * and Mars, and NASA image topics for the info centre.
+ * Bilingual (TR/EN) catalogues: lunar and Martian sites, historical supernovae and comets, hardware on
+ * the Moon and Mars, and NASA image topics for the info centre.
  */
 import type {
-  ArtifactPlacement, BodyId, L10n, SiteDef, SurfaceAsset, TransientDef,
+  ArtifactPlacement, BodyId, L10n, SiteBody, SiteDef, SurfaceAsset, TransientDef,
 } from '../core/types';
 import { jdFromCalendar } from '../core/time';
 
@@ -192,6 +192,72 @@ export const SITES: SiteDef[] = [
     },
   },
 ];
+
+/**
+ * Walkable places on Mars, each where a mission stands whose model exists. Areocentric latitude and east
+ * longitude, the same figures as the hardware in SURFACE_ASSETS. Every site looks north on arrival, toward
+ * its hardware.
+ */
+export const MARS_SITES: SiteDef[] = [
+  {
+    id: 'mars_jezero',
+    body: 'mars',
+    latDeg: 18.44,
+    lonDeg: 77.45,
+    tags: ['mars', 'rover'],
+    spawnHeadingDeg: 0,
+    name: { tr: 'Jezero Krateri (Perseverance ve Ingenuity)', en: 'Jezero Crater (Perseverance and Ingenuity)' },
+    region: { tr: 'Wright Kardeşler Alanı, krater tabanı', en: 'Wright Brothers Field, crater floor' },
+    blurb: {
+      tr: 'Milyarlarca yıl önce göl olan krater; batı kenarında, göle dökülen nehrin bıraktığı delta duruyor. Perseverance 18 Şubat 2021’de buraya indi ve yanında Ingenuity helikopterini getirdi.',
+      en: 'A crater that was a lake billions of years ago; at its western edge lies the delta left by the river that flowed into it. Perseverance landed here on 18 February 2021 and brought the Ingenuity helicopter with it.',
+    },
+  },
+  {
+    id: 'mars_viking1',
+    body: 'mars',
+    latDeg: 22.27,
+    lonDeg: -47.95,
+    tags: ['mars', 'lander'],
+    spawnHeadingDeg: 0,
+    name: { tr: 'Chryse Planitia (Viking 1)', en: 'Chryse Planitia (Viking 1)' },
+    region: { tr: 'Kuzey ovaları, eski sel kanallarının ağzı', en: 'Northern plains, at the mouth of ancient flood channels' },
+    blurb: {
+      tr: 'Kayalarla kaplı alçak bir ova. Viking 1 buraya 20 Temmuz 1976’da indi ve Kasım 1982’ye kadar çalıştı. Mars yüzeyinden çekilen ilk fotoğraflar buradan geldi.',
+      en: 'A low plain strewn with rocks. Viking 1 landed here on 20 July 1976 and worked until November 1982. The first photographs taken on the surface of Mars came from here.',
+    },
+  },
+  {
+    id: 'mars_viking2',
+    body: 'mars',
+    latDeg: 47.64,
+    lonDeg: 134.29,
+    tags: ['mars', 'lander'],
+    spawnHeadingDeg: 0,
+    name: { tr: 'Utopia Planitia (Viking 2)', en: 'Utopia Planitia (Viking 2)' },
+    region: { tr: 'Kuzey ovaları', en: 'Northern plains' },
+    blurb: {
+      tr: 'Mars’ın kuzeyindeki geniş düzlük. Viking 2 buraya 3 Eylül 1976’da indi ve Nisan 1980’e kadar çalıştı. Kışın kayaların üzerinde ince bir kırağı tabakası oluştuğunu fotoğrafladı.',
+      en: 'A wide plain in the north of Mars. Viking 2 landed here on 3 September 1976 and worked until April 1980. It photographed a thin layer of frost forming on the rocks in winter.',
+    },
+  },
+  {
+    id: 'mars_insight',
+    body: 'mars',
+    latDeg: 4.5,
+    lonDeg: 135.62,
+    tags: ['mars', 'lander', 'equatorial'],
+    spawnHeadingDeg: 0,
+    name: { tr: 'Elysium Planitia (InSight)', en: 'Elysium Planitia (InSight)' },
+    region: { tr: 'Ekvator yakınında düz ova', en: 'Flat plain near the equator' },
+    blurb: {
+      tr: 'Ekvatora yakın, dümdüz bir lav ovası. InSight buraya 26 Kasım 2018’de indi ve Aralık 2022’ye kadar Mars depremlerini dinledi; 1.300’den fazlasını kaydetti.',
+      en: 'A very flat lava plain near the equator. InSight landed here on 26 November 2018 and listened for marsquakes until December 2022; it recorded more than 1,300 of them.',
+    },
+  },
+];
+
+export const SITES_BY_BODY: Record<SiteBody, SiteDef[]> = { moon: SITES, mars: MARS_SITES };
 
 // ─────────────────────────── historical transients ───────────────────────────
 
@@ -758,8 +824,10 @@ export const SURFACE_ASSETS: SurfaceAsset[] = [
     kind: 'helicopter',
     mission: { tr: 'Mars 2020 (NASA/JPL)', en: 'Mars 2020 (NASA/JPL)' },
     agency: 'NASA',
-    latDeg: 18.49,
-    lonDeg: 77.32,
+    // Wright Brothers Field, the airfield of its first flights, beside the rover's landing site; its 72 flights
+    // carried it about 17 km from here.
+    latDeg: 18.44,
+    lonDeg: 77.45,
     arrival: { year: 2021, month: 2, day: 18 },
     lastContact: { year: 2024, month: 1, day: 18 },
     stillActive: false,
@@ -785,7 +853,21 @@ export const SURFACE_ASSETS: SurfaceAsset[] = [
   },
 ];
 
-// Approximate positions relative to the Apollo 11 Lunar Module at (0,0) from the NASA Apollo 11 Preliminary Science Report traverse map
+/**
+ * Hardware standing on the walkable sites, as offsets from the point where the astronaut arrives.
+ *
+ * Apollo 11: approximate positions relative to the Lunar Module at (0,0), from the traverse map of the NASA
+ * Apollo 11 Preliminary Science Report.
+ *
+ * Mars: `visual: 'model'` draws the asset's GLB, scaled so that it stands `heightM` tall. The heights are
+ * chosen so that each model's footprint matches the real vehicle (bounding boxes read from the GLB files):
+ * Ingenuity 0.59 m to the top of its antenna puts the rotors at 1.2 m across; Perseverance 1.85 m gives the
+ * real 2.7 m width and 3.1 m length (the model's mast is lower than the real 2.2 m); a Viking lander 2.1 m
+ * to the top of its dish spans 2.9 m by 3.9 m; InSight 1.65 m spans 6.0 m across its two solar panels.
+ * The landers stand 18 m north of the arrival point; that offset is a staging choice, not a measurement.
+ * At Jezero the rover stands 64 m from the helicopter, the distance from which it watched the first flight
+ * at Van Zyl Overlook; the direction between them here is not the real one.
+ */
 export const ARTIFACT_PLACEMENTS: ArtifactPlacement[] = [
   { assetId: 'a11_descent', siteId: 'apollo11', eastM: 0, southM: 0, headingDeg: 90, visual: 'apollo_lm_descent', radiusM: 6 },
   { assetId: 'a11_flag', siteId: 'apollo11', eastM: -7.5, southM: -3.2, headingDeg: 35, visual: 'flag', radiusM: 3.5 },
@@ -793,6 +875,11 @@ export const ARTIFACT_PLACEMENTS: ArtifactPlacement[] = [
   { assetId: 'a11_lrrr', siteId: 'apollo11', eastM: -4.2, southM: 14.5, headingDeg: 180, visual: 'lrrr', radiusM: 3.5 },
   { assetId: 'a11_psep', siteId: 'apollo11', eastM: -2.0, southM: 19.2, headingDeg: 0, visual: 'psep', radiusM: 3.5 },
   { assetId: 'a11_bootprints', siteId: 'apollo11', eastM: -3.8, southM: 1.8, headingDeg: 0, visual: 'bootprints', radiusM: 3.5 },
+  { assetId: 'ingenuity', siteId: 'mars_jezero', eastM: 0, southM: -24, headingDeg: 0, visual: 'model', heightM: 0.59, radiusM: 3.5 },
+  { assetId: 'perseverance', siteId: 'mars_jezero', eastM: 46, southM: -68, headingDeg: 225, visual: 'model', heightM: 1.85, radiusM: 6 },
+  { assetId: 'viking1', siteId: 'mars_viking1', eastM: 0, southM: -18, headingDeg: 0, visual: 'model', heightM: 2.1, radiusM: 6 },
+  { assetId: 'viking2', siteId: 'mars_viking2', eastM: 0, southM: -18, headingDeg: 0, visual: 'model', heightM: 2.1, radiusM: 6 },
+  { assetId: 'insight', siteId: 'mars_insight', eastM: 0, southM: -18, headingDeg: 0, visual: 'model', heightM: 1.65, radiusM: 7 },
 ];
 
 /** NASA Image Library topics for the info centre; `query` is the image search. */

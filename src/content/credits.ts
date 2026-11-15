@@ -34,6 +34,19 @@ export const CREDIT_GROUPS: Array<{ title: L10n; items: CreditItem[] }> = [
     ],
   },
   {
+    title: { tr: 'Mars yüzeyi', en: 'Mars surface' },
+    items: [
+      {
+        text: 'NASA MGS MOLA Science Team / PDS Geosciences Node — global elevation of Mars (MEGDR, 16 px/deg)',
+        url: 'https://pds-geosciences.wustl.edu/missions/mgs/megdr.html',
+      },
+      {
+        text: 'NASA release 21-039, “NASA’s Ingenuity Mars Helicopter Succeeds in Historic First Flight” (19 April 2021) — time, height and duration of the first flight',
+        url: 'https://www.nasa.gov/news-release/nasas-ingenuity-mars-helicopter-succeeds-in-historic-first-flight/',
+      },
+    ],
+  },
+  {
     title: { tr: 'Gökyüzü, gezegenler ve galaksiler', en: 'Sky, planets and galaxies' },
     items: [
       {

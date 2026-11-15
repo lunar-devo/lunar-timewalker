@@ -1,0 +1,13 @@
+{
+  "width": 5760,
+  "height": 2880,
+  "offset": -8177.0,
+  "scale": 0.447822,
+  "nodata": null,
+  "projection": "equirect",
+  "lonLeftDeg": -180.0,
+  "latTopDeg": 90.0,
+  "metersPerSample": 3697.37,
+  "source": "https://pds-geosciences.wustl.edu/mgs/mgs-m-mola-5-megdr-l3-v1/mgsl_300x/meg016/megt90n000eb.img",
+  "credit": "NASA MGS MOLA Science Team / PDS Geosciences Node (MEGDR 16 px/deg, MEGT90N000EB)"
+}
