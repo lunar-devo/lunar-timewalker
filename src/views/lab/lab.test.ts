@@ -4,7 +4,7 @@ import {
   LAB_MAX_AU, LAB_MIN_AU, LAB_ORBITS_AU, labEarthPlace, labPlaceFromEarth, labProject, labSunDistanceAU, labSunRadius, labUnproject, LY_AU,
   type MapPoint,
 } from './map';
-import { computeLabResults, labBlastPlace, labClockRealSec, labClockSec, labFrontsAU, type LabResults } from './physics';
+import { computeLabResults, labBlastPlace, labClockRealSec, labClockSec, labFrontsAU, labRunLines, type LabResults } from './physics';
 import { labLinkQuery, parseLabLink, type LabLink } from './link';
 import { GALAXIES, WORLDS } from '../../content';
 import { loc } from '../../core/l10n';
@@ -416,6 +416,77 @@ describe('Explosion Lab: the other bodies', () => {
     expect(calm.fates.find((f) => f.id === 'neptune')?.verdict).toBeNull();
     expect(impactOf('sn2', 6500 * LY_AU).verdict).toBeNull();
     for (const fate of resultsOf('cme', Math.PI, 1).fates) expect(fate.verdict === null).toBe(fate.shockAtSec === null);
+  });
+
+  it('lists every body at the arrival that causes what its line says', () => {
+    // One light year away the light is there after a year (365 days, a quarter of a day short of the year the
+    // times are counted in): it thins Earth's ozone layer and warms Jupiter. The blast follows 29 years
+    // later; it strips Mars of its thin air and does nothing more to the others.
+    const far = resultsOf('sn2', 1.1, LY_AU);
+    const bodies = [{ id: 'earth', ...far.impact }, ...far.fates];
+    const lines = labRunLines(far.impact, far.fates);
+    const cause = (id: string): string | null => bodies.find((b) => b.id === id)?.verdictFrom ?? null;
+    const line = (id: string): string => {
+      const found = lines.find((l) => l.id === id);
+      return `${found?.timeText ? loc(found.timeText, 'en') : '-'} · ${found?.verdict?.en ?? 'not affected'}`;
+    };
+    expect(line('earth')).toBe('365 days · most of the ozone layer lost');
+    expect(line('jupiter')).toBe('365 days · warms up');
+    expect(line('mars')).toBe('30 years · atmosphere stripped');
+    for (const found of lines) {
+      const body = bodies.find((b) => b.id === found.id);
+      expect(found.atSec).toBe(cause(found.id) === null ? null : cause(found.id) === 'light' ? body?.lightAtSec : body?.shockAtSec);
+    }
+    // Every line the light causes comes before every line the blast causes; the unaffected come last.
+    const order = lines.map((l) => cause(l.id) ?? 'none');
+    expect(order.lastIndexOf('light')).toBeLessThan(order.indexOf('blast'));
+    expect(order.lastIndexOf('blast')).toBeLessThan(order.indexOf('none'));
+    expect(order.filter((c) => c === 'none').length).toBe(lines.filter((l) => l.verdict === null).length);
+
+    // Close by, everything that is said is the blast's doing: the list is in the order of the blast's arrival.
+    const near = resultsOf('sn2', 0.7, 0.3);
+    const nearBodies = [{ id: 'earth', ...near.impact }, ...near.fates];
+    expect(nearBodies.every((b) => b.verdictFrom === 'blast')).toBe(true);
+    const nearLines = labRunLines(near.impact, near.fates);
+    expect(nearLines.map((l) => l.id)).toEqual([...nearBodies].sort((a, b) => (a.shockAtSec ?? 0) - (b.shockAtSec ?? 0)).map((b) => b.id));
+    for (const found of nearLines) expect(found.timeText).toBe(nearBodies.find((b) => b.id === found.id)?.shockTimeText);
+
+    // A burst is its own light: its lines carry the time of its rays.
+    const burst = resultsOf('grb', 0, 100);
+    for (const found of labRunLines(burst.impact, burst.fates)) {
+      const fate = burst.fates.find((f) => f.id === found.id);
+      if (fate && found.atSec !== null) expect(found.atSec).toBe(fate.lightAtSec);
+    }
+  });
+
+  it('heats the side of the Sun that faces a supernova near it, by the rule that holds for the planets', () => {
+    // Set at Jupiter, 5.1 AU from the Sun: 4.5×10¹⁰ W/m² at peak against the 6.3×10⁷ W/m² that the Sun's
+    // own surface gives off. The blast is too thin there to tear gas off it; the light is not.
+    const atJupiter = computeLabResults({ ...setupOf('sn2', Math.PI / 2, 5), anchorId: 'jupiter' }, system, ['europa', 'titan']);
+    const sun = atJupiter.fates.find((f) => f.id === 'sun');
+    expect(sun?.outcome.air).toBeLessThan(0.25);
+    expect(sun?.fluxLocal).toBeGreaterThan(500);
+    expect(sun?.fluxLocal).toBeLessThan(1000);
+    // 5772 K × (1 + 710)^¼.
+    expect(sun?.tempK).toBeGreaterThan(28_000);
+    expect(sun?.tempK).toBeLessThan(32_000);
+    expect(sun?.level).toBe('danger');
+    expect(sun?.verdict?.en).toBe('side facing the blast overheats');
+    expect(sun?.steps.map((s) => s.id)).toEqual(['light', 'scorch', 'shock']);
+    // Where the blast does tear gas off it, that is what is said first.
+    expect(fatesOf('sn2', 0, 0.9).sun.verdict?.en).toBe('loses gas from its outer layers');
+    // From 300 AU the light is a fifth of the Sun's own: the side facing it warms up, no more.
+    const warm = fatesOf('sn2', Math.PI, 301).sun;
+    expect(warm.fluxLocal).toBeGreaterThan(0.1);
+    expect(warm.fluxLocal).toBeLessThan(0.4);
+    expect(warm.level).toBe('caution');
+    expect(warm.verdict?.en).toBe('warms up');
+    // From Betelgeuse's distance it is a hundred-billionth: nothing.
+    const far = fatesOf('sn2', 1.1, 550 * LY_AU).sun;
+    expect(far.level).toBe('safe');
+    expect(far.verdict).toBeNull();
+    expect(far.fluxLocal).toBeLessThan(1e-9);
+    expect(far.tempK).toBeCloseTo(5772, 3);
   });
 
   it('a solar eruption aimed at Earth strikes what lies along its way and misses the rest', () => {

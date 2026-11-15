@@ -1087,5 +1087,11 @@
  "1 more body is destroyed along with Earth: {0}.": "1 autre corps est détruit avec la Terre : {0}.",
  "Earth holds together, but 1 body is destroyed: {0}.": "La Terre reste entière, mais 1 corps est détruit : {0}.",
  "{0} more bodies are destroyed along with Earth: {1}.": "{0} autres corps sont détruits avec la Terre : {1}.",
- "Earth holds together, but {0} bodies are destroyed: {1}.": "La Terre reste entière, mais {0} corps sont détruits : {1}."
+ "Earth holds together, but {0} bodies are destroyed: {1}.": "La Terre reste entière, mais {0} corps sont détruits : {1}.",
+ "Compared with its own surface": "Par rapport à sa propre surface",
+ "Temperature of the facing side": "Température de la face exposée",
+ "side facing the blast overheats": "la face tournée vers l’explosion surchauffe",
+ "The explosion’s light is no longer small beside what the star’s own surface gives off; the side facing it warms up.": "La lumière de l’explosion n’est plus négligeable devant ce que la surface de l’étoile émet elle-même ; la face tournée vers elle se réchauffe.",
+ "The side facing the blast overheats: there the explosion’s light outdoes the star’s own.": "La face tournée vers l’explosion surchauffe : la lumière de l’explosion y dépasse celle de l’étoile elle-même.",
+ "The side facing the blast heats up": "La face tournée vers l’explosion s’échauffe"
 }

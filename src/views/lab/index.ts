@@ -50,7 +50,8 @@ import {
 
 export { LAB_MAX_AU, LAB_MIN_AU, labEarthPlace, labPlaceFromEarth, labProject, labSunRadius, labUnproject, LY_AU, type MapPoint } from './map';
 export {
-  computeLabResults, distanceText, LAB_BREAKUP_AT, LAB_EXTRA_IDS, labBlastPlace, labClockRealSec, labClockSec, labFrontsAU, type LabResults,
+  computeLabResults, distanceText, LAB_BREAKUP_AT, LAB_EXTRA_IDS, labBlastPlace, labClockRealSec, labClockSec, labFrontsAU, labRunLines,
+  type LabResults, type LabRunLine,
 } from './physics';
 export { LAB_FIRST_YEAR, LAB_LAST_YEAR, labLinkQuery, parseLabLink, type LabLink } from './link';
 export { LAB_QUESTIONS } from './quiz';
@@ -353,8 +354,9 @@ interface NameTag extends LabelItem {
   y: number;
   radiusPx: number;
   show: number;
-  /** The side of its body the name stands on. */
+  /** The side of its body the name stands on, and whether it stands a tag's height farther out than usual (1) or not (0). */
   side: TagSide;
+  lift: number;
   /** The name is on the screen this frame, in the box that follows (pixels). */
   written: boolean;
   left: number;
@@ -720,7 +722,7 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     scene.add(sprite);
     const tag: NameTag = {
       sprite, label, centered: true, widthShare: 1,
-      at: new THREE.Vector3(), x: 0, y: 0, radiusPx: 0, show: 0, side: 'above', written: false, left: 0, right: 0, top: 0, bottom: 0,
+      at: new THREE.Vector3(), x: 0, y: 0, radiusPx: 0, show: 0, side: 'above', lift: 0, written: false, left: 0, right: 0, top: 0, bottom: 0,
     };
     labelSprites.push(tag);
     nameTags.push(tag);
@@ -729,13 +731,13 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
 
   /**
    * Puts a name's box on one side of its body: above or below it, tucked a little into the token; beside it;
-   * or at one of its corners, where the token's edge is 0.7 of its radius away along each axis. The text
-   * sits in the middle of a tag `tagH` pixels high.
+   * or at one of its corners, where the token's edge is 0.7 of its radius away along each axis. `lift` moves
+   * it that many tag heights (and a third) farther out. The text sits in the middle of a tag `tagH` pixels high.
    */
-  function setNameBox(tag: NameTag, side: TagSide, tagH: number): void {
+  function setNameBox(tag: NameTag, side: TagSide, lift: number, tagH: number): void {
     const halfW = tag.widthShare * tagH * 5;
     const { across, down } = TAG_OFFSETS[side];
-    const reach = tag.radiusPx * (across !== 0 && down !== 0 ? 0.7 : 1);
+    const reach = tag.radiusPx * (across !== 0 && down !== 0 ? 0.7 : 1) + lift * tagH * 1.3;
     const midX = tag.x + across * (reach + TAG_SIDE_GAP + halfW);
     const midY = tag.y + down * (reach + tagH * 0.5 - (across === 0 ? TAG_TUCK : 0));
     tag.left = midX - halfW;
@@ -760,6 +762,8 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
   }
   const earthTag = makeTag(0x7dd3fc, { tr: 'Dünya', en: 'Earth' });
   const blastTag = makeTag(0xffd9a0, KIND_TAG.sn2);
+  /** The name of the ring that marks where Earth stood before the blast carried it off. */
+  const originTag = makeTag(0x67e8f9, { tr: 'Dünya’nın ilk konumu', en: 'Where Earth started' });
 
   // ───────────── the Sun, Earth and the Moon ─────────────
   const starVert = /* glsl */ `
@@ -780,19 +784,28 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
     uniform vec3 uColB;
     uniform float uTime;
     uniform float uGain;
+    uniform float uHeat;
+    uniform vec3 uHeatDir;
     varying vec3 vPos;
     varying vec3 vWorldN;
     varying vec3 vWorldPos;
     void main() {
       vec3 V = normalize(cameraPosition - vWorldPos);
-      float mu = clamp(dot(normalize(vWorldN), V), 0.0, 1.0);
+      vec3 N = normalize(vWorldN);
+      float mu = clamp(dot(N, V), 0.0, 1.0);
       float cells = fbm3(normalize(vPos) * 5.0 + vec3(0.0, uTime * 0.07, 0.0));
       vec3 col = mix(uColA, uColB, smoothstep(0.3, 0.75, cells)) * (0.4 + 0.6 * sqrt(mu));
+      // Heated from one side: that side turns brighter and whiter.
+      col = mix(col, vec3(2.6, 2.7, 3.0), uHeat * max(dot(N, uHeatDir), 0.0));
       gl_FragColor = vec4(col * uGain, 1.0);
     }
   `;
+  /** A star's surface. `uHeat`, `uHeatDir`: how far (0..1) and from which side an explosion's light overheats it. */
   const makeStarMaterial = (a: THREE.Color, b: THREE.Color): THREE.ShaderMaterial => new THREE.ShaderMaterial({
-    uniforms: { uColA: { value: a.clone() }, uColB: { value: b.clone() }, uTime: { value: 0 }, uGain: { value: 1 } },
+    uniforms: {
+      uColA: { value: a.clone() }, uColB: { value: b.clone() }, uTime: { value: 0 }, uGain: { value: 1 },
+      uHeat: { value: 0 }, uHeatDir: { value: new THREE.Vector3(1, 0, 0) },
+    },
     vertexShader: starVert,
     fragmentShader: starFrag,
   });
@@ -1419,17 +1432,10 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
   originRing.scale.setScalar(EARTH_SCALE);
   const driftLine = new THREE.Line(driftGeo, originMat);
   driftLine.frustumCulled = false;
-  const originLabel = new THREE.Sprite(new THREE.SpriteMaterial({
-    color: 0x67e8f9, transparent: true, opacity: 0.95, depthTest: false, depthWrite: false, sizeAttenuation: false,
-  }));
-  originLabel.center.set(0, 0.5);
-  originLabel.scale.set(0.26, 0.026, 1);
-  originLabel.renderOrder = 20;
-  for (const marker of [originRing, driftLine, originLabel]) {
+  for (const marker of [originRing, driftLine]) {
     marker.visible = false;
     scene.add(marker);
   }
-  labelSprites.push({ sprite: originLabel, label: { tr: 'Dünya’nın ilk konumu', en: 'Where Earth started' }, centered: false, widthShare: 1 });
 
   // ───────────── magnetosphere (shown for solar eruptions) ─────────────
   // Local frame: +X toward the incoming cloud, +Y the magnetic axis. Not to scale with the distance map.
@@ -2371,7 +2377,6 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       const carried = push > 0.5 * EARTH_SCALE;
       originRing.visible = carried;
       driftLine.visible = carried;
-      originLabel.visible = carried;
       if (carried) {
         const ends = driftGeo.getAttribute('position') as THREE.BufferAttribute;
         ends.setXYZ(0, earthHome.x, 0, earthHome.z);
@@ -2488,8 +2493,12 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       const sunSize = Math.max(SUN_TOKEN_R, 7 / sunPx);
       sunMesh.visible = !solar && sunGone < 0.7;
       sunMesh.scale.setScalar(sunSize * (sunGone >= 0 ? Math.max(0.01, 1 - sunGone / 0.7) : 1));
-      // Struck by the blast, it flares up for a moment.
+      // Struck by the blast, it flares up for a moment; while the explosion's light is on it, the side facing
+      // the explosion is overheated.
+      const sunLit = playing && sunFate ? elapsed - sunFate.lightAtSec : -1;
       sunMat.uniforms.uGain.value = 1 + (sunHit >= 0 ? 1.4 * Math.exp(-sunHit * 1.2) * (0.3 + sunOut.air) : 0);
+      sunMat.uniforms.uHeat.value = 0.85 * sunOut.scorch * ramp(sunLit - 0.3, 1.5);
+      sunMat.uniforms.uHeatDir.value.copy(starPos).sub(sunPos).normalize();
       sunBody.wreck.group.visible = !solar && wreckShows(sunBody);
       sunBody.wreck.group.position.copy(sunPos);
       sunBody.wreck.group.scale.setScalar(sunSize);
@@ -2524,8 +2533,9 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       dist += (tDist - dist) * k;
       close += (tClose - close) * k;
 
-      name(earthTag, earthGroup.position, earthPx, broken ? 0 : 0.95);
+      name(earthTag, earthGroup.position, broken ? 0 : earthPx, broken ? 0 : 0.95);
       name(blastTag, starPos, look.starRadius * BLAST_SCALE * 1.3 * pxAt(starPos), solar ? 0 : 0.95);
+      name(originTag, earthHome, carried ? EARTH_TOKEN_R * pxAt(earthHome) : 0, carried ? 0.95 : 0);
       for (const mark of landmarks) {
         // A star of the map that explodes is the explosion itself.
         const exploding = mark.position.distanceToSquared(srcPos) < 0.3;
@@ -2542,26 +2552,30 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
         let show = tag.show;
         tag.written = false;
         if (show > 0.01) {
-          // A name stays on the side of its body where it stood, unless another side is clearer.
+          // A name stands close to its body, on the side where it stood, unless another side is clearer; where
+          // no side is clear it stands a little farther out.
           let best = tag.side;
-          setNameBox(tag, best, tagH);
-          let clash = nameClash(i);
-          for (const side of TAG_SIDES) {
-            if (clash === 0) break;
-            if (side === tag.side) continue;
-            setNameBox(tag, side, tagH);
-            const there = nameClash(i);
-            if (there < clash) {
-              best = side;
-              clash = there;
+          let bestLift = 0;
+          let clash = 3;
+          for (let lift = 0; lift <= 1 && clash > 0; lift++) {
+            for (let k = -1; k < TAG_SIDES.length && clash > 0; k++) {
+              const side = k < 0 ? tag.side : TAG_SIDES[k];
+              setNameBox(tag, side, lift, tagH);
+              const there = nameClash(i);
+              if (there < clash) {
+                best = side;
+                bestLift = lift;
+                clash = there;
+              }
             }
           }
           tag.side = best;
+          tag.lift = bestLift;
           // A name that would be written over a body or over another name gives way to it.
           if (clash > 0) show = 0;
           tag.written = show > 0.01;
         }
-        setNameBox(tag, tag.side, tagH);
+        setNameBox(tag, tag.side, tag.lift, tagH);
         tag.sprite.position.copy(tag.at);
         // The sprite is ten times as wide as it is high; its middle goes to the middle of the box.
         tag.sprite.center.set(0.5 - ((tag.left + tag.right) / 2 - tag.x) / (tagH * 10), 0.5 + ((tag.top + tag.bottom) / 2 - tag.y) / tagH);
@@ -2657,7 +2671,6 @@ export function createLabView(renderer: THREE.WebGLRenderer): LabController {
       earthOrbit.scale.setScalar(earthHome.length());
       lensEdge.position.copy(earthHome);
       originRing.position.copy(earthHome);
-      originLabel.position.set(earthHome.x + 0.25 * EARTH_SCALE, 0.05, earthHome.z - (LAB_EARTH_R + 0.5) * EARTH_SCALE);
       const bodies: LabBody[] = [{ id: 'sun', name: BODY_NAMES.sun, kind: 'sun', angleRad: sunAngle, distanceAU: places.sun.distanceAU }];
       tokens.forEach((p, n) => {
         const place = places[p.def.place];

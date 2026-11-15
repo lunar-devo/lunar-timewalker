@@ -966,8 +966,13 @@ export interface LabFate {
   level: LabImpactLevel;
   /** Sentences, read one after the other. */
   summary: L10n[];
-  /** What becomes of it in a few words, for a line of the list of all bodies; null when it is not affected. */
+  /**
+   * What becomes of it in a few words, for a line of the list of all bodies, and which arrival brings that
+   * about: the light's, or that of what follows it (a blast wave, a plasma cloud). Null when it is not
+   * affected.
+   */
   verdict: L10n | null;
+  verdictFrom: 'light' | 'blast' | null;
   outcome: LabFateOutcome;
   /** Damage bars: what each stands for and how far it is reached, 0..1. */
   meters: Array<{ label: L10n; value: number }>;
@@ -1045,8 +1050,12 @@ export interface LabImpact {
   satellitesLevel: LabImpactLevel;
   level: LabImpactLevel;
   summary: L10n;
-  /** What becomes of Earth in a few words, for a line of the list of all bodies; null when it is not affected. */
+  /**
+   * What becomes of Earth in a few words, for a line of the list of all bodies, and which arrival brings
+   * that about: the light's, or that of what follows it. Null when it is not affected.
+   */
   verdict: L10n | null;
+  verdictFrom: 'light' | 'blast' | null;
   outcome: LabOutcome;
   /**
    * Seconds after detonation, in the lab's time-lapse, at which the light and what follows it (null: it

@@ -1087,5 +1087,11 @@
  "1 more body is destroyed along with Earth: {0}.": "Вместе с Землёй разрушается ещё 1 тело: {0}.",
  "Earth holds together, but 1 body is destroyed: {0}.": "Земля уцелеет, но 1 тело разрушается: {0}.",
  "{0} more bodies are destroyed along with Earth: {1}.": "Число тел, разрушенных вместе с Землёй: {0} ({1}).",
- "Earth holds together, but {0} bodies are destroyed: {1}.": "Земля уцелеет, но разрушено тел: {0} ({1})."
+ "Earth holds together, but {0} bodies are destroyed: {1}.": "Земля уцелеет, но разрушено тел: {0} ({1}).",
+ "Compared with its own surface": "По сравнению с собственной поверхностью",
+ "Temperature of the facing side": "Температура обращённой стороны",
+ "side facing the blast overheats": "сторона, обращённая к взрыву, перегревается",
+ "The explosion’s light is no longer small beside what the star’s own surface gives off; the side facing it warms up.": "Свет взрыва уже не мал по сравнению с тем, что излучает сама поверхность звезды; обращённая к нему сторона нагревается.",
+ "The side facing the blast overheats: there the explosion’s light outdoes the star’s own.": "Сторона, обращённая к взрыву, перегревается: там свет взрыва сильнее собственного света звезды.",
+ "The side facing the blast heats up": "Сторона, обращённая к взрыву, нагревается"
 }

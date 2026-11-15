@@ -39,8 +39,9 @@
  *     can be seen) is taken to be right beside that body, three of its radii from its centre, and its other
  *     distances are measured from the body's real place. Set at a planet it is the size of the moon's orbit
  *     away from a moon of that planet, and the other way round. The body counts as on the axis of a burst.
- *   - The flash is compared with the sunlight the body normally gets, and its temperature follows the
- *     radiative balance, T ∝ (light received)^¼.
+ *   - A supernova's flash is compared with the light the body is used to: the sunlight it normally gets or,
+ *     for a star, what its own surface gives off (σT⁴). The temperature of the side facing the flash follows
+ *     the radiative balance, T ∝ (light received)^¼.
  *   - A CME is a cloud about 70° wide thrown from the Sun toward Earth: bodies outside that cone are missed.
  *     Where it strikes, a magnetosphere is squeezed by the same law as Earth's; a body without a global
  *     field takes the cloud on its upper atmosphere, or on its bare surface. A moon that orbits inside its
@@ -65,6 +66,8 @@ const YEAR_S = 365.25 * 86_400;
 const SUN_APPARENT_MAG = -26.74;
 /** Sunlight at Earth's distance, W/m². */
 const SOLAR_CONSTANT = 1361;
+/** Stefan–Boltzmann constant, W/m²/K⁴: a surface at temperature T gives off σT⁴. */
+const STEFAN_BOLTZMANN = 5.670374e-8;
 
 /** Energy it takes, in joules. */
 const E_ATMOSPHERE = 3.2e26; // lift the 5.15×10^18 kg of air out of Earth's gravity
@@ -299,6 +302,7 @@ const VERDICT = {
   partlyMolten: { tr: 'yüzeyi yer yer erir', en: 'surface melts in places' },
   scorched: { tr: 'kavrulur', en: 'scorched' },
   overheated: { tr: 'bulut tepeleri aşırı ısınır', en: 'cloud tops overheat' },
+  sideOverheats: { tr: 'patlamaya bakan yüzü aşırı ısınır', en: 'side facing the blast overheats' },
   warmed: { tr: 'ısınır', en: 'warms up' },
   ionised: { tr: 'üst atmosferi iyonlaşır', en: 'upper atmosphere ionised' },
   ozoneLost: { tr: 'ozon tabakasının çoğu yok olur', en: 'most of the ozone layer lost' },
@@ -356,6 +360,8 @@ function supernovaImpact(kind: 'sn2' | 'sn1a', distanceAU: number, at: Arrivals)
 
   let level: LabImpactLevel = 'safe';
   let verdict: L10n | null = null;
+  // Only the blast strips, boils, melts or breaks; the light scorches and thins the ozone layer.
+  const byBlast = damage.atmosphere >= 0.5 || damage.oceans >= 0.5 || damage.crust >= 0.5 || damage.breakup >= LAB_BREAKUP_AT;
   let summary: L10n = {
     tr: 'Zararsız. Gökyüzünde çok parlak yeni bir yıldız belirir ve aylar içinde söner; Dünya’daki yaşam etkilenmez.',
     en: 'Harmless. A very bright new star appears in the sky and fades over months; life on Earth is not affected.',
@@ -428,6 +434,7 @@ function supernovaImpact(kind: 'sn2' | 'sn1a', distanceAU: number, at: Arrivals)
     level,
     summary,
     verdict,
+    verdictFrom: verdict === null ? null : byBlast ? 'blast' : 'light',
     lightAtSec: at.lightAtSec,
     shockAtSec: blastSeconds === null ? null : at.frontAtSec,
     outcome: {
@@ -504,6 +511,7 @@ function burstImpact(distanceAU: number, at: Arrivals): LabImpact {
     level,
     summary,
     verdict,
+    verdictFrom: 'light',
     lightAtSec: at.lightAtSec,
     shockAtSec: at.lightAtSec,
     outcome: {
@@ -658,6 +666,7 @@ function cmeImpact(distanceAU: number, strength: LabCmeStrength, at: Arrivals): 
     level,
     summary,
     verdict: insideSun ? VERDICT.outsideModel : calm ? null : STORM_VERDICT[level],
+    verdictFrom: insideSun || !calm ? 'blast' : null,
     lightAtSec: at.lightAtSec,
     shockAtSec: at.frontAtSec,
     outcome: {
@@ -704,7 +713,7 @@ interface Strike {
   /** Seconds into the time-lapse at which the two reach the body's token. */
   lightAtSec: number;
   frontAtSec: number;
-  /** The steps for the two arrivals; a burst has no light ahead of its rays. */
+  /** The steps for the two arrivals; a burst has no light ahead of its rays: its rays are its light, and all it does comes with them. */
   lightStep: L10n | null;
   frontStep: L10n;
   /** What there is to say, and how it rates, when the body is neither burnt nor stripped, melted or broken. */
@@ -719,8 +728,10 @@ function supernovaStrike(kind: 'sn2' | 'sn1a', traits: BodyTraits, geo: BodyGeom
   const model = SUPERNOVA[kind];
   const star = traits.bodyClass === 'star';
   const apparentMag = model.absMag + 5 * Math.log10(geo.distanceAU / PC_AU) - 5;
-  // Light of the explosion at the body, against the sunlight the body normally gets there.
-  const fluxLocal = star ? 0 : 10 ** (-0.4 * (apparentMag - SUN_APPARENT_MAG)) * geo.sunAU ** 2;
+  // Light of the explosion at the body, against the light the body is used to: the sunlight it normally
+  // gets there or, for a star, what its own surface gives off.
+  const usualWm2 = star ? STEFAN_BOLTZMANN * traits.tempK ** 4 : SOLAR_CONSTANT / geo.sunAU ** 2;
+  const fluxLocal = (10 ** (-0.4 * (apparentMag - SUN_APPARENT_MAG)) * SOLAR_CONSTANT) / usualWm2;
   const share = (traits.radiusM / (2 * geo.distanceAU * AU_M)) ** 2;
   const blastSeconds = blastTravelSeconds(geo.distanceAU);
   const blastJ = blastSeconds === null ? 0 : model.kineticJ * share;
@@ -728,9 +739,21 @@ function supernovaStrike(kind: 'sn2' | 'sn1a', traits: BodyTraits, geo: BodyGeom
   const lightTimeText = lightTime(geo.distanceAU);
   const frontTimeText = blastSeconds === null ? NEVER : durationText(blastSeconds);
   let mild: Strike['mild'] = { level: 'safe', text: { tr: 'Patlama parlak yeni bir yıldız olarak görünür; başka bir şey değişmez.', en: 'The explosion shows as a bright new star; nothing else changes.' } };
-  if (star) mild = { level: 'safe', text: NOTHING_TO_SEE };
-  else if (fluxLocal >= 1) mild = { level: 'caution', text: { tr: 'Patlama oradan Güneş’ten parlak görünür; sıcaklığı belirgin biçimde yükselir.', en: 'From there the explosion outshines the Sun; its temperature rises markedly.' } };
-  else if (fluxLocal >= 0.05) mild = { level: 'caution', text: { tr: 'Patlama gökyüzünde ikinci bir Güneş gibi parlar; sıcaklığı biraz yükselir.', en: 'The explosion shines like a second Sun in its sky; its temperature rises a little.' } };
+  if (star) {
+    mild = fluxLocal >= 0.05
+      ? {
+        level: 'caution',
+        text: {
+          tr: 'Patlamanın ışığı, yıldızın kendi yüzeyinin yaydığı ışığın yanında artık küçük değildir; patlamaya bakan yüzü ısınır.',
+          en: 'The explosion’s light is no longer small beside what the star’s own surface gives off; the side facing it warms up.',
+        },
+      }
+      : { level: 'safe', text: NOTHING_TO_SEE };
+  } else if (fluxLocal >= 1) {
+    mild = { level: 'caution', text: { tr: 'Patlama oradan Güneş’ten parlak görünür; sıcaklığı belirgin biçimde yükselir.', en: 'From there the explosion outshines the Sun; its temperature rises markedly.' } };
+  } else if (fluxLocal >= 0.05) {
+    mild = { level: 'caution', text: { tr: 'Patlama gökyüzünde ikinci bir Güneş gibi parlar; sıcaklığı biraz yükselir.', en: 'The explosion shines like a second Sun in its sky; its temperature rises a little.' } };
+  }
   return {
     fluxLocal,
     tempK: traits.tempK * (1 + fluxLocal) ** 0.25,
@@ -832,9 +855,9 @@ function struckFate(id: string, traits: BodyTraits, geo: BodyGeometry, strike: S
         ? { tr: 'Buz kabuğu yer yer erir.', en: 'Its shell of ice melts in places.' }
         : { tr: 'Yüzeyi yer yer erir.', en: 'Its surface melts in places.' });
     } else if (scorch >= 0.4) {
-      summary.push(solid
-        ? { tr: 'Patlamaya bakan yüzü kavrulur.', en: 'The side facing the blast is scorched.' }
-        : { tr: 'Bulut tepeleri aşırı ısınır ve şişer.', en: 'Its cloud tops overheat and swell.' });
+      if (solid) summary.push({ tr: 'Patlamaya bakan yüzü kavrulur.', en: 'The side facing the blast is scorched.' });
+      else if (star) summary.push({ tr: 'Patlamaya bakan yüzü aşırı ısınır: orada patlamanın ışığı yıldızın kendi ışığını bastırır.', en: 'The side facing the blast overheats: there the explosion’s light outdoes the star’s own.' });
+      else summary.push({ tr: 'Bulut tepeleri aşırı ısınır ve şişer.', en: 'Its cloud tops overheat and swell.' });
     }
     if (summary.length === 0) summary.push(strike.mild.text);
   }
@@ -844,12 +867,18 @@ function struckFate(id: string, traits: BodyTraits, geo: BodyGeometry, strike: S
   else if (air >= 0.5) verdict = solid ? VERDICT.stripped : star ? VERDICT.gasLost : VERDICT.layersTorn;
   else if (melt >= 0.25) verdict = VERDICT.partlyMolten;
   else if (air >= 0.25) verdict = solid ? VERDICT.airEscapes : VERDICT.gasLost;
-  else if (scorch >= 0.4) verdict = solid ? VERDICT.scorched : VERDICT.overheated;
+  else if (scorch >= 0.4) verdict = solid ? VERDICT.scorched : star ? VERDICT.sideOverheats : VERDICT.overheated;
+  // A supernova's blast strips, melts and breaks; what its light does comes with the light.
+  const byBlast = strike.lightStep !== null && (breakup >= LAB_BREAKUP_AT || melt >= 0.25 || air >= 0.25);
 
   const steps: Steps = [];
   if (strike.lightStep) steps.push({ id: 'light', atSec: strike.lightAtSec, text: strike.lightStep });
   if (scorch > 0.05) {
-    steps.push({ id: 'scorch', atSec: strike.lightAtSec + 0.8, text: solid ? SCORCH_STEP : { tr: 'Bulut tepeleri ısınıyor', en: 'The cloud tops heat up' } });
+    steps.push({
+      id: 'scorch',
+      atSec: strike.lightAtSec + 0.8,
+      text: solid ? SCORCH_STEP : star ? { tr: 'Patlamaya bakan yüz ısınıyor', en: 'The side facing the blast heats up' } : { tr: 'Bulut tepeleri ısınıyor', en: 'The cloud tops heat up' },
+    });
   }
   if (strike.frontArrives) {
     const at = strike.frontAtSec;
@@ -898,6 +927,7 @@ function struckFate(id: string, traits: BodyTraits, geo: BodyGeometry, strike: S
     level,
     summary,
     verdict,
+    verdictFrom: verdict === null ? null : byBlast ? 'blast' : 'light',
     outcome: { flash: flashOf(strike.fluxLocal), scorch, air, melt, breakup, kick: clamp01(Math.log10(1 + kickKmS) / 2), storm: 0 },
     meters,
     lightAtSec: strike.lightAtSec,
@@ -924,6 +954,7 @@ function missedByBeam(id: string, traits: BodyTraits, geo: BodyGeometry): LabFat
     level: 'safe',
     summary: [{ tr: 'Hüzme bu yöne gelmez; etkilenmez.', en: 'The beam does not come this way; no effect.' }],
     verdict: null,
+    verdictFrom: null,
     outcome: { flash: 0, scorch: 0, air: 0, melt: 0, breakup: 0, kick: 0, storm: 0 },
     meters: [],
     lightAtSec: geo.frontAtSec,
@@ -1033,6 +1064,7 @@ function cmeFate(id: string, traits: BodyTraits, geo: BodyGeometry, strength: La
     level,
     summary,
     verdict,
+    verdictFrom: verdict === null ? null : 'blast',
     outcome: {
       flash: 0.12,
       scorch: 0,
@@ -1205,6 +1237,42 @@ export interface LabResults {
   /** The second of the time-lapse by which everything that is going to happen has happened, with a few to spare. */
   runSec: number;
   clock: LabClock;
+}
+
+/** A line of the list of all bodies: what becomes of one of them, and when. */
+export interface LabRunLine {
+  /** 'earth' or a LabBody id. */
+  id: string;
+  level: LabImpactLevel;
+  verdict: L10n | null;
+  /**
+   * The second of the time-lapse at which that happens, and the real time after the explosion: those of the
+   * arrival that causes it. Null for a body that is not affected.
+   */
+  atSec: number | null;
+  timeText: L10n | null;
+}
+
+/**
+ * The list of all bodies in the order things happen to them: each at the arrival that causes what its line
+ * says (the light's, or the blast's or cloud's), bodies reached in the same moment in the order of their
+ * distance from the explosion; then the bodies that are not affected, Earth first.
+ */
+export function labRunLines(impact: LabImpact, fates: LabFate[]): LabRunLine[] {
+  const lines = [{ id: 'earth', ...impact }, ...fates].map((body) => {
+    const byLight = body.verdictFrom === 'light' || body.shockAtSec === null;
+    return {
+      id: body.id,
+      level: body.level,
+      verdict: body.verdict,
+      atSec: body.verdictFrom === null ? null : byLight ? body.lightAtSec : body.shockAtSec,
+      timeText: body.verdictFrom === null ? null : byLight ? body.lightTimeText : body.shockTimeText,
+      // The light reaches the bodies in the order of their distance from the explosion.
+      lightAtSec: body.lightAtSec,
+    };
+  });
+  const reached = lines.filter((line) => line.atSec !== null).sort((a, b) => (a.atSec ?? 0) - (b.atSec ?? 0) || a.lightAtSec - b.lightAtSec);
+  return [...reached, ...lines.filter((line) => line.atSec === null)].map(({ id, level, verdict, atSec, timeText }) => ({ id, level, verdict, atSec, timeText }));
 }
 
 /**

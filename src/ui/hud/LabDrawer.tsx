@@ -18,7 +18,7 @@ import { useGame } from '../../core/store';
 import { calendarUTFromJdTT, formatDate, jdTTFromCalendarUT, jdTTNow } from '../../core/time';
 import { BODY_NAMES, WORLDS } from '../../content';
 import { game } from '../../game/api';
-import { distanceText, LAB_BREAKUP_AT, LAB_MAX_AU, LAB_MIN_AU, LY_AU } from '../../views/lab';
+import { distanceText, LAB_BREAKUP_AT, LAB_MAX_AU, LAB_MIN_AU, labRunLines, LY_AU } from '../../views/lab';
 import { useDialog } from '../useDialog';
 
 const SUPERSCRIPT = '⁰¹²³⁴⁵⁶⁷⁸⁹';
@@ -218,10 +218,16 @@ function FateResult({ fate, kind, lang }: { fate: LabFate; kind: LabExplosionKin
       ) : (
         <div className="hud-lab-rows">
           <Row label={tx(lang, 'Patlamaya uzaklığı', 'Distance from the explosion')} value={loc(fate.distanceLabel, lang)} />
-          {!star && <Row label={tx(lang, 'Oradaki Güneş’e göre', 'Compared with the Sun there')} value={`× ${scientific(fate.fluxLocal, lang)}`} />}
+          <Row
+            label={star ? tx(lang, 'Kendi yüzey ışığına göre', 'Compared with its own surface') : tx(lang, 'Oradaki Güneş’e göre', 'Compared with the Sun there')}
+            value={`× ${scientific(fate.fluxLocal, lang)}`}
+          />
           <Row label={tx(lang, 'Işığın varışı', 'Light arrival')} value={loc(fate.lightTimeText, lang)} />
           <Row label={tx(lang, 'Şok dalgasının varışı', 'Blast arrival')} value={loc(fate.shockTimeText, lang)} />
-          {!star && <Row label={tx(lang, 'Sıcaklık', 'Temperature')} value={`${scientific(fate.tempK, lang)} K`} />}
+          <Row
+            label={star ? tx(lang, 'Patlamaya bakan yüzün sıcaklığı', 'Temperature of the facing side') : tx(lang, 'Sıcaklık', 'Temperature')}
+            value={`${scientific(fate.tempK, lang)} K`}
+          />
           <Row label={tx(lang, 'Çarpan enerji', 'Energy striking it')} value={`${scientific(fate.energyJ, lang)} J`} />
         </div>
       )}
@@ -421,30 +427,23 @@ function QuizCard({ quiz, lang }: { quiz: LabQuiz; lang: Lang }) {
 
 /**
  * The running list of the whole map: Earth and every other body, each with what becomes of it, in the order
- * the explosion reaches them. A body's moment is the arrival of the blast wave, plasma cloud or beam; where
- * that never comes but the light alone does something, the arrival of the light. A line lights up when the
- * time-lapse reaches its moment; bodies that nothing happens to stand last, without a moment. A click on a
- * line puts its body in focus.
+ * things happen (`labRunLines`). A line carries the real time of the arrival that causes what it says (the
+ * light's, or the blast wave's or plasma cloud's) and lights up when the time-lapse reaches that arrival;
+ * bodies that nothing happens to stand last, without a time. A click on a line puts its body in focus.
  */
 function RunList({ lab, lang }: { lab: LabState; lang: Lang }) {
   const started = lab.playing || lab.elapsedSec > 0;
-  // Reached bodies first, in the order the fronts reach them (equal moments: Earth, then the bodies as the
-  // model lists them); then those that only the light reaches and that it does nothing to.
-  const lines = [{ id: 'earth', ...lab.impact }, ...lab.fates]
-    .map((b) => {
-      const name = loc(lab.bodies.find((body) => body.id === b.id)?.name ?? BODY_NAMES.earth, lang);
-      const verdict = loc(b.verdict ?? NOT_AFFECTED, lang);
-      const time = b.shockAtSec !== null ? b.shockTimeText : b.lightTimeText;
-      /** Second of the time-lapse at which the line lights up; Infinity for a body that comes to no harm. */
-      const atSec = b.verdict === null ? Infinity : b.shockAtSec ?? b.lightAtSec;
-      return {
-        id: b.id,
-        level: b.level,
-        atSec,
-        text: atSec === Infinity ? `${name}: ${verdict}` : `${loc(time, lang)} · ${name}: ${verdict}`,
-      };
-    })
-    .sort((a, b) => (a.atSec === b.atSec ? 0 : a.atSec - b.atSec));
+  const lines = labRunLines(lab.impact, lab.fates).map((line) => {
+    const name = loc(lab.bodies.find((body) => body.id === line.id)?.name ?? BODY_NAMES.earth, lang);
+    const verdict = loc(line.verdict ?? NOT_AFFECTED, lang);
+    return {
+      id: line.id,
+      level: line.level,
+      done: started && line.atSec !== null && lab.elapsedSec >= line.atSec,
+      never: line.atSec === null,
+      text: line.timeText ? `${loc(line.timeText, lang)} · ${name}: ${verdict}` : `${name}: ${verdict}`,
+    };
+  });
   return (
     <div className="hud-card hud-lab-card">
       <div className="hud-card-title" style={{ marginBottom: 0 }}>
@@ -463,7 +462,7 @@ function RunList({ lab, lang }: { lab: LabState; lang: Lang }) {
           <li key={line.id}>
             <button
               type="button"
-              className={`hud-lab-run-line is-${line.level} ${started && lab.elapsedSec >= line.atSec ? 'is-done' : ''} ${line.atSec === Infinity ? 'is-never' : ''}`}
+              className={`hud-lab-run-line is-${line.level} ${line.done ? 'is-done' : ''} ${line.never ? 'is-never' : ''}`}
               aria-current={lab.focusId === line.id ? 'true' : undefined}
               onClick={() => game.setLabFocus(line.id)}
             >
@@ -600,13 +599,13 @@ function LabTable({ lab, lang, onClose }: { lab: LabState; lang: Lang; onClose: 
         cells: [loc(impact.distanceLabel, lang), `× ${scientific(impact.fluxSolar, lang)}`, `${scientific(impact.surfaceTempK, lang)} K`, loc(impact.lightTimeText, lang), loc(impact.shockTimeText, lang)],
         level: impact.level,
       },
-      // A star is not compared with the sunlight it gets, nor given a temperature: as in its result card.
+      // A star is not compared with sunlight, as the column says, but with its own surface: that is in its result card.
       ...fates.map((f): TableRow => ({
         id: f.id,
         cells: [
           loc(f.distanceLabel, lang),
           f.bodyClass === 'star' ? '—' : `× ${scientific(f.fluxLocal, lang)}`,
-          f.bodyClass === 'star' ? '—' : `${scientific(f.tempK, lang)} K`,
+          `${scientific(f.tempK, lang)} K`,
           loc(f.lightTimeText, lang),
           loc(f.shockTimeText, lang),
         ],
