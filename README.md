@@ -20,7 +20,7 @@ npm test           # efemeris (JPL Horizons), sahneleme, Patlama Laboratuvarı m
 npm run build
 ```
 
-**Yayın:** `main` dalına yapılan her gönderimde GitHub Actions (`.github/workflows/pages.yml`) uygulamayı derler ve GitHub Pages’e yayımlar. Derleme göreli yollar kullanır (`vite.config.ts`: `base: './'`), bu yüzden `dist/` klasörü herhangi bir alt dizinden sunulabilir.
+**Yayın:** `npm run deploy` uygulamayı derler ve derlemeyi tek commit olarak `gh-pages` dalına gönderir (`tools/deploy_pages.sh`); GitHub Pages bu dalı yayımlar. Derleme göreli yollar kullanır (`vite.config.ts`: `base: './'`), bu yüzden `dist/` klasörü herhangi bir sunucuda, herhangi bir alt dizinden sunulabilir.
 
 Varlık paketini ham NASA kaynaklarından yeniden üretmek (tamamı ya da seçili adımlar):
 ```bash
