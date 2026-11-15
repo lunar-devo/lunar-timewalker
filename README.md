@@ -157,7 +157,7 @@ The “before” frames of the conjunction, alignment and Mars episodes are take
 | NASA SVS #4851 — Deep Star Maps 2020 | https://svs.gsfc.nasa.gov/4851 | 8K star map (`starmap_2020_8k.exr`) and constellation lines; visible-light cut-outs of the Magellanic Clouds from the 64K map (`starmap_2020_64k.exr`) |
 | NASA GSFC PGDA — LOLA 5 m/px South Pole DEMs | https://pgda.gsfc.nasa.gov/products/78 | Shackleton rim (`Site04`) and the Shackleton–de Gerlache Connecting Ridge (`Site01`) |
 | NASA NSSDCA — Apollo landing site coordinates (Wagner et al. 2017, Icarus 283, 92–103) | https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html | Coordinates of the Apollo landing sites |
-| NASA/GSFC/Arizona State University LROC | https://lroc.asu.edu/images/1358 | Landing coordinates of SLIM (JAXA), Chang’e 5, Chang’e 6 and IM-2 Athena; robotic spacecraft table (Luna 16, Surveyor 1): https://lroc.im-ldi.com/news/117; Chandrayaan-3 (ISRO): https://lroc.asu.edu/images/1314; IM-1 Odysseus: https://lroc.asu.edu/images/1360 |
+| NASA/GSFC/Arizona State University LROC | https://www.lroc.asu.edu/images/1358 | Landing coordinates of SLIM (JAXA); Chang’e 5: https://www.lroc.asu.edu/images/1172; Chang’e 6: https://www.lroc.asu.edu/images/1374; IM-2 Athena: https://www.lroc.asu.edu/images/1408; Chandrayaan-3 (ISRO): https://www.lroc.asu.edu/images/1314; IM-1 Odysseus: https://www.lroc.asu.edu/images/1360; robotic spacecraft table (Luna 16, Surveyor 1): https://lroc.im-ldi.com/news/117 |
 | Liu et al. 2019, Nature Communications 10, 4229 | https://doi.org/10.1038/s41467-019-12278-3 | Landing coordinates of Chang’e 4 (CNSA) |
 | Blewett et al. 2025, LPSC 56, abstract 1233 | https://www.hou.usra.edu/meetings/lpsc2025/pdf/1233.pdf | The Lunar Vertex (IM-3) target at Reiner Gamma |
 | NASA JPL Horizons (DE441) | https://ssd.jpl.nasa.gov/horizons/ | Position verification tables |
@@ -183,7 +183,7 @@ The “before” frames of the conjunction, alignment and Mars episodes are take
 | NASA Image Library — GALEX and Spitzer (JPL) | https://images.nasa.gov/details/PIA15416 · PIA03033 · PIA07137 · PIA12485 | M31 and M33 (ultraviolet), Large and Small Magellanic Cloud (infrared) |
 | NASA Hubble Messier Catalog | https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-messier-catalog/ | M51, M104, M87 (Hubble) |
 | NASA SkyView (GSFC) | https://skyview.gsfc.nasa.gov/ | Survey images for measuring where the galaxy images sit on the sky (GALEX, IRAS/IRIS, DSS) |
-| SIMBAD (CDS) and NASA/IPAC NED | https://simbad.cds.unistra.fr/simbad/ · https://ned.ipac.caltech.edu/ | Coordinates and properties of the galaxies |
+| SIMBAD (CDS) and NASA/IPAC NED | https://simbad.cds.unistra.fr/ · https://ned.ipac.caltech.edu/ | Coordinates and properties of the galaxies |
 | NASA Blue Marble NG (2004, 12 months) | https://visibleearth.nasa.gov/collection/1484/blue-marble | Cloud-free Earth by season (8K) |
 | NASA Black Marble 2016 (VIIRS) | https://earthobservatory.nasa.gov/features/NightLights | City lights at night (8K) |
 | NASA GIBS / Worldview | https://worldview.earthdata.nasa.gov/ | Earth with real clouds on episode dates (MODIS Terra, VIIRS SNPP; 8K) |

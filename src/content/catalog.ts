@@ -249,7 +249,7 @@ export const SITES: SiteDef[] = [
       en: 'The side of the Moon we never see from Earth. Earth never rises here, so there is no direct radio contact with it. China’s Chang’e 4 landed here in 2019.',
     },
   },
-  // https://lroc.asu.edu/images/1358 (LROC: 13.3160° S, 25.2510° E)
+  // https://www.lroc.asu.edu/images/1358 (LROC: 13.3160° S, 25.2510° E)
   {
     id: 'slim',
     latDeg: -13.316,
@@ -264,7 +264,7 @@ export const SITES: SiteDef[] = [
       en: 'Japan’s (JAXA) “Moon sniper” SLIM landed very close to its target in January 2024 but tipped onto its nose. Its solar panels faced west, so it only made power in the afternoon, once the Sun shone from the west.',
     },
   },
-  // https://lroc.asu.edu/images/1172.2020 (LROC: 43.0576° N, 308.0839° E)
+  // https://www.lroc.asu.edu/images/1172 (LROC: 43.0576° N, 308.0839° E)
   {
     id: 'change5',
     latDeg: 43.0576,
@@ -278,7 +278,7 @@ export const SITES: SiteDef[] = [
       en: 'China’s Chang’e 5 landed here in December 2020 and carried Moon soil back to Earth. The lava here is much younger than the rocks Apollo brought back.',
     },
   },
-  // https://lroc.asu.edu/images/1374 (LROC: 41.6385° S, 206.0148° E)
+  // https://www.lroc.asu.edu/images/1374 (LROC: 41.6385° S, 206.0148° E)
   {
     id: 'change6',
     latDeg: -41.6385,

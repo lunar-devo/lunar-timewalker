@@ -36,8 +36,20 @@ export const CREDIT_GROUPS: Array<{ title: L10n; items: CreditItem[] }> = [
         url: 'https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_sites.html',
       },
       {
-        text: 'NASA/GSFC/Arizona State University LROC — landing coordinates of SLIM, Chang’e 5, Chang’e 6 and IM-2 Athena',
-        url: 'https://lroc.asu.edu/images/1358',
+        text: 'NASA/GSFC/Arizona State University LROC — landing coordinates of SLIM (JAXA)',
+        url: 'https://www.lroc.asu.edu/images/1358',
+      },
+      {
+        text: 'NASA/GSFC/Arizona State University LROC — landing coordinates of Chang’e 5 (CNSA)',
+        url: 'https://www.lroc.asu.edu/images/1172',
+      },
+      {
+        text: 'NASA/GSFC/Arizona State University LROC — landing coordinates of Chang’e 6 (CNSA)',
+        url: 'https://www.lroc.asu.edu/images/1374',
+      },
+      {
+        text: 'NASA/GSFC/Arizona State University LROC — landing coordinates of IM-2 Athena',
+        url: 'https://www.lroc.asu.edu/images/1408',
       },
       {
         text: 'NASA/GSFC/Arizona State University LROC — coordinates of robotic spacecraft (Luna 16, Surveyor 1)',
@@ -45,11 +57,11 @@ export const CREDIT_GROUPS: Array<{ title: L10n; items: CreditItem[] }> = [
       },
       {
         text: 'NASA/GSFC/Arizona State University LROC — landing coordinates of Chandrayaan-3 (ISRO)',
-        url: 'https://lroc.asu.edu/images/1314',
+        url: 'https://www.lroc.asu.edu/images/1314',
       },
       {
         text: 'NASA/GSFC/Arizona State University LROC — landing coordinates of IM-1 Odysseus',
-        url: 'https://lroc.asu.edu/images/1360',
+        url: 'https://www.lroc.asu.edu/images/1360',
       },
       {
         text: 'Liu et al. 2019, Nature Communications 10, 4229 — landing coordinates of Chang’e 4 (CNSA)',
@@ -127,7 +139,7 @@ export const CREDIT_GROUPS: Array<{ title: L10n; items: CreditItem[] }> = [
       },
       {
         text: 'Messier & Magellanic galaxy coordinates and properties from SIMBAD/NED/NASA',
-        url: 'https://simbad.cds.unistra.fr/simbad/',
+        url: 'https://simbad.cds.unistra.fr/',
       },
     ],
   },
